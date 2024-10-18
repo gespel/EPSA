@@ -27,6 +27,17 @@ static void* ema_handle = NULL;
 
 static int (*ema_init_fn)(EMA_init_cb) = NULL;
 static int (*ema_finalize_fn)() = NULL;
+static int (*region_create_and_init_fn)(
+    Region **region,
+    const char* idf,
+    Filter *filter,
+    const char* file,
+    unsigned int line,
+    const char* func
+) = NULL;
+static int (*region_begin_fn)(Region* region) = NULL;
+static int (*region_end_fn)(Region* region) = NULL;
+static int (*region_finalize_fn)(Region* region) = NULL;
 
 int _EMA_init(const char* path)
 {
@@ -51,6 +62,42 @@ int _EMA_init(const char* path)
     error = dlerror();
 
     if (!ema_finalize_fn || error) {
+        slurm_error(error);
+        dlclose(ema_handle);
+        return 1;
+    }
+
+    region_create_and_init_fn = dlsym(ema_handle, "EMA_region_create_and_init");
+    error = dlerror();
+
+    if (!region_create_and_init_fn || error) {
+        slurm_error(error);
+        dlclose(ema_handle);
+        return 1;
+    }
+
+    region_begin_fn = dlsym(ema_handle, "EMA_region_begin");
+    error = dlerror();
+
+    if (!region_begin_fn || error) {
+        slurm_error(error);
+        dlclose(ema_handle);
+        return 1;
+    }
+
+    region_end_fn = dlsym(ema_handle, "EMA_region_end");
+    error = dlerror();
+
+    if (!region_end_fn || error) {
+        slurm_error(error);
+        dlclose(ema_handle);
+        return 1;
+    }
+
+    region_finalize_fn = dlsym(ema_handle, "EMA_region_finalize");
+    error = dlerror();
+
+    if (!region_finalize_fn || error) {
         slurm_error(error);
         dlclose(ema_handle);
         return 1;
