@@ -28,28 +28,23 @@ static void* ema_handle = NULL;
 /* EMA function pointers */
 static int (*ema_init_fn)(EMA_init_cb) = NULL;
 static int (*ema_finalize_fn)() = NULL;
-static int (*region_create_and_init_fn)(
-    Region** region,
-    const char* idf,
-    Filter* filter,
-    const char* file,
-    unsigned int line,
-    const char* func
-) = NULL;
-static int (*region_define_fn)(
-    Region** region,
-    const char* idf,
-    Filter* filter,
-    const char* file,
-    unsigned int line,
-    const char* func
-) = NULL;
-static int (*region_begin_fn)(Region* region) = NULL;
-static int (*region_end_fn)(Region* region) = NULL;
-static int (*region_finalize_fn)(Region* region) = NULL;
-static int (*print_all_fn)(FILE* f) = NULL;
+static DevicePtrArray (*ema_get_devices_fn)() = NULL;
+static char* (*ema_get_device_name_fn)() = NULL;
+static unsigned long long (*ema_device_get_energy_fn)() = NULL;
 
 /* Plugin specific EMA functions */
+int _EMA_load_symbol(void** container, const char* name)
+{
+    *container = dlsym(ema_handle, name);
+    char* error = dlerror();
+    
+    if (!(*container) || error) {
+        slurm_error(error);
+        return 1;
+    }
+    return 0;
+}
+
 int _EMA_init(const char* path)
 {
 
@@ -60,77 +55,20 @@ int _EMA_init(const char* path)
         return 1;
     }
 
-    ema_init_fn = dlsym(ema_handle, "EMA_init");
-    char* error = dlerror();
+    int err = _EMA_load_symbol((void**)&ema_init_fn, "EMA_init");
+    if (err) return err;
 
-    if (!ema_init_fn || error) {
-        slurm_error(error);
-        dlclose(ema_handle);
-        return 1;
-    }
+    err = _EMA_load_symbol((void**)&ema_finalize_fn, "EMA_finalize");
+    if (err) return err;
 
-    ema_finalize_fn = dlsym(ema_handle, "EMA_finalize");
-    error = dlerror();
+    err = _EMA_load_symbol((void*)&ema_get_devices_fn, "EMA_get_devices");
+    if (err) return err;
 
-    if (!ema_finalize_fn || error) {
-        slurm_error(error);
-        dlclose(ema_handle);
-        return 1;
-    }
+    err = _EMA_load_symbol((void*)&ema_get_device_name_fn, "EMA_get_device_name");
+    if (err) return err;
 
-    region_create_and_init_fn = dlsym(ema_handle, "EMA_region_create_and_init");
-    error = dlerror();
-
-    if (!region_create_and_init_fn || error) {
-        slurm_error(error);
-        dlclose(ema_handle);
-        return 1;
-    }
-
-    region_define_fn = dlsym(ema_handle, "EMA_region_define");
-    error = dlerror();
-
-    if (!region_define_fn || error) {
-        slurm_error(error);
-        dlclose(ema_handle);
-        return 1;
-    }
-
-    region_begin_fn = dlsym(ema_handle, "EMA_region_begin");
-    error = dlerror();
-
-    if (!region_begin_fn || error) {
-        slurm_error(error);
-        dlclose(ema_handle);
-        return 1;
-    }
-
-    region_end_fn = dlsym(ema_handle, "EMA_region_end");
-    error = dlerror();
-
-    if (!region_end_fn || error) {
-        slurm_error(error);
-        dlclose(ema_handle);
-        return 1;
-    }
-
-    region_finalize_fn = dlsym(ema_handle, "EMA_region_finalize");
-    error = dlerror();
-
-    if (!region_finalize_fn || error) {
-        slurm_error(error);
-        dlclose(ema_handle);
-        return 1;
-    }
-
-    print_all_fn = dlsym(ema_handle, "EMA_print_all");
-    error = dlerror();
-
-    if (!print_all_fn || error) {
-        slurm_error(error);
-        dlclose(ema_handle);
-        return 1;
-    }
+    err = _EMA_load_symbol((void*)&ema_device_get_energy_fn, "EMA_get_energy_uj");
+    if (err) return err;
 
     return 0;
 }
@@ -145,9 +83,6 @@ void _EMA_fini()
         slurm_error(dlerror());
     }
 }
-
-/* EMA Region */
-static Region* region = NULL;
 
 //////////////////////////////
 // Data obtaining functions
@@ -230,28 +165,6 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         slurm_info("\tLD lib path: %s", ld_path);
         slurm_info("\tLib path: %s", lib_path);
 
-        slurm_info("Defining EMA region...");
-        int err = region_define_fn(
-            &region,
-            "slurm_job_region",
-            NULL,
-            __FILE__,
-            207,
-            __func__
-        );
-        if (err) {
-            slurm_error("Failed to create and initialize EMA Region!");
-            return SLURM_ERROR;
-        }
-
-        slurm_info("Starting EMA region...");
-        err = region_begin_fn(region);
-        if (err) {
-            slurm_error("Failed to start EMA Region!");
-            return SLURM_ERROR;
-        }
-
-
 	return SLURM_SUCCESS;
 }
 
@@ -261,20 +174,6 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 
         slurm_info("Epilog: %s", plugin_name);
         slurm_info("\tJob ID: %d", jobid);
-
-        slurm_info("Ending EMA region...");
-        int err = region_end_fn(region);
-        if (err) {
-            slurm_error("Failed to end EMA Region!");
-            return SLURM_ERROR;
-        }
-
-        slurm_info("Printing EMA measurements to stdout...");
-        err = print_all_fn(stdout);
-        if (err) {
-            slurm_error("EMA print all function failed! ");
-            return SLURM_ERROR;
-        }
         
 	return SLURM_SUCCESS;
 }
