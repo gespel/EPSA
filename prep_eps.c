@@ -174,6 +174,13 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 
         slurm_info("Epilog: %s", plugin_name);
         slurm_info("\tJob ID: %d", jobid);
+
+        DevicePtrArray devices = ema_get_devices_fn();
+
+        slurm_info("Num EMA devices: %ld", devices.size);
+        slurm_info("EMA devices:");
+        for (size_t i = 0; i < devices.size; i++)
+            slurm_info("\t%s", ema_get_device_name_fn(devices.array[i]));
         
 	return SLURM_SUCCESS;
 }
