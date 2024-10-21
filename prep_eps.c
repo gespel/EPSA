@@ -40,6 +40,9 @@ DevicePtrArray devices;
 static char* ema_lib_path = "/tmp/EMA/lib/libEMA.so";
 static void* ema_handle = NULL;
 
+Measurements e1 = NULL;
+Measurements e0 = NULL;
+
 /* EMA function pointers */
 static int (*ema_init_fn)(EMA_init_cb) = NULL;
 static int (*ema_finalize_fn)() = NULL;
