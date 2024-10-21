@@ -237,12 +237,28 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
         slurm_info("Epilog: %s", plugin_name);
         slurm_info("\tJob ID: %d", jobid);
 
-        DevicePtrArray devices = ema_get_devices_fn();
+        e1 = _EMA_get_energy();
 
-        slurm_info("Num EMA devices: %ld", devices.size);
-        slurm_info("EMA devices:");
+        Measurements res = malloc(devices.size * sizeof(unsigned long long));
+
         for (size_t i = 0; i < devices.size; i++)
-            slurm_info("\t%s", ema_get_device_name_fn(devices.array[i]));
+        {
+            res[i] = e1[i] - e0[i];
+        }
+
+        _EMA_log_energy(res);
+
+        unsigned long long total_energy = 0;
+
+        for (size_t i = 0; i < devices.size; i++)
+        {
+            total_energy = total_energy + res[i];
+        }
+
+        slurm_info("Total energy: %lld", total_energy);
+
+        free(e1);
+        free(e0);
         
 	return SLURM_SUCCESS;
 }
