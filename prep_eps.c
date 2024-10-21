@@ -42,6 +42,7 @@ static void* ema_handle = NULL;
 
 Measurements e1 = NULL;
 Measurements e0 = NULL;
+Measurements res = NULL;
 
 /* EMA function pointers */
 static int (*ema_init_fn)(EMA_init_cb) = NULL;
@@ -51,18 +52,15 @@ static char* (*ema_get_device_name_fn)() = NULL;
 static unsigned long long (*ema_device_get_energy_fn)() = NULL;
 
 /* Plugin specific EMA functions */
-Measurements _EMA_get_energy()
+void _EMA_get_energy(Measurements m)
 {
+    if (!devices.size) return;
     slurm_info("Getting energy values...");
-    if (!devices.size) return NULL;
 
-    Measurements m = malloc(devices.size * sizeof(unsigned long long));
     for (size_t i = 0; i < devices.size; i++)
     {
         m[i] = ema_device_get_energy_fn(devices.array[i]);
     }
-
-    return m;
 }
 
 void _EMA_log_energy(const Measurements m)
@@ -184,6 +182,14 @@ extern int init(void)
            return SLURM_ERROR;
         }
 
+        devices = ema_get_devices_fn();
+
+        _EMA_log_devices();
+
+        e1 = malloc(devices.size * sizeof(unsigned long long));
+        e0 = malloc(devices.size * sizeof(unsigned long long));
+        res = malloc(devices.size * sizeof(unsigned long long));
+
 	return SLURM_SUCCESS;
 }
 
@@ -199,6 +205,10 @@ extern void fini(void)
             slurm_error("Failed to finalize EMA!");
         }
 
+        free(e1);
+        free(e0);
+        free(res);
+
         _EMA_fini();
 }
 
@@ -206,25 +216,9 @@ extern void prep_p_register_callbacks(prep_callbacks_t* callbacks) {}
 
 extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
 {
-        uint32_t jobid = get_jobid_from_env(job_env);
-        uint32_t uid = get_userid_from_env(job_env);
-
         slurm_info("Prolog: %s", plugin_name);
-        slurm_info("\tJob ID: %d", jobid);
-        slurm_info("\tUser ID: %d", uid);
 
-        char* ld_path = getenv("LD_LIBRARY_PATH");
-        char* lib_path = getenv("LIBRARY_PATH");
-
-        slurm_info("\tLD lib path: %s", ld_path);
-        slurm_info("\tLib path: %s", lib_path);
-
-        devices = ema_get_devices_fn();
-
-        _EMA_log_devices();
-
-        e0 = _EMA_get_energy();
-
+        _EMA_get_energy(e0);
         _EMA_log_energy(e0);
 
 	return SLURM_SUCCESS;
@@ -237,9 +231,7 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
         slurm_info("Epilog: %s", plugin_name);
         slurm_info("\tJob ID: %d", jobid);
 
-        e1 = _EMA_get_energy();
-
-        Measurements res = malloc(devices.size * sizeof(unsigned long long));
+        _EMA_get_energy(e1);
 
         for (size_t i = 0; i < devices.size; i++)
         {
@@ -257,9 +249,6 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 
         slurm_info("Total energy: %lld", total_energy);
 
-        free(e1);
-        free(e0);
-        free(res);
         
 	return SLURM_SUCCESS;
 }
