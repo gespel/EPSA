@@ -51,6 +51,20 @@ static char* (*ema_get_device_name_fn)() = NULL;
 static unsigned long long (*ema_device_get_energy_fn)() = NULL;
 
 /* Plugin specific EMA functions */
+Measurements _EMA_get_energy()
+{
+    slurm_info("Getting energy values...");
+    if (!devices.size) return NULL;
+
+    Measurements m = malloc(devices.size * sizeof(unsigned long long));
+    for (size_t i = 0; i < devices.size; i++)
+    {
+        m[i] = ema_device_get_energy_fn(devices.array[i]);
+    }
+
+    return m;
+}
+
 int _EMA_load_symbol(void** container, const char* name)
 {
     *container = dlsym(ema_handle, name);
