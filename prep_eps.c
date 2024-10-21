@@ -17,6 +17,11 @@ const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
 
 /////////////////////////////
+// Internal Data Structures
+/////////////////////////////
+typedef unsigned long long* Measurements;
+
+/////////////////////////////
 // Logging/Utils
 /////////////////////////////
 extern void slurm_error (const char* format, ...);
