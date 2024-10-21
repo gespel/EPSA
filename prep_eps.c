@@ -35,6 +35,8 @@ void slurm_warn(const char* msg)
 // EMA
 //////////////////////////////
 
+DevicePtrArray devices;
+
 static char* ema_lib_path = "/tmp/EMA/lib/libEMA.so";
 static void* ema_handle = NULL;
 
