@@ -259,6 +259,7 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 
         free(e1);
         free(e0);
+        free(res);
         
 	return SLURM_SUCCESS;
 }
