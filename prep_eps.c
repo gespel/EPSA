@@ -65,6 +65,14 @@ Measurements _EMA_get_energy()
     return m;
 }
 
+void _EMA_log_energy(const Measurements m)
+{
+        for (size_t i = 0; i < devices.size; i++)
+            slurm_info("%s: %lld", ema_get_device_name_fn(
+                devices.array[i]), m[i]
+            );
+}
+
 int _EMA_load_symbol(void** container, const char* name)
 {
     *container = dlsym(ema_handle, name);
