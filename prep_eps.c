@@ -260,8 +260,6 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
         slurm_info("Ctld_prolog: %s", plugin_name);
         slurm_info("\tJob ID: %d", jobid);
 
-        _EMA_log_devices();
-
 	return SLURM_SUCCESS;
 }
 
