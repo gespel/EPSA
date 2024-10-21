@@ -12,11 +12,19 @@
 
 #define P_NAME "PrEp-EPS: "
 
-extern void slurm_error (const char* format, ...);
-
 const char plugin_name[] = "EPS PrEp plugin";
 const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
+
+/////////////////////////////
+// Logging/Utils
+/////////////////////////////
+extern void slurm_error (const char* format, ...);
+
+void slurm_warn(const char* msg)
+{
+    slurm_info("warn: %s", msg);
+}
 
 //////////////////////////////
 // EMA
