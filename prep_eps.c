@@ -88,6 +88,7 @@ void _EMA_log_devices()
 
 int _EMA_load_symbol(void** container, const char* name)
 {
+    slurm_info("Loading symbol: %s...", name);
     *container = dlsym(ema_handle, name);
     char* error = dlerror();
     
