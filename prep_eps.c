@@ -219,6 +219,14 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         slurm_info("\tLD lib path: %s", ld_path);
         slurm_info("\tLib path: %s", lib_path);
 
+        devices = ema_get_devices_fn();
+
+        _EMA_log_devices();
+
+        e0 = _EMA_get_energy();
+
+        _EMA_log_energy(e0);
+
 	return SLURM_SUCCESS;
 }
 
