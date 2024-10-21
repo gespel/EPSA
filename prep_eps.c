@@ -73,6 +73,19 @@ void _EMA_log_energy(const Measurements m)
             );
 }
 
+void _EMA_log_devices()
+{
+        if (!devices.size) {
+            slurm_warn("No EMA devices!");
+            return;
+        };
+
+        slurm_info("Num EMA devices: %ld", devices.size);
+        slurm_info("EMA devices:");
+        for (size_t i = 0; i < devices.size; i++)
+            slurm_info("\t%s", ema_get_device_name_fn(devices.array[i]));
+}
+
 int _EMA_load_symbol(void** container, const char* name)
 {
     *container = dlsym(ema_handle, name);
