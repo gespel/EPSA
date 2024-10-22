@@ -7,21 +7,24 @@ SLURM_BUILD = $(SLURM_VERSION)
 SLURM_BUILD_DIR = $(HOME)/slurm_build
 SLURM_SRC_DIR = $(HOME)/src/slurm
 
-EMA_INSTALL_DIR = /tmp/EMA
-EMA_INCLUDE_DIR = $(EMA_INSTALL_DIR)/include
-EMA_LIB_DIR = $(EMA_INSTALL_DIR)/lib
-
 PLUGIN_TYPE = prep
 PLUGIN_NAME = eps
 PLUGIN_FILE = $(PLUGIN_TYPE)_$(PLUGIN_NAME).so
+SPANK_PLUGIN_FILE = $(PLUGIN_NAME).so
 
 SRC_FILE = prep_eps.c
+SPANK_SRC_FILE = eps.c
 
-CC      = gcc
-CFLAGS  ?= -Wall -fPIC -I$(SLURM_BUILD_DIR) -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR) -I$(EMA_INCLUDE_DIR) -L$(EMA_LIB_DIR) -lEMA
-LDFLAGS ?= -shared
+CC              = gcc
+CFLAGS          ?= -Wall -fPIC -I$(SLURM_BUILD_DIR) -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR) -lEMA
+SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR) -lEMA
+LDFLAGS         ?= -shared
 
-all: $(PLUGIN_FILE)
+all: prep spank
+
+prep: $(PLUGIN_FILE)
+
+spank: $(SPANK_PLUGIN_FILE)
 
 test:
 	gcc test.c -o test
@@ -29,6 +32,9 @@ test:
 default: $(PLUGIN_FILE)
 
 $(PLUGIN_FILE): $(SRC_FILE)
+	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
+
+$(SPANK_PLUGIN_FILE): $(SPANK_SRC_FILE)
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 install: $(PLUGIN_FILE)
