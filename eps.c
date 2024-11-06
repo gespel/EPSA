@@ -1,11 +1,7 @@
-#include <slurm/spank.h>
 #include <stddef.h>
-#include <stdio.h>
-#include <time.h>
-#include <unistd.h>
-#include <stdlib.h>
 #include <stdint.h>
-#include <src/common/slurm_protocol_api.c>
+
+#include <slurm/spank.h>
 
 #define PLUGIN_NAME "Spank/Eps"
 
@@ -27,7 +23,7 @@ static int _ema_opt_process(int val, const char *optarg, int remote)
 {
     if (optarg == NULL)
     {
-        printf("args: NULL\n");
+        slurm_info("args: NULL\n");
         return ESPANK_SUCCESS;
     }
 
@@ -64,12 +60,12 @@ int slurm_spank_exit(spank_t sp, int ac, char **av) {
 
 int slurm_spank_job_prolog (spank_t sp, int ac, char **av) {
     slurm_info("Prolog: " PLUGIN_NAME);
-    slurm_spank_log("%s: %s", "slurm_spank_log", __func__);
     return 0;
 }
 
 int slurm_spank_job_epilog (spank_t sp, int ac, char **av) {
     slurm_info("Epilog: " PLUGIN_NAME);
+
     uint32_t nid, jid;
 
     spank_get_item(sp, S_JOB_NODEID, &nid);
