@@ -9,9 +9,11 @@ const char plugin_name[] = "EPS PrEp plugin";
 const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
 
-//////////////////////////////
-// Slurm Plugin API hooks
-/////////////////////////////
+/********************************
+ *
+ * Slurm Plugin API hooks
+ *
+ ********************************/
 
 extern int init(void)
 {

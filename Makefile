@@ -1,4 +1,4 @@
-# Makefile example for PrEp Plugin
+# Makefile for EPS Plugins
 
 SLURM_ROOT_DIR = /usr
 SLURM_INC_DIR = $(SLURM_ROOT_DIR)/local/slurm/include/

@@ -12,7 +12,7 @@ static int _ema_opt_process(int, const char*, int);
 /* Provide a --eps option. */
 struct spank_option spank_options[] =
 {
-    { "eps", "", "Enables EMA plugin for Slurm.", 0, 0,
+    { "eps", "", "Enables EMA (Spank) plugin for Slurm.", 0, 0,
         (spank_opt_cb_f) _ema_opt_process
     },
     SPANK_OPTIONS_TABLE_END
@@ -29,11 +29,6 @@ static int _ema_opt_process(int val, const char *optarg, int remote)
 
     return ESPANK_ERROR;
 }
-/********************************
- *
- * Utility functions
- *
- ********************************/
 
 /********************************
  *
