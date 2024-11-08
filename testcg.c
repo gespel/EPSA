@@ -3,9 +3,10 @@
 #include <unistd.h>
 
 int main() {
-    printf("Hello, Test!\n");
-    printf("USER: %s\n", getenv("USER"));
-    system("id");
+    printf("Hello, Cgroup Test!\n");
+
+    printf("Cgroup:\n");
+    // TODO: Realize cgroup testing...
 
     sleep(2);
 
