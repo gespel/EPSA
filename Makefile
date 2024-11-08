@@ -28,6 +28,7 @@ spank: $(SPANK_PLUGIN_FILE)
 
 test:
 	gcc test.c -o test
+	gcc testcg.c -o testcg
 
 default: $(PLUGIN_FILE)
 
@@ -42,6 +43,6 @@ install: $(PLUGIN_FILE)
 
 clean:
 	rm -f $(PLUGIN_FILE)
-	rm -f test
+	rm -f test testcg
 
 mrproper: clean
