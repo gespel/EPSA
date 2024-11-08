@@ -3,10 +3,11 @@
 #include <unistd.h>
 
 int main() {
-    printf("Hello, World!\n");
-    const char* pwd = getenv("USER");
-    printf("USER: %s\n", pwd);
+    printf("Hello, Test!\n");
+    printf("USER: %s\n", getenv("USER"));
     system("id");
+
     sleep(2);
+
     return 0;
 }

@@ -3,10 +3,12 @@
 #include <unistd.h>
 
 int main() {
-    printf("Hello, World!\n");
-    const char* pwd = getenv("USER");
-    printf("USER: %s\n", pwd);
-    system("id");
+    printf("Hello, Cgroup Test!\n");
+
+    printf("Cgroup:\n", );
+    // TODO: Realize cgroup testing...
+
     sleep(2);
+
     return 0;
 }
