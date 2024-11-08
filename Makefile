@@ -1,5 +1,5 @@
 # Makefile example for PrEp Plugin
-HOME = /home/yahdzhyiev
+
 SLURM_ROOT_DIR = /usr
 SLURM_INC_DIR = $(SLURM_ROOT_DIR)/local/slurm/include/
 SLURM_LIB_DIR = /usr/local/slurm/lib/slurm
