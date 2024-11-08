@@ -11,6 +11,9 @@ EMA_DIR = /perfacct/slurm-libs/EMA
 
 PLUGIN_TYPE = prep
 PLUGIN_NAME = eps
+
+PLUGINS_DIR = /perfacct/slurm-plugins
+
 PLUGIN_FILE = $(PLUGIN_TYPE)_$(PLUGIN_NAME).so
 SPANK_PLUGIN_FILE = $(PLUGIN_NAME).so
 
@@ -42,7 +45,8 @@ $(SPANK_PLUGIN_FILE): $(SPANK_SRC_FILE)
 	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 install: $(PLUGIN_FILE)
-	install -m 755 $(PLUGIN_FILE) $(SLURM_LIB_DIR)
+	install -m 755 $(PLUGIN_FILE) $(PLUGINS_DIR)
+	install -m 755 $(SPANK_PLUGIN_FILE) $(PLUGINS_DIR)
 
 clean:
 	rm -f $(PLUGIN_FILE)
