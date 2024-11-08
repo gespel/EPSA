@@ -1,30 +1,43 @@
-# EMA Plugin for Slurm
+# EMA Plugin(s) for Slurm
 
-Uses PreEp (Prolog/Epilog) Plugin API from Slurm to measure enery on compute
+Uses PreEp (Prolog/Epilog) Plugin API from Slurm to measure energy on compute
 nodes and write them alongside with some additional information to connected
-DB.
+DB. \*
 
-## Build
+\* - Currently work in progress.
 
-- `cd` into project's root directory.
-- run `make` to build plugin's `.so` file.
-- run `make test` to build dummy test executable that you can later use for
-  tests with `srun`.
+## Build and Install
+
+- `cd` into project's root directory;
+- run `make` to build plugins `.so` files;
+- run `make test` to build dummy test executables that you can later use for
+  tests with `srun` or standalone;
+- run `make install` (currently will simply run `install` commands for both plugin files).
 
 ## Update nodes
 
-This repository holds two bash scripts to speed up and simplify the process
-of cluster nodes updation/reloading after rebuilding the plugin:
+- Controller node:
 
-   - `update_head.sh` - for use on cluster's head node.
-   - `update_node.sh` - for use on cluster's compute nodes.
+   ```bash
+   sudo systemctl restart slurmctld.service
+   ```
 
-You can run them or inspect their contents to learn which steps are required to
-perform them manually later.
+- Compute nodes:
+
+   ```bash
+   sudo systemctl restart slurmd.service
+   ```
 
 ### Suggested handy aliases
 
 ```bash
-alias updh="/path/to/root/dir/update_head.sh"
-alias updn="/path/to/root/dir/update_node.sh"
+alias remake="make clean && make && make test"
+
+alias screstart="sudo systemctl restart slurmctld.service"
+alias scstatus="sudo systemctl status slurmctld.service"
+alias sclog="sudo journalctl -xefu slurmctld.service"
+
+alias sdrestart="sudo systemctl restart slurmd.service"
+alias sdstatus="sudo systemctl status slurmd.service"
+alias sdlog="sudo journalctl -xefu slurmd.service"
 ```
