@@ -5,7 +5,7 @@
 int main() {
     printf("Hello, Cgroup Test!\n");
 
-    printf("Cgroup:\n", );
+    printf("Cgroup:\n");
     // TODO: Realize cgroup testing...
 
     sleep(2);
