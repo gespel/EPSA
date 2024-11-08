@@ -6,27 +6,23 @@ DB. \*
 
 \* - Currently work in progress.
 
-## Build and Install
+## Build
 
 - `cd` into project's root directory;
 - run `make` to build plugins `.so` files;
 - run `make test` to build dummy test executables that you can later use for
   tests with `srun` or standalone;
-- run `make install` (currently will simply run `install` commands for both plugin files).
 
 ## Update nodes
 
-- Controller node:
+Repository holds two utility shell scripts:
+   - `update_head.sh`
+   - `update_node.sh`
 
-   ```bash
-   sudo systemctl restart slurmctld.service
-   ```
+for controller and compute nodes respectively.
 
-- Compute nodes:
-
-   ```bash
-   sudo systemctl restart slurmd.service
-   ```
+Simply run them on corresponding nodes, in summary they just copy freshly compiled `.so`
+files to required locations and restart the services.
 
 ### Suggested handy aliases
 
