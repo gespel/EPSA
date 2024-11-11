@@ -1,7 +1,7 @@
 #include <slurm/slurm.h>
 #include <slurm/slurm_errno.h>
 
-#include <EMA.h>
+#include <eps_ema.h>
 #include <eps_utils.h>
 
 #include "src/interfaces/prep.h"
@@ -9,6 +9,14 @@
 const char plugin_name[] = "EPS PrEp plugin";
 const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
+
+/********************************
+ *
+ * Globals
+ *
+ ********************************/
+
+ DevicePtrArray devices;
 
 /********************************
  *
@@ -28,6 +36,10 @@ extern int init(void)
            slurm_info("EMA Initialization Error: %d", err);
            return SLURM_ERROR;
         }
+
+        devices = EMA_get_devices();
+        
+        log_ema_devices();
 
 	return SLURM_SUCCESS;
 }
