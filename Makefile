@@ -8,6 +8,7 @@ SLURM_BUILD_DIR = $(HOME)/slurm_build
 SLURM_SRC_DIR = $(HOME)/src/slurm
 
 EMA_DIR = /perfacct/slurm-libs/EMA
+PQ_DIR = /perfacct/slurm-libs/postgresql
 
 PLUGIN_TYPE = prep
 PLUGIN_NAME = eps
@@ -24,7 +25,7 @@ CC              = gcc
 CFLAGS          ?= -Wall -fPIC -Iinclude \
                    -I$(SLURM_BUILD_DIR) -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
 SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
-LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -lEMA
+LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -L$(PQ_DIR)/libs -lEMA -lpq
 
 all: prep spank
 

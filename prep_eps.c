@@ -2,6 +2,7 @@
 #include <slurm/slurm_errno.h>
 
 #include <eps_data.h>
+#include <eps_db.h>
 #include <eps_ema.h>
 #include <eps_utils.h>
 
@@ -27,6 +28,8 @@ const uint32_t plugin_version = SLURM_VERSION_NUMBER;
  unsigned long long tstart, tend;
  time_t timestamp;
 
+ PGconn* db_connection;
+
 /********************************
  *
  * Slurm Plugin API hooks
@@ -38,6 +41,9 @@ extern int init(void)
         slurm_info("Init: %s", plugin_name);
 
         if (!running_in_slurmd()) return SLURM_SUCCESS;
+
+        slurm_info("Connecting to DB...");
+        db_connection = PQconnectdb(DB_CONN_INFO);
 
         slurm_info("Initializing EMA...");
         int err = EMA_init(NULL);
@@ -62,6 +68,9 @@ extern void fini(void)
         slurm_info("Fini: %s", plugin_name);
 
         if (!running_in_slurmd()) return;
+
+        slurm_info("Finishing DB connection...");
+        PQfinish(db_connection);
 
         slurm_info("Finalizing EMA...");
         int err = EMA_finalize();
