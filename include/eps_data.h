@@ -1,5 +1,5 @@
-#ifndef _EPS_H
-#define _EPS_H
+#ifndef _EPS_DATA_H
+#define _EPS_DATA_H
 
 #include <EMA.h>
 
