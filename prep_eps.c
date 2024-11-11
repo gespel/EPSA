@@ -43,10 +43,11 @@ extern int init(void)
         if (!running_in_slurmd()) return SLURM_SUCCESS;
 
         slurm_info("Connecting to DB...");
-        db_connection = PQconnectdb(DB_CONN_INFO);
+        int err = connect_db();
+        if (err) return SLURM_ERROR;
 
         slurm_info("Initializing EMA...");
-        int err = EMA_init(NULL);
+        err = EMA_init(NULL);
         if (err) {
            slurm_info("EMA Initialization Error: %d", err);
            return SLURM_ERROR;
@@ -69,8 +70,8 @@ extern void fini(void)
 
         if (!running_in_slurmd()) return;
 
-        slurm_info("Finishing DB connection...");
-        PQfinish(db_connection);
+        //slurm_info("Finishing DB connection...");
+        //PQfinish(db_connection);
 
         slurm_info("Finalizing EMA...");
         int err = EMA_finalize();

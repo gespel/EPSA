@@ -7,4 +7,6 @@
 //       configurable.
 #define DB_CONN_INFO "postgresql://test:testtest2@10.10.10.142/test"
 
+int connect_db();
+
 #endif
