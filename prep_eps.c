@@ -160,6 +160,7 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
         eps_meta_data_t* data = get_metadata(job_ptr);
 
         // TODO: Write the data to the DB...
+        insert_meta_data(db_connection, data);
         log_metadata(data);
         free_metadata(data);
 
