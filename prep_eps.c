@@ -40,11 +40,14 @@ extern int init(void)
 {
         slurm_info("Init: %s", plugin_name);
 
-        if (!running_in_slurmd()) return SLURM_SUCCESS;
-
         slurm_info("Connecting to DB...");
         int err = connect_db();
-        if (err) return SLURM_ERROR;
+        if (err) {
+            PQfinish(db_connection);
+            return SLURM_ERROR;
+        }
+
+        if (!running_in_slurmd()) return SLURM_SUCCESS;
 
         slurm_info("Initializing EMA...");
         err = EMA_init(NULL);
@@ -68,10 +71,10 @@ extern void fini(void)
 {
         slurm_info("Fini: %s", plugin_name);
 
-        if (!running_in_slurmd()) return;
+        slurm_info("Finishing DB connection...");
+        PQfinish(db_connection);
 
-        //slurm_info("Finishing DB connection...");
-        //PQfinish(db_connection);
+        if (!running_in_slurmd()) return;
 
         slurm_info("Finalizing EMA...");
         int err = EMA_finalize();
@@ -102,6 +105,18 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 {
         slurm_info("Epilog: %s", plugin_name);
 
+        slurm_info("Checking DB connection...");
+        int connection_is_not_ok = check_connection(db_connection);
+
+        if (connection_is_not_ok) {
+            slurm_error(
+                "problems with db connection: %s",
+                PQerrorMessage(db_connection)
+            );
+            PQfinish(db_connection);
+            return SLURM_ERROR;
+        }
+
         tend = EMA_get_time_in_us();
         measure_energy(e1);
 
@@ -128,6 +143,19 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 {
         slurm_info("Ctld_prolog: %s", plugin_name);
+
+        slurm_info("Checking DB connection...");
+        int connection_is_not_ok = check_connection(db_connection);
+
+        if (connection_is_not_ok) {
+            slurm_error(
+                "problems with db connection: %s",
+                PQerrorMessage(db_connection)
+            );
+            PQfinish(db_connection);
+            return SLURM_ERROR;
+        }
+
         slurm_info("Collecting job metadata...");
         eps_meta_data_t* data = get_metadata(job_ptr);
 
@@ -141,6 +169,19 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
 {
         slurm_info("Ctld_epilog: %s", plugin_name);
+
+        slurm_info("Checking DB connection...");
+        int connection_is_not_ok = check_connection(db_connection);
+
+        if (connection_is_not_ok) {
+            slurm_error(
+                "problems with db connection: %s",
+                PQerrorMessage(db_connection)
+            );
+            PQfinish(db_connection);
+            return SLURM_ERROR;
+        }
+
         slurm_info("Collecting job data...");
         // TODO: Provide real energy value...
         eps_job_data_t* data = get_job_data(job_ptr, 42);

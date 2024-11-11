@@ -9,4 +9,6 @@
 
 int connect_db();
 
+int check_connection(PGconn* connection);
+
 #endif

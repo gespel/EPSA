@@ -20,3 +20,8 @@ int connect_db()
 
     return 0;
 }
+
+int check_connection(PGconn* connection)
+{
+    return PQstatus(connection) != CONNECTION_OK ? 1 : 0;
+}
