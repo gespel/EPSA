@@ -2,6 +2,7 @@
 #include <slurm/slurm_errno.h>
 
 #include <EMA.h>
+#include <eps_utils.h>
 
 #include "src/interfaces/prep.h"
 
