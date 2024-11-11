@@ -18,6 +18,11 @@ const uint32_t plugin_version = SLURM_VERSION_NUMBER;
 
  DevicePtrArray devices;
 
+ Measurements e0;
+ Measurements e1;
+ //TODO: Find a better name...
+ Measurements res;
+
 /********************************
  *
  * Slurm Plugin API hooks
@@ -41,6 +46,10 @@ extern int init(void)
         
         log_ema_devices();
 
+        e0 = malloc(devices.size * sizeof(unsigned long long));
+        e1 = malloc(devices.size * sizeof(unsigned long long));
+        res = malloc(devices.size * sizeof(unsigned long long));
+
 	return SLURM_SUCCESS;
 }
 
@@ -55,6 +64,10 @@ extern void fini(void)
         if (err) {
             slurm_info("Failed to finalize EMA!");
         }
+
+        free(e0);
+        free(e1);
+        free(res);
 }
 
 extern void prep_p_register_callbacks(prep_callbacks_t* callbacks) {}
@@ -63,12 +76,23 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
 {
         slurm_info("Prolog: %s", plugin_name);
 
+        measure_energy(e0);
+
 	return SLURM_SUCCESS;
 }
 
 extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 {
         slurm_info("Epilog: %s", plugin_name);
+
+        measure_energy(e1);
+
+        for (size_t i = 0; i < devices.size; i++)
+        {
+            res[i] = e1[i] - e0[i];
+        }
+
+        log_measurements(res);
         
 	return SLURM_SUCCESS;
 }

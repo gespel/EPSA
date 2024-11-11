@@ -15,3 +15,25 @@ void log_ema_devices()
     for (size_t i = 0; i < devices.size; i++)
         slurm_info("\t%s", EMA_get_device_name(devices.array[i]));
 }
+
+void measure_energy(Measurements m)
+{
+    if (!devices.size) {
+        slurm_warn("No devices to measure energy!");
+        return;
+    };
+
+    slurm_info("Measuring energy values...");
+    for (size_t i = 0; i < devices.size; i++)
+    {
+        m[i] = EMA_get_energy_uj(devices.array[i]);
+    }
+}
+
+void log_measurements(Measurements m)
+{
+    for (size_t i = 0; i < devices.size; i++)
+            slurm_info("%s: %lld", EMA_get_device_name(
+                devices.array[i]), m[i]
+            );
+}
