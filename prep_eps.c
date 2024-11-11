@@ -1,6 +1,7 @@
 #include <slurm/slurm.h>
 #include <slurm/slurm_errno.h>
 
+#include <eps_data.h>
 #include <eps_ema.h>
 #include <eps_utils.h>
 
@@ -22,6 +23,9 @@ const uint32_t plugin_version = SLURM_VERSION_NUMBER;
  Measurements e1;
  //TODO: Find a better name...
  Measurements res;
+
+ unsigned long long tstart, tend;
+ time_t timestamp;
 
 /********************************
  *
@@ -78,6 +82,9 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
 
         measure_energy(e0);
 
+        tstart = EMA_get_time_in_us();
+        time(&timestamp);
+
 	return SLURM_SUCCESS;
 }
 
@@ -85,21 +92,38 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 {
         slurm_info("Epilog: %s", plugin_name);
 
+        tend = EMA_get_time_in_us();
         measure_energy(e1);
 
         for (size_t i = 0; i < devices.size; i++)
         {
             res[i] = e1[i] - e0[i];
+            eps_device_data_t* data = get_device_data(
+                devices.array[i],
+                job_env,
+                res[i],
+                &timestamp,
+                tstart,
+                tend
+            );
+
+            // TODO: Write the data to the DB...
+            log_device_data(data);
+            free_device_data(data);
         }
 
-        log_measurements(res);
-        
 	return SLURM_SUCCESS;
 }
 
 extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 {
         slurm_info("Ctld_prolog: %s", plugin_name);
+        slurm_info("Collecting job metadata...");
+        eps_meta_data_t* data = get_metadata(job_ptr);
+
+        // TODO: Write the data to the DB...
+        log_metadata(data);
+        free_metadata(data);
 
 	return SLURM_SUCCESS;
 }
@@ -107,6 +131,13 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
 {
         slurm_info("Ctld_epilog: %s", plugin_name);
+        slurm_info("Collecting job data...");
+        // TODO: Provide real energy value...
+        eps_job_data_t* data = get_job_data(job_ptr, 42);
+
+        // TODO: Write the data to the DB...
+        log_job_data(data);
+        free_job_data(data);
 
 	return SLURM_SUCCESS;
 }
