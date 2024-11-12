@@ -26,6 +26,7 @@ CFLAGS          ?= -Wall -fPIC -Iinclude \
                    -I$(SLURM_BUILD_DIR) -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
 SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
 LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -L$(PQ_DIR)/libs -lEMA -lpq
+TEST_LDFLAGS    ?= -L$(PQ_DIR)/libs -lEMA -lpq
 
 TESTS_DIR  = __test__
 
@@ -38,6 +39,7 @@ spank: $(SPANK_PLUGIN_FILE)
 test:
 	$(CC) $(TESTS_DIR)/basic.c -o basic
 	$(CC) $(TESTS_DIR)/cgroup.c -o cgroup
+	$(CC) $(CFLAGS) -g src/eps_utils.c src/eps_resources.c src/eps_data.c src/eps_db.c $(TESTS_DIR)/db.c $(TEST_LDFLAGS) -o dbtest
 
 
 default: $(PLUGIN_FILE)
