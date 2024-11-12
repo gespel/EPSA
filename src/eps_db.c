@@ -57,7 +57,8 @@ int check_query_result(PGresult* result, PGconn* connection)
     return 0;
 }
 
-int row_by_userid(PGresult* res, const char* tablename, int jobid)
+int row_by_userid
+    (PGconn* db_conn, PGresult* res, const char* tablename, int jobid)
 {
     char query[MAX_QUERY_SIZE];
 
@@ -102,11 +103,10 @@ int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
 
 int select_meta_data_by_jobid(eps_meta_data_t* data, PGconn* db_conn, int jobid)
 {
-    char query[MAX_QUERY_SIZE];
-    PGresult* res;
-    PGresult* row;
+    PGresult* res = NULL;
+    PGresult* row = NULL;
 
-    if(row_by_userid(row, "meta", jobid))
+    if(row_by_userid(db_conn, row, "meta", jobid))
         return 1;
 
     data->jobid = (int) strtol(
@@ -169,14 +169,13 @@ int select_job_data_by_jobid(eps_job_data_t* data, PGconn* db_conn, int jobid)
     data->jobid = (int) strtol(
         PQgetvalue(res, 0, PQfnumber(res, "job_id")), (char **)NULL, 10
     );
-    data->userid = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(res, "user_id")), (char **)NULL, 10
+    data->energy = strtoull(
+        PQgetvalue(res, 0, PQfnumber(res, "energy")), (char **)NULL, 10
     );
-    data->nnodes = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(res, "nnodes")), (char **)NULL, 10
+    data->duration = strtoull(
+        PQgetvalue(res, 0, PQfnumber(res, "duration")), (char **)NULL, 10
     );
     data->tstart = PQgetvalue(res, 0, PQfnumber(res, "t_start"));
-    data->resources = NULL;
 
     return 0;
 }
@@ -213,7 +212,7 @@ int select_device_data_by_jobid(
     sprintf(query, "SELECT * FROM devices WHERE job_id = '%d'", jobid);
     res = PQexec(db_conn, query);
 
-    if(row_by_userid(res, "devices", jobid))
+    if(row_by_userid(db_conn, res, "devices", jobid))
         return 1;
 
     printf("User ID row: %d\n", PQfnumber(res, "user_id"));
@@ -231,25 +230,24 @@ int select_device_data_by_jobid(
     );
     data->nodename = PQgetvalue(res, 0, PQfnumber(res, "nodename"));
     data->device = PQgetvalue(res, 0, PQfnumber(res, "device"));
-    data->energy = (unsigned long long int) strtoull(
+    data->energy = strtoull(
         PQgetvalue(res, 0, PQfnumber(res, "energy")), (char **)NULL, 10
     );
 
     data->tstart = PQgetvalue(res, 0, PQfnumber(res, "t_start"));
-    data->duration = (unsigned long long int) strtoull(
-        PQgetvalue(res, 0, PQfnumber(res, "t_duration")
+    data->duration = strtoull(
+        PQgetvalue(res, 0, PQfnumber(res, "t_duration")), (char **)NULL, 10
     );
 
     // TODO: finalize
     data->device_type = NULL;
     data->exclusive = 0;
-    data->resources = NULL;
+    data->resource = NULL;
     // data->device_type = PQgetvalue(res, 0, PQfnumber(res, "device_type"));
     // data->exclusive = strtol(
     //    PQgetvalue(res, 0, PQfnumber(res, "exclusive")), (char **)NULL, 10
     //);
     // data->exclusive = PQgetvalue(res, 0, PQfnumber(res, "exclusive"));
-
 
     return 0;
 }
