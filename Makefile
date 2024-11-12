@@ -26,6 +26,8 @@ CFLAGS          ?= -Wall -fPIC \
 SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
 LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -lEMA
 
+TESTS_DIR  = __test__
+
 all: prep spank
 
 prep: $(PLUGIN_FILE)
@@ -33,8 +35,9 @@ prep: $(PLUGIN_FILE)
 spank: $(SPANK_PLUGIN_FILE)
 
 test:
-	gcc test.c -o test
-	gcc testcg.c -o testcg
+	$(CC) $(TESTS_DIR)/basic.c -o basic
+	$(CC) $(TESTS_DIR)/cgroup.c -o cgroup
+
 
 default: $(PLUGIN_FILE)
 
@@ -51,6 +54,6 @@ install: $(PLUGIN_FILE)
 clean:
 	rm -f $(PLUGIN_FILE)
 	rm -f $(SPANK_PLUGIN_FILE)
-	rm -f test testcg
+	rm -f basic cgroup
 
 mrproper: clean
