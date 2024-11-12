@@ -45,6 +45,18 @@ int insert(
     return num <= 0;
 }
 
+int check_query_result(PGresult* result, PGconn* connection)
+{
+    if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+        slurm_error(
+            "eps-db: failed to execute query: %s\n",
+            PQerrorMessage(connection)
+        );
+        return 1;
+    }
+    return 0;
+}
+
 /*********************************** META ************************************/
 /* IN db_conn, data, returns int */
 int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
