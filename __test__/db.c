@@ -1,3 +1,4 @@
+#include <eps_data.h>
 #include <eps_db.h>
 
 PGconn* connection = NULL;
@@ -29,6 +30,18 @@ int main(int argc, char** argv){
     if (err) {
         exit_on_error(err, "Connection check failed!");
     }
+
+    eps_meta_data_t* data = malloc(sizeof(eps_meta_data_t));
+
+    err = select_meta_data_by_jobid(data, connection, jid);
+
+    if (err) {
+        free_metadata(data);
+        exit_on_error(err, "Failed to read metadata from db!");
+    }
+
+    print_metadata(data);
+    free_metadata(data);
 
     /* Disconnecting DB. */
     PQfinish(connection);
