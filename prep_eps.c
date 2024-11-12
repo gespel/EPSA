@@ -131,8 +131,10 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
                 tend
             );
 
-            // TODO: Write the data to the DB...
-            log_device_data(data);
+            int err = insert_device_data(db_connection, data);
+            if (err) {
+                slurm_error("failed to write data to db");
+            }
             free_device_data(data);
         }
 
@@ -158,10 +160,13 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
         slurm_info("Collecting job metadata...");
         eps_meta_data_t* data = get_metadata(job_ptr);
 
-        // TODO: Write the data to the DB...
-        insert_meta_data(db_connection, data);
-        log_metadata(data);
+        int err = insert_meta_data(db_connection, data);
         free_metadata(data);
+
+        if (err) {
+            slurm_error("failed to write data to db");
+            return SLURM_ERROR;
+        }
 
 	return SLURM_SUCCESS;
 }
@@ -186,9 +191,13 @@ extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
         // TODO: Provide real energy value...
         eps_job_data_t* data = get_job_data(job_ptr, 42);
 
-        // TODO: Write the data to the DB...
-        log_job_data(data);
+        int err = insert_job_data(db_connection, data);
         free_job_data(data);
+
+        if (err) {
+            slurm_error("failed to write data to db");
+            return SLURM_ERROR;
+        }
 
 	return SLURM_SUCCESS;
 }
