@@ -64,22 +64,21 @@ int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
     char query[MAX_QUERY_SIZE];
     char values[VALUES_BUFFER_SIZE];
 
-    // PGresult* res;
     META_DATA_VALS(data, values);
 
-    insert(query, "meta", META_COLS, values);
+    int err = insert(query, "meta", META_COLS, values);
+    if (err) {
+        slurm_error("failed to construct query");
+        return err;
+    }
 
-    //res = PQexec(connection, query);
+    PGresult* result = PQexec(connection, query);
 
-    //if(PQresultStatus(res) != PGRES_COMMAND_OK) {
-    //    slrum_error(
-    //        "EPS-Error on execution: %s\n",
-    //        PQerrorMessage(connection)
-    //    );
-    //}
+    err = check_query_result(result, connection);
 
-    //PQclear(res);
-    return 0;
+    PQclear(result);
+
+    return err;
 }
 
 /************************************ JOB ************************************/
@@ -91,12 +90,19 @@ int insert_job_data(PGconn* connection, eps_job_data_t* data)
 
     JOB_DATA_VALS(data, values);
 
-    /* TODO: check return value*/
-    insert(query, "jobs", JOB_COLS, values);
+    int err = insert(query, "jobs", JOB_COLS, values);
+    if (err) {
+        slurm_error("failed to construct query");
+        return err;
+    }
 
-    return PQresultStatus(
-            PQexec(connection, query)
-        ) != PGRES_COMMAND_OK;
+    PGresult* result = PQexec(connection, query);
+
+    err = check_query_result(result, connection);
+
+    PQclear(result);
+
+    return err;
 }
 
 /********************************** DEVICES **********************************/
@@ -108,9 +114,17 @@ int insert_device_data(PGconn* connection, eps_device_data_t* data)
 
     DEVICE_DATA_VALS(data, values);
 
-    /* TODO: check return value*/
-    insert(query, "devices", DEVICE_COLS, values);
-    return PQresultStatus(
-            PQexec(connection, query)
-        ) != PGRES_COMMAND_OK;
+    int err = insert(query, "devices", DEVICE_COLS, values);
+    if (err) {
+        slurm_error("failed to construct query");
+        return err;
+    }
+
+    PGresult* result = PQexec(connection, query);
+
+    err = check_query_result(result, connection);
+
+    PQclear(result);
+
+    return err;
 }
