@@ -50,7 +50,7 @@
         );\
     } while(0)
 
-int connect_db();
+PGconn* connect_db();
 
 int check_connection(PGconn* connection);
 

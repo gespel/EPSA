@@ -27,7 +27,7 @@ const uint32_t plugin_version = SLURM_VERSION_NUMBER;
  unsigned long long tstart, tend;
  time_t timestamp;
 
- PGconn* db_connection;
+ PGconn* db_connection = NULL;
 
 /********************************
  *
@@ -40,8 +40,16 @@ extern int init(void)
         slurm_info("Init: %s", plugin_name);
 
         slurm_info("Connecting to DB...");
-        int err = connect_db();
-        if (err) {
+        db_connection = connect_db();
+
+        slurm_info("Checking DB connection...");
+        int connection_is_not_ok = check_connection(db_connection);
+
+        if (connection_is_not_ok) {
+            slurm_error(
+                "problems with db connection: %s",
+                PQerrorMessage(db_connection)
+            );
             PQfinish(db_connection);
             return SLURM_ERROR;
         }
@@ -49,7 +57,7 @@ extern int init(void)
         if (!running_in_slurmd()) return SLURM_SUCCESS;
 
         slurm_info("Initializing EMA...");
-        err = EMA_init(NULL);
+        int err = EMA_init(NULL);
         if (err) {
            slurm_info("EMA Initialization Error: %d", err);
            return SLURM_ERROR;
