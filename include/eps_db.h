@@ -65,4 +65,10 @@ int insert_meta_data(PGconn* connection, eps_meta_data_t* data);
 int insert_job_data(PGconn* connection, eps_job_data_t* data);
 int insert_device_data(PGconn* connection, eps_device_data_t* data);
 
+int select_device_data_by_jobid(
+    eps_device_data_t* data, PGconn* db_conn, int jobid
+);
+int select_job_data_by_jobid(eps_job_data_t* data, PGconn* db_conn, int jobid);
+int select_meta_data_by_jobid(eps_meta_data_t* data, PGconn* db_conn, int jobid);
+
 #endif
