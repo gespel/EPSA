@@ -22,8 +22,7 @@ const uint32_t plugin_version = SLURM_VERSION_NUMBER;
 
  Measurements e0;
  Measurements e1;
- //TODO: Find a better name...
- Measurements res;
+ Measurements consumption;
 
  unsigned long long tstart, tend;
  time_t timestamp;
@@ -62,7 +61,7 @@ extern int init(void)
 
         e0 = malloc(devices.size * sizeof(unsigned long long));
         e1 = malloc(devices.size * sizeof(unsigned long long));
-        res = malloc(devices.size * sizeof(unsigned long long));
+        consumption = malloc(devices.size * sizeof(unsigned long long));
 
 	return SLURM_SUCCESS;
 }
@@ -84,7 +83,7 @@ extern void fini(void)
 
         free(e0);
         free(e1);
-        free(res);
+        free(consumption);
 }
 
 extern void prep_p_register_callbacks(prep_callbacks_t* callbacks) {}
@@ -122,11 +121,11 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 
         for (size_t i = 0; i < devices.size; i++)
         {
-            res[i] = e1[i] - e0[i];
+            consumption[i] = e1[i] - e0[i];
             eps_device_data_t* data = get_device_data(
                 devices.array[i],
                 job_env,
-                res[i],
+                consumption[i],
                 &timestamp,
                 tstart,
                 tend
