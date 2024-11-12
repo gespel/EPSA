@@ -81,6 +81,30 @@ int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
     return err;
 }
 
+int select_meta_data_by_jobid(eps_meta_data_t* data, PGconn* db_conn, int jobid)
+{
+    char query[MAX_QUERY_SIZE];
+    PGresult* res;
+    PGresult* row;
+
+    if(row_by_userid(row, "meta", jobid))
+        return 1;
+
+    data->jobid = (int) strtol(
+        PQgetvalue(res, 0, PQfnumber(row, "job_id")), (char **)NULL, 10
+    );
+    data->userid = (int) strtol(
+        PQgetvalue(res, 0, PQfnumber(row, "user_id")), (char **)NULL, 10
+    );
+    data->nnodes = (int) strtol(
+        PQgetvalue(res, 0, PQfnumber(row, "nnodes")), (char **)NULL, 10
+    );
+    data->tstart = PQgetvalue(res, 0, PQfnumber(row, "t_start"));
+    data->resources = NULL;
+
+    return 0;
+}
+
 /************************************ JOB ************************************/
 /* IN db_conn, data, returns int */
 int insert_job_data(PGconn* connection, eps_job_data_t* data)
@@ -105,6 +129,38 @@ int insert_job_data(PGconn* connection, eps_job_data_t* data)
     return err;
 }
 
+int select_job_data_by_jobid(eps_job_data_t* data, PGconn* db_conn, int jobid)
+{
+    char query[MAX_QUERY_SIZE];
+    PGresult* res;
+
+    sprintf(query, "SELECT * FROM jobs WHERE job_id = '%d'", jobid);
+    res = PQexec(db_conn, query);
+
+    printf("User ID row: %d\n", PQfnumber(res, "user_id"));
+    int nrows = PQntuples(res);
+    if(nrows != 1)
+    {
+        char msg[] = "Single entry expected. Found %d entries. Query: %s";
+        printf(msg, nrows, query);
+        PQclear(res);
+        return 1;
+    }
+
+    data->jobid = (int) strtol(
+        PQgetvalue(res, 0, PQfnumber(res, "job_id")), (char **)NULL, 10
+    );
+    data->userid = (int) strtol(
+        PQgetvalue(res, 0, PQfnumber(res, "user_id")), (char **)NULL, 10
+    );
+    data->nnodes = (int) strtol(
+        PQgetvalue(res, 0, PQfnumber(res, "nnodes")), (char **)NULL, 10
+    );
+    data->tstart = PQgetvalue(res, 0, PQfnumber(res, "t_start"));
+    data->resources = NULL;
+
+    return 0;
+}
 /********************************** DEVICES **********************************/
 /* IN db_conn, data, returns int */
 int insert_device_data(PGconn* connection, eps_device_data_t* data)
@@ -127,4 +183,54 @@ int insert_device_data(PGconn* connection, eps_device_data_t* data)
     PQclear(result);
 
     return err;
+}
+
+int select_device_data_by_jobid(
+    eps_device_data_t* data, PGconn* db_conn, int jobid
+){
+    char query[MAX_QUERY_SIZE];
+    PGresult* res;
+
+    sprintf(query, "SELECT * FROM devices WHERE job_id = '%d'", jobid);
+    res = PQexec(db_conn, query);
+
+    if(row_by_userid(res, "devices", jobid))
+        return 1;
+
+    printf("User ID row: %d\n", PQfnumber(res, "user_id"));
+    int nrows = PQntuples(res);
+    if(nrows != 1)
+    {
+        char msg[] = "Single entry expected. Found %d entries. Query: %s";
+        printf(msg, nrows, query);
+        PQclear(res);
+        return 1;
+    }
+
+    data->jobid = (int) strtol(
+        PQgetvalue(res, 0, PQfnumber(res, "job_id")), (char **)NULL, 10
+    );
+    data->nodename = PQgetvalue(res, 0, PQfnumber(res, "nodename"));
+    data->device = PQgetvalue(res, 0, PQfnumber(res, "device"));
+    data->energy = (unsigned long long int) strtoull(
+        PQgetvalue(res, 0, PQfnumber(res, "energy")), (char **)NULL, 10
+    );
+
+    data->tstart = PQgetvalue(res, 0, PQfnumber(res, "t_start"));
+    data->duration = (unsigned long long int) strtoull(
+        PQgetvalue(res, 0, PQfnumber(res, "t_duration")
+    );
+
+    // TODO: finalize
+    data->device_type = NULL;
+    data->exclusive = 0;
+    data->resources = NULL;
+    // data->device_type = PQgetvalue(res, 0, PQfnumber(res, "device_type"));
+    // data->exclusive = strtol(
+    //    PQgetvalue(res, 0, PQfnumber(res, "exclusive")), (char **)NULL, 10
+    //);
+    // data->exclusive = PQgetvalue(res, 0, PQfnumber(res, "exclusive"));
+
+
+    return 0;
 }
