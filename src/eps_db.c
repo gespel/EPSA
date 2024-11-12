@@ -57,6 +57,25 @@ int check_query_result(PGresult* result, PGconn* connection)
     return 0;
 }
 
+int row_by_userid(PGresult* res, const char* tablename, int jobid)
+{
+    char query[MAX_QUERY_SIZE];
+
+    sprintf(query, "SELECT * FROM %s WHERE job_id = '%d'", tablename, jobid);
+    res = PQexec(db_conn, query);
+
+    printf("User ID row: %d\n", PQfnumber(res, "user_id"));
+    int nrows = PQntuples(res);
+    if(nrows != 1)
+    {
+        char msg[] = "Single entry expected. Found %d entries. Query: %s";
+        printf(msg, nrows, query);
+        PQclear(res);
+        return 1;
+    }
+
+    return 0;
+}
 /*********************************** META ************************************/
 /* IN db_conn, data, returns int */
 int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
