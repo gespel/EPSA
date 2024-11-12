@@ -23,7 +23,7 @@ typedef struct eps_job_data
     int jobid;
     unsigned long long int energy;
     char* tstart;
-    int duration;
+    unsigned long long duration;
 } eps_job_data_t;
 
 typedef struct eps_device_data

@@ -64,7 +64,7 @@ void log_job_data(eps_job_data_t* data)
     slurm_info("Job ID: %d", data->jobid);
     slurm_info("Energy: %lld", data->energy);
     slurm_info("Time started: %s", data->tstart);
-    slurm_info("Duration: %d", data->duration);
+    slurm_info("Duration: %lld", data->duration);
 }
 
 eps_device_data_t* get_device_data(

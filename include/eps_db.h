@@ -26,11 +26,11 @@
     do{\
         sprintf(\
             str,\
-            "%d,%llu,'%s',%d",\
+            "%d,%llu,'%s',%llu",\
             data->jobid,\
             (long long int) data->energy,\
             data->tstart,\
-            data->duration\
+            (long long int) data->duration\
         );\
     } while(0)
 
