@@ -12,6 +12,8 @@ const char plugin_name[] = "EPS PrEp plugin";
 const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
 
+extern void slurm_error(const char* format, ...);
+
 /********************************
  *
  * Globals

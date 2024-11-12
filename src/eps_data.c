@@ -1,9 +1,6 @@
 #include <eps_data.h>
 #include <eps_utils.h>
-
 #include <limits.h>
-
-#include <slurm/slurm.h>
 #include <stdlib.h>
 #include <unistd.h>
 
@@ -31,13 +28,13 @@ void free_metadata(eps_meta_data_t* data)
     free(data);
 }
 
-void log_metadata(eps_meta_data_t* data)
+void print_metadata(eps_meta_data_t* data)
 {
-    slurm_info("Job ID: %d", data->jobid);
-    slurm_info("User ID: %d", data->userid);
-    slurm_info("Nodes count: %d", data->nnodes);
-    slurm_info("Timestamp: %s", data->tstart);
-    log_resources(data->resources);
+    printf("Job ID: %d", data->jobid);
+    printf("User ID: %d", data->userid);
+    printf("Nodes count: %d", data->nnodes);
+    printf("Timestamp: %s", data->tstart);
+    print_resources(data->resources);
 }
 
 eps_job_data_t* get_job_data(
@@ -59,12 +56,12 @@ void free_job_data(eps_job_data_t* data)
     free(data);
 }
 
-void log_job_data(eps_job_data_t* data)
+void print_job_data(eps_job_data_t* data)
 {
-    slurm_info("Job ID: %d", data->jobid);
-    slurm_info("Energy: %lld", data->energy);
-    slurm_info("Time started: %s", data->tstart);
-    slurm_info("Duration: %lld", data->duration);
+    printf("Job ID: %d", data->jobid);
+    printf("Energy: %lld", data->energy);
+    printf("Time started: %s", data->tstart);
+    printf("Duration: %lld", data->duration);
 }
 
 eps_device_data_t* get_device_data(
@@ -108,12 +105,12 @@ void free_device_data(eps_device_data_t* data)
     free(data);
 }
 
-void log_device_data(eps_device_data_t* data)
+void print_device_data(eps_device_data_t* data)
 {
-    slurm_info("Job ID: %d", data->jobid);
-    slurm_info("Node name: %s", data->nodename);
-    slurm_info("Device: %s", data->device);
-    slurm_info("Energy: %lld", data->energy);
-    slurm_info("Time started: %s", data->tstart);
-    slurm_info("Duration: %lld", data->duration);
+    printf("Job ID: %d", data->jobid);
+    printf("Node name: %s", data->nodename);
+    printf("Device: %s", data->device);
+    printf("Energy: %lld", data->energy);
+    printf("Time started: %s", data->tstart);
+    printf("Duration: %lld", data->duration);
 }

@@ -22,6 +22,6 @@ typedef struct
 } eps_resources_t;
 
 eps_resources_t* get_resources(const job_record_t* job);
-void log_resources(eps_resources_t* resrcs);
+void print_resources(eps_resources_t* resrcs);
 
 #endif

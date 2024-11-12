@@ -1,10 +1,10 @@
-#include <slurm/slurm.h>
 #include <eps_resources.h>
+#include <eps_utils.h>
 
 
 eps_resources_t* get_resources(const job_record_t* job)
 {
-    slurm_info("Gathering job resources info...");
+    INFO("Gathering job resources info...");
     eps_resources_t* resrcs = malloc(sizeof(eps_resources_t));
 
     resrcs->cpu_count = job->job_resrcs->ncpus;
@@ -22,22 +22,22 @@ eps_resources_t* get_resources(const job_record_t* job)
     return resrcs;
 }
 
-void log_resources(eps_resources_t* resrcs)
+void print_resources(eps_resources_t* resrcs)
 {
     if (!resrcs) return;
 
-    slurm_info("Resources:");
-    slurm_info("==========");
+    printf("Resources:");
+    printf("==========");
 
-    slurm_info("\tCPUs count: %d", resrcs->cpu_count);
-    slurm_info("\tCPUs per node: %d", resrcs->cpus_per_node);
+    printf("\tCPUs count: %d", resrcs->cpu_count);
+    printf("\tCPUs per node: %d", resrcs->cpus_per_node);
 
-    slurm_info("\tSockets per node: %d", resrcs->sockets_per_node);
-    slurm_info("\tCores per socket: %d", resrcs->cores_per_socket);
-    slurm_info("\tThreads per core: %d", resrcs->threads_per_core);
+    printf("\tSockets per node: %d", resrcs->sockets_per_node);
+    printf("\tCores per socket: %d", resrcs->cores_per_socket);
+    printf("\tThreads per core: %d", resrcs->threads_per_core);
 
-    slurm_info("\tMemory allocated: %ld", resrcs->mem_allocated);
-    slurm_info("\tMemory used: %ld", resrcs->mem_used);
+    printf("\tMemory allocated: %ld", resrcs->mem_allocated);
+    printf("\tMemory used: %ld", resrcs->mem_used);
 
-    slurm_info("\tWhole node: %d", resrcs->whole_node);
+    printf("\tWhole node: %d", resrcs->whole_node);
 }

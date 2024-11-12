@@ -1,17 +1,23 @@
 #ifndef _EPS_UTILS_H
 #define _EPS_UTILS_H
 
-#include <slurm/slurm.h>
-#include <slurm/spank.h>
-#include <slurm/slurm_errno.h>
-
+#include <stdio.h>
 #include <time.h>
 
 #define TIME_STRING_SIZE 21
 
-char* to_string(const time_t* ts);
+#define INFO(MSG, ...) do { \
+    fprintf(stdout, "[eps] info: " MSG "\n", ##__VA_ARGS__); \
+} while(0)
 
-extern void slurm_error(const char* format, ...);
-void slurm_warn(const char* msg);
+#define WARN(MSG, ...) do { \
+    fprintf(stdout, "[eps] warn: " MSG "\n", ##__VA_ARGS__); \
+} while(0)
+
+#define ERROR(MSG, ...) do { \
+    fprintf(stderr, "[eps] error: " MSG "\n", ##__VA_ARGS__); \
+} while(0)
+
+char* to_string(const time_t* ts);
 
 #endif

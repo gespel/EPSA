@@ -25,7 +25,6 @@ int insert(
         columns,
         values
     );
-    slurm_info("Query: %s\n", query);
 
     return num <= 0;
 }
@@ -33,7 +32,7 @@ int insert(
 int check_query_result(PGresult* result, PGconn* connection)
 {
     if (PQresultStatus(result) != PGRES_COMMAND_OK) {
-        slurm_error(
+        ERROR(
             "eps-db: failed to execute query: %s\n",
             PQerrorMessage(connection)
         );
@@ -73,7 +72,7 @@ int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
 
     int err = insert(query, "meta", META_COLS, values);
     if (err) {
-        slurm_error("failed to construct query");
+        ERROR("failed to construct query");
         return err;
     }
 
@@ -120,7 +119,7 @@ int insert_job_data(PGconn* connection, eps_job_data_t* data)
 
     int err = insert(query, "jobs", JOB_COLS, values);
     if (err) {
-        slurm_error("failed to construct query");
+        ERROR("failed to construct query");
         return err;
     }
 
@@ -175,7 +174,7 @@ int insert_device_data(PGconn* connection, eps_device_data_t* data)
 
     int err = insert(query, "devices", DEVICE_COLS, values);
     if (err) {
-        slurm_error("failed to construct query");
+        ERROR("failed to construct query");
         return err;
     }
 

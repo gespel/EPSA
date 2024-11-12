@@ -42,12 +42,12 @@ typedef struct eps_device_data
 
 eps_meta_data_t* get_metadata(const job_record_t* job);
 void free_metadata(eps_meta_data_t* data);
-void log_metadata(eps_meta_data_t* data);
+void print_metadata(eps_meta_data_t* data);
 
 eps_job_data_t* get_job_data(
     const job_record_t* job, unsigned long long energy);
 void free_job_data(eps_job_data_t* data);
-void log_job_data(eps_job_data_t* data);
+void print_job_data(eps_job_data_t* data);
 
 eps_device_data_t* get_device_data(
     const Device* device,
@@ -58,6 +58,6 @@ eps_device_data_t* get_device_data(
     unsigned long long tend
 );
 void free_device_data(eps_device_data_t* data);
-void log_device_data(eps_device_data_t* data);
+void print_device_data(eps_device_data_t* data);
 
 #endif

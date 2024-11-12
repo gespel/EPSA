@@ -5,7 +5,7 @@
 
 void slurm_warn(const char* msg)
 {
-    slurm_info("warn: %s", msg);
+    printf("warn: %s", msg);
 }
 
 char* to_string(const time_t* ts)
