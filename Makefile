@@ -57,6 +57,6 @@ install: $(PLUGIN_FILE)
 clean:
 	rm -f $(PLUGIN_FILE)
 	rm -f $(SPANK_PLUGIN_FILE)
-	rm -f basic cgroup
+	rm -f basic cgroup dbtest
 
 mrproper: clean
