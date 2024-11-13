@@ -114,5 +114,5 @@ void print_device_data(eps_device_data_t* data)
     printf("Energy: %lld", data->energy);
     printf("Time started: %s", data->tstart);
     printf("Duration: %lld", data->duration);
-    printf("Time started(posix): %lld", data->tstart_posix);
+    printf("Time started(posix): %ld", data->tstart_posix);
 }

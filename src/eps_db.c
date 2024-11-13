@@ -1,6 +1,8 @@
 #include <eps_db.h>
 #include <eps_utils.h>
 
+#include <limits.h>
+
 PGconn* connect_db()
 {
     return PQconnectdb(DB_CONN_INFO);
@@ -204,7 +206,7 @@ eps_device_data_t** select_device_data_by_jobid(
     );
     res = PQexec(db_conn, query);
 
-    if(row_by_userid(res, "devices", jobid))
+    if(row_by_userid(db_conn, res, "devices", jobid))
     {
         err = 1;
         return NULL;
@@ -222,7 +224,7 @@ eps_device_data_t** select_device_data_by_jobid(
 
     data = calloc(nrows, sizeof(eps_device_data_t));
 
-    for(int i=0; i<nrows; i++;)
+    for(int i=0; i<nrows; i++)
     {
         data[i]->jobid = (int) strtol(
             PQgetvalue(res, i, PQfnumber(res, "job_id")), (char **)NULL, 10
@@ -234,19 +236,21 @@ eps_device_data_t** select_device_data_by_jobid(
         );
         data[i]->tstart = PQgetvalue(res, i, PQfnumber(res, "t_start"));
         data[i]->duration = strtoull(
-            PQgetvalue(res, i, PQfnumber(res, "t_duration")
+            PQgetvalue(res, i, PQfnumber(res, "t_duration")), (char **)NULL, 10
         );
         // TODO: finalize
         data[i]->device_type = NULL;
         data[i]->exclusive = 0;
-        data[i]->resources = NULL;
+        data[i]->resource = NULL;
         // data->device_type = PQgetvalue(res, i, PQfnumber(res, "device_type"));
         // data->exclusive = strtol(
         //    PQgetvalue(res, i, PQfnumber(res, "exclusive")), (char **)NULL, 10
         //);
         // data->exclusive = PQgetvalue(res, i, PQfnumber(res, "exclusive"));
         data[i]->tstart_posix = strtol(
-            PQgetvalue(res, i, PQfnumber(res, "unix_timestamp")
+            PQgetvalue(res, i, PQfnumber(res, "unix_timestamp")),
+            (char **)NULL,
+            10
         );
     }
 
@@ -255,19 +259,18 @@ eps_device_data_t** select_device_data_by_jobid(
 
 int compose_job_data(eps_device_data_t** device_data, int num_elems, int jobid)
 {
-    eps_job_data_t* data = calloc(1, eps_job_data_t);
-    int jobid;
+    eps_job_data_t* data = calloc(1, sizeof(eps_job_data_t));
+    PGresult* res = NULL;
     char* tstart;
-    unsigned long long duration, end, energy = 0;
-    for(int i=0; i<num_elems; i++;)
+    long tstart_posix = LONG_MAX;
+    unsigned long long duration, end = 0;
+    for(int i=0; i<num_elems; i++)
     {
-        jobid = (int) strtol(
+        data->jobid = (int) strtol(
             PQgetvalue(res, i, PQfnumber(res, "job_id")), (char **)NULL, 10
         );
         if(data->jobid != jobid)
             continue;
-
-        data->jobid = jobid;
 
         /* calculate summed energy consumption */
         data->energy += strtoull(
@@ -281,9 +284,13 @@ int compose_job_data(eps_device_data_t** device_data, int num_elems, int jobid)
             data->tstart_posix = tstart_posix;
             data->tstart = tstart;
         }
-        duration = strtoull(PQgetvalue(res, i, PQfnumber(res, "t_duration"));
+        duration = strtoull(
+            PQgetvalue(res, i, PQfnumber(res, "t_duration")),
+            (char **)NULL,
+            10
+        );
         /* Use latest end. */
-        unsigned long long tmp_end = tstart_posix + duration
+        unsigned long long tmp_end = tstart_posix + duration;
         if(tmp_end > end)
             end = tmp_end;
         /* use duration from ealierst start to latest end */
@@ -292,4 +299,5 @@ int compose_job_data(eps_device_data_t** device_data, int num_elems, int jobid)
         if(duration > data->duration)
             data->duration = duration;
     }
+    return 0;
 }
