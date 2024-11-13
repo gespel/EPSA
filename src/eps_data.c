@@ -89,6 +89,7 @@ eps_device_data_t* get_device_data(
     data->energy = energy;
 
     data->tstart = to_string(tstart);
+    data->tstart_posix = tstart_posix;
     data->duration = tend_us - tstart_us;
 
     // TODO: Find a way to write something meaningfull here...
