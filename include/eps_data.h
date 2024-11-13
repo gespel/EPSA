@@ -21,7 +21,7 @@ typedef struct eps_meta_data
 typedef struct eps_job_data
 {
     int jobid;
-    unsigned long long int energy;
+    unsigned long long energy;
     char* tstart;
     unsigned long long duration;
 } eps_job_data_t;
@@ -30,9 +30,10 @@ typedef struct eps_device_data
 {
     int jobid;
     char* nodename;
-    unsigned long long int energy;
+    unsigned long long energy;
     char* tstart;
     unsigned long long duration;
+    unsigned long long runtime
     char* device;
     void* device_type; /* EMA plugin type? */
     // TODO: Clarify what this should be...
