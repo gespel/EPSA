@@ -69,6 +69,7 @@ eps_device_data_t* get_device_data(
     const job_env_t* job,
     unsigned long long energy,
     const time_t* tstart,
+    long tstart_posix,
     unsigned long long tstart_us,
     unsigned long long tend_us
 )
@@ -113,4 +114,5 @@ void print_device_data(eps_device_data_t* data)
     printf("Energy: %lld", data->energy);
     printf("Time started: %s", data->tstart);
     printf("Duration: %lld", data->duration);
+    printf("Time started(posix): %lld", data->tstart_posix);
 }
