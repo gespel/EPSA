@@ -33,7 +33,7 @@ typedef struct eps_device_data
     unsigned long long energy;
     char* tstart;
     unsigned long long duration;
-    unsigned long long runtime
+    unsigned long long runtime;
     char* device;
     void* device_type; /* EMA plugin type? */
     // TODO: Clarify what this should be...
