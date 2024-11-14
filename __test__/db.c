@@ -31,17 +31,17 @@ int main(int argc, char** argv){
         exit_on_error(err, "Connection check failed!");
     }
 
-    eps_meta_data_t* data = malloc(sizeof(eps_meta_data_t));
+    eps_meta_data_t data;
 
-    err = select_meta_data_by_jobid(data, connection, jid);
+    err = select_meta_data_by_jobid(&data, connection, jid);
 
     if (err) {
-        free_metadata(data);
+        // free_metadata(&data);
         exit_on_error(err, "Failed to read metadata from db!");
     }
 
-    print_metadata(data);
-    free_metadata(data);
+    print_metadata(&data);
+    // free_metadata(&data);
 
     /* Disconnecting DB. */
     PQfinish(connection);

@@ -62,7 +62,7 @@ int check_query_result(PGresult* result, PGconn* connection)
 }
 
 int row_by_userid
-    (PGconn* connection, PGresult* res, const char* table, int jobid)
+    (PGconn* connection, PGresult** res, const char* table, int jobid)
 {
     char query[MAX_QUERY_SIZE];
     char jid_str[16];
@@ -79,16 +79,16 @@ int row_by_userid
     PQfreemem(_table);
     PQfreemem(_jobid);
 
-    res = PQexec(connection, query);
+    *res = PQexec(connection, query);
 
     printf("query: %s\n", query);
-    printf("User ID row: %d\n", PQfnumber(res, "user_id"));
-    int nrows = PQntuples(res);
+    printf("Job ID row: %d\n", PQfnumber(*res, "job_id"));
+    int nrows = PQntuples(*res);
     if(nrows != 1)
     {
-        char msg[] = "Single entry expected. Found %d entries. Query: %s";
+        char msg[] = "Single entry expected. Found %d entries. Query: %s\n";
         printf(msg, nrows, query);
-        PQclear(res);
+        PQclear(*res);
         return 1;
     }
 
@@ -124,21 +124,23 @@ int select_meta_data_by_jobid(
     eps_meta_data_t* data, PGconn* connection, int jobid
 ){
     PGresult* res = NULL;
-    PGresult* row = NULL;
 
-    if(row_by_userid(connection, row, "meta", jobid))
+    if(row_by_userid(connection, &res, "meta", jobid))
+    {
+        printf("No entry found!\n");
         return 1;
-
+    }
     data->jobid = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(row, "job_id")), (char **)NULL, 10
+        PQgetvalue(res, 0, PQfnumber(res, "job_id")), (char **)NULL, 10
     );
+
     data->userid = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(row, "user_id")), (char **)NULL, 10
+        PQgetvalue(res, 0, PQfnumber(res, "user_id")), (char **)NULL, 10
     );
     data->nnodes = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(row, "nnodes")), (char **)NULL, 10
+        PQgetvalue(res, 0, PQfnumber(res, "nnodes")), (char **)NULL, 10
     );
-    data->tstart = PQgetvalue(res, 0, PQfnumber(row, "t_start"));
+    data->tstart = PQgetvalue(res, 0, PQfnumber(res, "t_start"));
     data->resources = NULL;
 
     return 0;
@@ -181,11 +183,11 @@ int select_job_data_by_jobid(eps_job_data_t* data, PGconn* connection, int jobid
     );
     res = PQexec(connection, query);
     printf("query: %s\n", query);
-    printf("User ID row: %d\n", PQfnumber(res, "user_id"));
+    printf("Job ID row: %d\n", PQfnumber(res, "job_id"));
     int nrows = PQntuples(res);
     if(nrows != 1)
     {
-        char msg[] = "Single entry expected. Found %d entries. Query: %s";
+        char msg[] = "Single entry expected. Found %d entries. Query: %s\n";
         printf(msg, nrows, query);
         PQclear(res);
         return 1;
@@ -249,8 +251,9 @@ eps_device_data_t** select_device_data_by_jobid(
     );
     res = PQexec(connection, query);
 
-    if(row_by_userid(connection, res, "devices", jobid))
+    if(row_by_userid(connection, &res, "devices", jobid))
     {
+        printf("No entry found!\n");
         err = 1;
         return NULL;
     }

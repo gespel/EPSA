@@ -30,11 +30,13 @@ void free_metadata(eps_meta_data_t* data)
 
 void print_metadata(eps_meta_data_t* data)
 {
-    printf("Job ID: %d", data->jobid);
-    printf("User ID: %d", data->userid);
-    printf("Nodes count: %d", data->nnodes);
-    printf("Timestamp: %s", data->tstart);
+    printf("\n--- META ---\n");
+    printf("Job ID: %d\n", data->jobid);
+    printf("User ID: %d\n", data->userid);
+    printf("Nodes count: %d\n", data->nnodes);
+    printf("Timestamp: %s\n", data->tstart);
     print_resources(data->resources);
+    printf("------------\n\n");
 }
 
 eps_job_data_t* get_job_data(
