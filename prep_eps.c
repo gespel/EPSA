@@ -30,8 +30,6 @@ extern void slurm_error(const char* format, ...);
  unsigned long long tstart, tend;
  time_t timestamp;
 
- PGconn* db_connection = NULL;
-
 /********************************
  *
  * Slurm Plugin API hooks
@@ -41,21 +39,6 @@ extern void slurm_error(const char* format, ...);
 extern int init(void)
 {
         slurm_info("Init: %s", plugin_name);
-
-        slurm_info("Connecting to DB...");
-        db_connection = connect_db();
-
-        slurm_info("Checking DB connection...");
-        int connection_is_not_ok = check_connection(db_connection);
-
-        if (connection_is_not_ok) {
-            slurm_error(
-                "problems with db connection: %s",
-                PQerrorMessage(db_connection)
-            );
-            PQfinish(db_connection);
-            return SLURM_ERROR;
-        }
 
         if (!running_in_slurmd()) return SLURM_SUCCESS;
 
@@ -80,9 +63,6 @@ extern int init(void)
 extern void fini(void)
 {
         slurm_info("Fini: %s", plugin_name);
-
-        slurm_info("Finishing DB connection...");
-        PQfinish(db_connection);
 
         if (!running_in_slurmd()) return;
 
@@ -115,6 +95,11 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 {
         slurm_info("Epilog: %s", plugin_name);
 
+        tend = EMA_get_time_in_us();
+        measure_energy(e1);
+
+        PGconn* db_connection = connect_db();
+
         slurm_info("Checking DB connection...");
         int connection_is_not_ok = check_connection(db_connection);
 
@@ -126,9 +111,6 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
             PQfinish(db_connection);
             return SLURM_ERROR;
         }
-
-        tend = EMA_get_time_in_us();
-        measure_energy(e1);
 
         for (size_t i = 0; i < devices.size; i++)
         {
@@ -143,12 +125,16 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
                 tend
             );
 
+            // TODO: Replace multiple writes with transaction...
             int err = insert_device_data(db_connection, data);
             if (err) {
                 slurm_error("failed to write data to db");
             }
             free_device_data(data);
         }
+
+        slurm_info("Closing DB connection...");
+        PQfinish(db_connection);
 
 	return SLURM_SUCCESS;
 }
@@ -157,6 +143,12 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 {
         slurm_info("Ctld_prolog: %s", plugin_name);
 
+        slurm_info("Collecting job metadata...");
+        eps_meta_data_t* data = get_metadata(job_ptr);
+
+        slurm_info("Connecting to DB...");
+        PGconn* db_connection = connect_db();
+
         slurm_info("Checking DB connection...");
         int connection_is_not_ok = check_connection(db_connection);
 
@@ -168,10 +160,6 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
             PQfinish(db_connection);
             return SLURM_ERROR;
         }
-
-        slurm_info("Collecting job metadata...");
-        eps_meta_data_t* data = get_metadata(job_ptr);
-
         int err = insert_meta_data(db_connection, data);
         free_metadata(data);
 
@@ -180,36 +168,15 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
             return SLURM_ERROR;
         }
 
+        slurm_info("Closing DB connection...");
+        PQfinish(db_connection);
+
 	return SLURM_SUCCESS;
 }
 
 extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
 {
         slurm_info("Ctld_epilog: %s", plugin_name);
-
-        slurm_info("Checking DB connection...");
-        int connection_is_not_ok = check_connection(db_connection);
-
-        if (connection_is_not_ok) {
-            slurm_error(
-                "problems with db connection: %s",
-                PQerrorMessage(db_connection)
-            );
-            PQfinish(db_connection);
-            return SLURM_ERROR;
-        }
-
-        slurm_info("Collecting job data...");
-        // TODO: Provide real energy value...
-        eps_job_data_t* data = get_job_data(job_ptr, 42);
-
-        int err = insert_job_data(db_connection, data);
-        free_job_data(data);
-
-        if (err) {
-            slurm_error("failed to write data to db");
-            return SLURM_ERROR;
-        }
 
 	return SLURM_SUCCESS;
 }
