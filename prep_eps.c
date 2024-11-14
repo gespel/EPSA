@@ -94,23 +94,23 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
 extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 {
         slurm_info("Epilog: %s", plugin_name);
+        slurm_info("Devices size: %ld", devices.size);
 
         tend = EMA_get_time_in_us();
         measure_energy(e1);
 
-        PGconn* db_connection = connect_db();
+        //PGconn* db_connection = connect_db();
 
-        slurm_info("Checking DB connection...");
-        int connection_is_not_ok = check_connection(db_connection);
+        //int connection_is_not_ok = check_connection(db_connection);
 
-        if (connection_is_not_ok) {
-            slurm_error(
-                "problems with db connection: %s",
-                PQerrorMessage(db_connection)
-            );
-            PQfinish(db_connection);
-            return SLURM_ERROR;
-        }
+        //if (connection_is_not_ok) {
+        //    slurm_error(
+        //        "problems with db connection: %s",
+        //        PQerrorMessage(db_connection)
+        //    );
+        //    PQfinish(db_connection);
+        //    return SLURM_ERROR;
+        //}
 
         for (size_t i = 0; i < devices.size; i++)
         {
@@ -126,15 +126,16 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
             );
 
             // TODO: Replace multiple writes with transaction...
-            int err = insert_device_data(db_connection, data);
-            if (err) {
-                slurm_error("failed to write data to db");
-            }
+            //int err = insert_device_data(db_connection, data);
+            //if (err) {
+            //    slurm_error("failed to write data to db");
+            //}
+            print_device_data(data);
             free_device_data(data);
         }
 
-        slurm_info("Closing DB connection...");
-        PQfinish(db_connection);
+        //slurm_info("Closing DB connection...");
+        //PQfinish(db_connection);
 
 	return SLURM_SUCCESS;
 }
@@ -143,33 +144,31 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 {
         slurm_info("Ctld_prolog: %s", plugin_name);
 
-        slurm_info("Collecting job metadata...");
-        eps_meta_data_t* data = get_metadata(job_ptr);
+        //slurm_info("Collecting job metadata...");
+        //eps_meta_data_t* data = get_metadata(job_ptr);
 
-        slurm_info("Connecting to DB...");
-        PGconn* db_connection = connect_db();
+        //PGconn* db_connection = connect_db();
 
-        slurm_info("Checking DB connection...");
-        int connection_is_not_ok = check_connection(db_connection);
+        //int connection_is_not_ok = check_connection(db_connection);
 
-        if (connection_is_not_ok) {
-            slurm_error(
-                "problems with db connection: %s",
-                PQerrorMessage(db_connection)
-            );
-            PQfinish(db_connection);
-            return SLURM_ERROR;
-        }
-        int err = insert_meta_data(db_connection, data);
-        free_metadata(data);
+        //if (connection_is_not_ok) {
+        //    slurm_error(
+        //        "problems with db connection: %s",
+        //        PQerrorMessage(db_connection)
+        //    );
+        //    PQfinish(db_connection);
+        //    return SLURM_ERROR;
+        //}
+        //int err = insert_meta_data(db_connection, data);
+        //free_metadata(data);
 
-        if (err) {
-            slurm_error("failed to write data to db");
-            return SLURM_ERROR;
-        }
+        //if (err) {
+        //    slurm_error("failed to write data to db");
+        //    return SLURM_ERROR;
+        //}
 
-        slurm_info("Closing DB connection...");
-        PQfinish(db_connection);
+        //slurm_info("Closing DB connection...");
+        //PQfinish(db_connection);
 
 	return SLURM_SUCCESS;
 }
