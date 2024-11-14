@@ -5,6 +5,7 @@
 #include <eps_db.h>
 #include <eps_ema.h>
 #include <eps_utils.h>
+#include <src/interfaces/prep.h>
 
 #include "src/interfaces/prep.h"
 
