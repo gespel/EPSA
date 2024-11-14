@@ -4,7 +4,8 @@ SLURM_ROOT_DIR = /usr
 SLURM_INC_DIR = $(SLURM_ROOT_DIR)/local/slurm/include/
 SLURM_LIB_DIR = /usr/local/slurm/lib/slurm
 SLURM_BUILD = $(SLURM_VERSION)
-SLURM_BUILD_DIR = $(HOME)/slurm_build
+
+# !!! Edit this to be valid for your setup
 SLURM_SRC_DIR = $(HOME)/src/slurm
 
 EMA_DIR = /perfacct/slurm-libs/EMA
@@ -22,7 +23,7 @@ SPANK_SRC_FILE = eps.c
 
 CC              = gcc
 CFLAGS          ?= -Wall -fPIC \
-                   -I$(SLURM_BUILD_DIR) -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
+                   -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
 SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
 LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -lEMA
 
