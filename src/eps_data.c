@@ -111,11 +111,11 @@ void free_device_data(eps_device_data_t* data)
 
 void print_device_data(eps_device_data_t* data)
 {
-    printf("Job ID: %d", data->jobid);
-    printf("Node name: %s", data->nodename);
-    printf("Device: %s", data->device);
-    printf("Energy: %lld", data->energy);
-    printf("Time started: %s", data->tstart);
-    printf("Duration: %lld", data->duration);
-    printf("Time started(posix): %ld", data->tstart_posix);
+    printf("Job ID: %d\n", data->jobid);
+    printf("Node name: %s\n", data->nodename);
+    printf("Device: %s\n", data->device);
+    printf("Energy: %lld\n", data->energy);
+    printf("Time started: %s\n", data->tstart);
+    printf("Duration: %lld\n", data->duration);
+    printf("Time started(posix): %ld\n", data->tstart_posix);
 }
