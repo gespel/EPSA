@@ -14,11 +14,13 @@
 
 PGconn* connect_db()
 {
+    INFO("Connectiong to db: (%s)...", DB_CONN_INFO);
     return PQconnectdb(DB_CONN_INFO);
 }
 
 int check_connection(PGconn* connection)
 {
+    INFO("Checking db connection (%p)...", connection);
     return PQstatus(connection) != CONNECTION_OK ? 1 : 0;
 }
 
