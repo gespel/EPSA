@@ -14,7 +14,7 @@ void log_ema_devices()
     INFO("Num EMA devices: %ld", devices.size);
     INFO("EMA devices:");
     for (size_t i = 0; i < devices.size; i++)
-        printf("\t%s", EMA_get_device_name(devices.array[i]));
+        printf("\t%s\n", EMA_get_device_name(devices.array[i]));
 }
 
 void measure_energy(Measurements m)
@@ -34,7 +34,7 @@ void measure_energy(Measurements m)
 void print_measurements(Measurements m)
 {
     for (size_t i = 0; i < devices.size; i++)
-            printf("%s: %lld", EMA_get_device_name(
+            printf("%s: %lld\n", EMA_get_device_name(
                 devices.array[i]), m[i]
             );
 }
