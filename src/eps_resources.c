@@ -26,18 +26,18 @@ void print_resources(eps_resources_t* resrcs)
 {
     if (!resrcs) return;
 
-    printf("Resources:");
-    printf("==========");
+    printf("Resources:\n");
+    printf("==========\n");
 
-    printf("\tCPUs count: %d", resrcs->cpu_count);
-    printf("\tCPUs per node: %d", resrcs->cpus_per_node);
+    printf("\tCPUs count: %d\n", resrcs->cpu_count);
+    printf("\tCPUs per node: %d\n", resrcs->cpus_per_node);
 
-    printf("\tSockets per node: %d", resrcs->sockets_per_node);
-    printf("\tCores per socket: %d", resrcs->cores_per_socket);
-    printf("\tThreads per core: %d", resrcs->threads_per_core);
+    printf("\tSockets per node: %d\n", resrcs->sockets_per_node);
+    printf("\tCores per socket: %d\n", resrcs->cores_per_socket);
+    printf("\tThreads per core: %d\n", resrcs->threads_per_core);
 
-    printf("\tMemory allocated: %ld", resrcs->mem_allocated);
-    printf("\tMemory used: %ld", resrcs->mem_used);
+    printf("\tMemory allocated: %ld\n", resrcs->mem_allocated);
+    printf("\tMemory used: %ld\n", resrcs->mem_used);
 
-    printf("\tWhole node: %d", resrcs->whole_node);
+    printf("\tWhole node: %d\n", resrcs->whole_node);
 }
