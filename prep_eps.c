@@ -5,9 +5,9 @@
 #include <eps_db.h>
 #include <eps_ema.h>
 #include <eps_utils.h>
+
 #include <src/interfaces/prep.h>
 
-#include "src/interfaces/prep.h"
 
 const char plugin_name[] = "EPS PrEp plugin";
 const char plugin_type[] = "prep/eps";

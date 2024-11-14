@@ -24,8 +24,6 @@ SPANK_SRC_FILE = eps.c
 
 CC              = gcc
 CFLAGS          ?= -Wall -fPIC -Iinclude \
-                   -I$(SLURM_BUILD_DIR) -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
-CFLAGS          ?= -Wall -fPIC \
                    -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
 SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
 LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -L$(PQ_DIR)/libs -lEMA -lpq
