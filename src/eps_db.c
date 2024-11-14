@@ -1,3 +1,12 @@
+/*
+  Please use the following function to AVOID SQL INJECTION:
+    char *PQescapeLiteral(PGconn *conn, const char *str, size_t length);
+    char *PQescapeIdentifier(PGconn *conn, const char *str, size_t length);
+
+  https://www.postgresql.org/docs/17/libpq-exec.html#LIBPQ-EXEC-ESCAPE-STRING
+
+*/
+
 #include <eps_db.h>
 #include <eps_utils.h>
 
@@ -14,19 +23,28 @@ int check_connection(PGconn* connection)
 }
 
 //TODO: Consider better name e.g. compose_query, create_query etc.
-int insert(
+int create_insert_query(
     char* query,
+    PGconn* connection,
     const char* table,
     const char* columns,
     char* values
 ){
+    char* _table = PQescapeIdentifier(connection, table, strlen(table));
+    char* _columns = PQescapeIdentifier(connection, columns, strlen(columns));
+    char* _values = PQescapeLiteral(connection, values, strlen(values));
+
     int num = sprintf(
         query,
         "INSERT INTO %s (%s) VALUES(%s);",
-        table,
-        columns,
-        values
+        _table,
+        _columns,
+        _values
     );
+
+    PQfreemem(_table);
+    PQfreemem(_columns);
+    PQfreemem(_values);
 
     return num <= 0;
 }
@@ -44,27 +62,40 @@ int check_query_result(PGresult* result, PGconn* connection)
 }
 
 int row_by_userid
-    (PGconn* db_conn, PGresult* res, const char* tablename, int jobid)
+    (PGconn* connection, PGresult** res, const char* table, int jobid)
 {
     char query[MAX_QUERY_SIZE];
+    char jid_str[16];
+    sprintf(jid_str, "%d", jobid);
+    char* _table = PQescapeIdentifier(connection, table, strlen(table));
+    char* _jobid = PQescapeLiteral(connection, jid_str, strlen(jid_str));
+    sprintf(
+        query,
+        "SELECT * FROM %s WHERE job_id = %s",
+        _table,
+        _jobid
+    );
 
-    sprintf(query, "SELECT * FROM %s WHERE job_id = '%d'", tablename, jobid);
-    res = PQexec(db_conn, query);
+    PQfreemem(_table);
+    PQfreemem(_jobid);
 
-    printf("User ID row: %d\n", PQfnumber(res, "user_id"));
-    int nrows = PQntuples(res);
+    *res = PQexec(connection, query);
+
+    printf("query: %s\n", query);
+    printf("Job ID row: %d\n", PQfnumber(*res, "job_id"));
+    int nrows = PQntuples(*res);
     if(nrows != 1)
     {
-        char msg[] = "Single entry expected. Found %d entries. Query: %s";
+        char msg[] = "Single entry expected. Found %d entries. Query: %s\n";
         printf(msg, nrows, query);
-        PQclear(res);
+        PQclear(*res);
         return 1;
     }
 
     return 0;
 }
 /*********************************** META ************************************/
-/* IN db_conn, data, returns int */
+/* IN connection, data, returns int */
 int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
 {
     char query[MAX_QUERY_SIZE];
@@ -72,7 +103,9 @@ int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
 
     META_DATA_VALS(data, values);
 
-    int err = insert(query, "meta", META_COLS, values);
+    int err = create_insert_query(
+        query, connection, "meta", META_COLS, values
+    );
     if (err) {
         ERROR("failed to construct query");
         return err;
@@ -87,31 +120,34 @@ int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
     return err;
 }
 
-int select_meta_data_by_jobid(eps_meta_data_t* data, PGconn* db_conn, int jobid)
-{
+int select_meta_data_by_jobid(
+    eps_meta_data_t* data, PGconn* connection, int jobid
+){
     PGresult* res = NULL;
-    PGresult* row = NULL;
 
-    if(row_by_userid(db_conn, row, "meta", jobid))
+    if(row_by_userid(connection, &res, "meta", jobid))
+    {
+        printf("No entry found!\n");
         return 1;
-
+    }
     data->jobid = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(row, "job_id")), (char **)NULL, 10
+        PQgetvalue(res, 0, PQfnumber(res, "job_id")), (char **)NULL, 10
     );
+
     data->userid = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(row, "user_id")), (char **)NULL, 10
+        PQgetvalue(res, 0, PQfnumber(res, "user_id")), (char **)NULL, 10
     );
     data->nnodes = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(row, "nnodes")), (char **)NULL, 10
+        PQgetvalue(res, 0, PQfnumber(res, "nnodes")), (char **)NULL, 10
     );
-    data->tstart = PQgetvalue(res, 0, PQfnumber(row, "t_start"));
+    data->tstart = PQgetvalue(res, 0, PQfnumber(res, "t_start"));
     data->resources = NULL;
 
     return 0;
 }
 
 /************************************ JOB ************************************/
-/* IN db_conn, data, returns int */
+/* IN connection, data, returns int */
 int insert_job_data(PGconn* connection, eps_job_data_t* data)
 {
     char query[MAX_QUERY_SIZE];
@@ -119,7 +155,7 @@ int insert_job_data(PGconn* connection, eps_job_data_t* data)
 
     JOB_DATA_VALS(data, values);
 
-    int err = insert(query, "jobs", JOB_COLS, values);
+    int err = create_insert_query(query, connection, "jobs", JOB_COLS, values);
     if (err) {
         ERROR("failed to construct query");
         return err;
@@ -134,19 +170,24 @@ int insert_job_data(PGconn* connection, eps_job_data_t* data)
     return err;
 }
 
-int select_job_data_by_jobid(eps_job_data_t* data, PGconn* db_conn, int jobid)
+int select_job_data_by_jobid(eps_job_data_t* data, PGconn* connection, int jobid)
 {
     char query[MAX_QUERY_SIZE];
     PGresult* res;
-
-    sprintf(query, "SELECT * FROM jobs WHERE job_id = '%d'", jobid);
-    res = PQexec(db_conn, query);
-
-    printf("User ID row: %d\n", PQfnumber(res, "user_id"));
+    char jid_str[16];
+    sprintf(jid_str, "%d", jobid);
+    sprintf(
+        query,
+        "SELECT * FROM jobs WHERE job_id = %s",
+        PQescapeLiteral(connection, jid_str, strlen(jid_str))
+    );
+    res = PQexec(connection, query);
+    printf("query: %s\n", query);
+    printf("Job ID row: %d\n", PQfnumber(res, "job_id"));
     int nrows = PQntuples(res);
     if(nrows != 1)
     {
-        char msg[] = "Single entry expected. Found %d entries. Query: %s";
+        char msg[] = "Single entry expected. Found %d entries. Query: %s\n";
         printf(msg, nrows, query);
         PQclear(res);
         return 1;
@@ -166,7 +207,7 @@ int select_job_data_by_jobid(eps_job_data_t* data, PGconn* db_conn, int jobid)
     return 0;
 }
 /********************************** DEVICES **********************************/
-/* IN db_conn, data, returns int */
+/* IN connection, data, returns int */
 int insert_device_data(PGconn* connection, eps_device_data_t* data)
 {
     char query[MAX_QUERY_SIZE];
@@ -174,7 +215,9 @@ int insert_device_data(PGconn* connection, eps_device_data_t* data)
 
     DEVICE_DATA_VALS(data, values);
 
-    int err = insert(query, "devices", DEVICE_COLS, values);
+    int err = create_insert_query(
+        query, connection, "devices", DEVICE_COLS, values
+    );
     if (err) {
         ERROR("failed to construct query");
         return err;
@@ -194,20 +237,23 @@ OUT num_elems
 OUT err
 */
 eps_device_data_t** select_device_data_by_jobid(
-    int* num_elems, int err, PGconn* db_conn, int jobid
+    int* num_elems, int err, PGconn* connection, int jobid
 ){
     char query[MAX_QUERY_SIZE];
     PGresult* res;
     eps_device_data_t** data = NULL;
+    char jid_str[16];
+    sprintf(jid_str, "%d", jobid);
     sprintf(
         query,
-        "SELECT * FROM devices WHERE job_id = '%d' EXTRACT(EPOCH FROM T_START) As unix_timestamp;",
-        jobid
+        "SELECT * FROM devices WHERE job_id = %s EXTRACT(EPOCH FROM T_START) As unix_timestamp;",
+        PQescapeLiteral(connection, jid_str, strlen(jid_str))
     );
-    res = PQexec(db_conn, query);
+    res = PQexec(connection, query);
 
-    if(row_by_userid(db_conn, res, "devices", jobid))
+    if(row_by_userid(connection, &res, "devices", jobid))
     {
+        printf("No entry found!\n");
         err = 1;
         return NULL;
     }
