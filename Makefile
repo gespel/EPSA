@@ -49,7 +49,7 @@ $(PLUGIN_FILE): $(SRC_FILE)
 	$(CC) $(CFLAGS) src/*.c $^ $(LDFLAGS) -o $@
 
 $(SPANK_PLUGIN_FILE): $(SPANK_SRC_FILE)
-	$(CC) $(CFLAGS) src/*.c $^ $(LDFLAGS) -o $@
+	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 install: $(PLUGIN_FILE)
 	install -m 755 $(PLUGIN_FILE) $(PLUGINS_DIR)
