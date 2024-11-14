@@ -31,8 +31,12 @@ int create_insert_query(
     char* values
 ){
     char* _table = PQescapeIdentifier(connection, table, strlen(table));
-    char* _columns = PQescapeIdentifier(connection, columns, strlen(columns));
+    char* _columns = NULL; //PQescapeIdentifier(connection, columns, strlen(columns));
     char* _values = PQescapeLiteral(connection, values, strlen(values));
+    int err = 0;
+    PQescapeStringConn(connection, _columns, columns, strlen(columns), &err);
+    if(err)
+        printf("Error occures: %d\n", err);
 
     int num = sprintf(
         query,
@@ -41,7 +45,7 @@ int create_insert_query(
         _columns,
         _values
     );
-
+    printf("query: %s\n", query);
     PQfreemem(_table);
     PQfreemem(_columns);
     PQfreemem(_values);
