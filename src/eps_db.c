@@ -12,6 +12,17 @@
 
 #include <limits.h>
 
+#define CHECK_PQ_ERR(res, ret) \
+    if (PQresultStatus(res) == PGRES_FATAL_ERROR || PQresultStatus(res) != PGRES_COMMAND_OK)\
+        return ret;
+
+const char* META_COLS[META_COLS_SIZE] = {
+    "job_id", "t_start", "nnodes", "user_id"};
+const char* JOB_COLS[JOB_COLS_SIZE] = {
+    "job_id", "energy", "t_start", "t_duration"};
+const char* DEVICE_COLS[DEVICE_COLS_SIZE] = {
+    "job_id", "nodename", "device", "energy", "t_start", "t_duration"};
+
 PGconn* connect_db()
 {
     INFO("Connectiong to db: (%s)...", DB_CONN_INFO);
@@ -29,14 +40,27 @@ int create_insert_query(
     char* query,
     PGconn* connection,
     const char* table,
-    const char* columns,
+    const char** columns,
+    int num_cols,
     char* values
 ){
     char* _table = PQescapeIdentifier(connection, table, strlen(table));
-    char* _columns = NULL; //PQescapeIdentifier(connection, columns, strlen(columns));
-    char* _values = PQescapeLiteral(connection, values, strlen(values));
+    char* _columns = "%s%s";
+    /* TODO */
+    for(int i=0; i<num_cols; i++)
+    {
+        char* col = PQescapeIdentifier(
+            connection, columns[i], strlen(columns[i])
+        );
+        sprintf(
+            _columns,
+            col,
+            i==num_cols-1? "":",%s%s"
+        );
+        PQfreemem(col);
+
+    }
     int err = 0;
-    PQescapeStringConn(connection, _columns, columns, strlen(columns), &err);
     if(err)
         printf("Error occures: %d\n", err);
 
@@ -45,12 +69,10 @@ int create_insert_query(
         "INSERT INTO %s (%s) VALUES(%s);",
         _table,
         _columns,
-        _values
+        values
     );
     printf("query: %s\n", query);
     PQfreemem(_table);
-    PQfreemem(_columns);
-    PQfreemem(_values);
 
     return num <= 0;
 }
@@ -71,19 +93,15 @@ int row_by_userid
     (PGconn* connection, PGresult** res, const char* table, int jobid)
 {
     char query[MAX_QUERY_SIZE];
-    char jid_str[16];
-    sprintf(jid_str, "%d", jobid);
     char* _table = PQescapeIdentifier(connection, table, strlen(table));
-    char* _jobid = PQescapeLiteral(connection, jid_str, strlen(jid_str));
     sprintf(
         query,
-        "SELECT * FROM %s WHERE job_id = %s",
+        "SELECT * FROM %s WHERE job_id = %d",
         _table,
-        _jobid
+        jobid
     );
 
     PQfreemem(_table);
-    PQfreemem(_jobid);
 
     *res = PQexec(connection, query);
 
@@ -107,10 +125,9 @@ int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
     char query[MAX_QUERY_SIZE];
     char values[VALUES_BUFFER_SIZE];
 
-    META_DATA_VALS(data, values);
-
+    META_DATA_VALS(connection, data, values);
     int err = create_insert_query(
-        query, connection, "meta", META_COLS, values
+        query, connection, "meta", META_COLS, META_COLS_SIZE , values
     );
     if (err) {
         ERROR("failed to construct query");
@@ -159,9 +176,11 @@ int insert_job_data(PGconn* connection, eps_job_data_t* data)
     char query[MAX_QUERY_SIZE];
     char values[VALUES_BUFFER_SIZE];
 
-    JOB_DATA_VALS(data, values);
+    JOB_DATA_VALS(connection, data, values);
 
-    int err = create_insert_query(query, connection, "jobs", JOB_COLS, values);
+    int err = create_insert_query(
+        query, connection, "jobs", JOB_COLS, JOB_COLS_SIZE, values
+    );
     if (err) {
         ERROR("failed to construct query");
         return err;
@@ -180,13 +199,7 @@ int select_job_data_by_jobid(eps_job_data_t* data, PGconn* connection, int jobid
 {
     char query[MAX_QUERY_SIZE];
     PGresult* res;
-    char jid_str[16];
-    sprintf(jid_str, "%d", jobid);
-    sprintf(
-        query,
-        "SELECT * FROM jobs WHERE job_id = %s",
-        PQescapeLiteral(connection, jid_str, strlen(jid_str))
-    );
+    sprintf( query, "SELECT * FROM jobs WHERE job_id = %d", jobid);
     res = PQexec(connection, query);
     printf("query: %s\n", query);
     printf("Job ID row: %d\n", PQfnumber(res, "job_id"));
@@ -219,10 +232,10 @@ int insert_device_data(PGconn* connection, eps_device_data_t* data)
     char query[MAX_QUERY_SIZE];
     char values[VALUES_BUFFER_SIZE];
 
-    DEVICE_DATA_VALS(data, values);
+    DEVICE_DATA_VALS(connection, data, values);
 
     int err = create_insert_query(
-        query, connection, "devices", DEVICE_COLS, values
+        query, connection, "devices", DEVICE_COLS, DEVICE_COLS_SIZE, values
     );
     if (err) {
         ERROR("failed to construct query");
@@ -238,6 +251,28 @@ int insert_device_data(PGconn* connection, eps_device_data_t* data)
     return err;
 }
 
+/* Using transaction so insert all data in one commit */
+int insert_device_data_bulk_ta(
+    PGconn* connection, eps_device_data_t** data, int num_data
+){
+    PGresult* res;
+
+    res = PQexec(connection, "BEGIN");
+    CHECK_PQ_ERR(res, 1);
+
+    for(int i=0; i < num_data; i++)
+    {
+        insert_device_data(connection, data[i]);
+    }
+    res = PQexec(connection, "COMMIT");
+    CHECK_PQ_ERR(res, 1);
+
+    res = PQexec(connection, "END");
+    CHECK_PQ_ERR(res, 1);
+
+    return 0;
+}
+
 /*
 OUT num_elems
 OUT err
@@ -248,12 +283,10 @@ eps_device_data_t** select_device_data_by_jobid(
     char query[MAX_QUERY_SIZE];
     PGresult* res;
     eps_device_data_t** data = NULL;
-    char jid_str[16];
-    sprintf(jid_str, "%d", jobid);
     sprintf(
         query,
-        "SELECT * FROM devices WHERE job_id = %s EXTRACT(EPOCH FROM T_START) As unix_timestamp;",
-        PQescapeLiteral(connection, jid_str, strlen(jid_str))
+        "SELECT * FROM devices WHERE job_id = %d EXTRACT(EPOCH FROM T_START) As unix_timestamp;",
+        jobid
     );
     res = PQexec(connection, query);
 

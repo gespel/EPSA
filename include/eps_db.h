@@ -11,41 +11,44 @@
 #define MAX_QUERY_SIZE 1024
 #define VALUES_BUFFER_SIZE 256
 
-#define META_COLS "job_id, t_start, nnodes, user_id"
-#define META_DATA_VALS(data, str) \
+#define META_COLS_SIZE 4
+
+#define META_DATA_VALS(db_conn, data, str) \
     do{\
         sprintf(\
             str,\
-            "%d,'%s',%d,%d",\
-            data->jobid, data->tstart, data->nnodes, data->userid\
+            "%d,%s,%d,%d",\
+            data->jobid,\
+            PQescapeLiteral(db_conn, data->tstart, strlen(data->tstart)),\
+            data->nnodes,\
+            data->userid\
         );\
     } while(0)
 
-#define JOB_COLS "job_id, energy, t_start, t_duration"
-#define JOB_DATA_VALS(data, str) \
+#define JOB_COLS_SIZE 4
+#define JOB_DATA_VALS(db_conn, data, str) \
     do{\
         sprintf(\
             str,\
             "%d,%llu,'%s',%llu",\
             data->jobid,\
-            (long long int) data->energy,\
-            data->tstart,\
-            (long long int) data->duration\
+            data->energy,\
+            PQescapeLiteral(db_conn, data->tstart, strlen(data->tstart)),\
+            data->duration\
         );\
     } while(0)
 
-// #define DEVICE_COLS "job_id, nodename, device, device_type, energy, t_start, t_duration, exclusive"
-#define DEVICE_COLS "job_id, nodename, device, energy, t_start, t_duration"
-#define DEVICE_DATA_VALS(data, str) \
+#define DEVICE_COLS_SIZE 6
+#define DEVICE_DATA_VALS(db_conn, data, str) \
     do{\
         sprintf(\
             str,\
             "%d,'%s','%s',%llu,'%s',%lld",\
             data->jobid,\
-            data->nodename,\
-            data->device,\
-            (long long int) data->energy,\
-            data->tstart,\
+            PQescapeLiteral(db_conn, data->nodename, strlen(data->nodename)),\
+            PQescapeLiteral(db_conn, data->device, strlen(data->device)),\
+            data->energy,\
+            PQescapeLiteral(db_conn, data->tstart, strlen(data->tstart)),\
             data->duration\
         );\
     } while(0)
@@ -54,10 +57,12 @@ PGconn* connect_db();
 
 int check_connection(PGconn* connection);
 
-int insert(
+int create_insert_query(
     char* query,
+    PGconn* connection,
     const char* table,
-    const char* columns,
+    const char** columns,
+    int num_cols,
     char* values
 );
 
