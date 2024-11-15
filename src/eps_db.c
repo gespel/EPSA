@@ -35,7 +35,6 @@ int check_connection(PGconn* connection)
     return PQstatus(connection) != CONNECTION_OK ? 1 : 0;
 }
 
-//TODO: Consider better name e.g. compose_query, create_query etc.
 int create_insert_query(
     char* query,
     PGconn* connection,
@@ -46,23 +45,15 @@ int create_insert_query(
 ){
     char* _table = PQescapeIdentifier(connection, table, strlen(table));
     char* _columns = "%s%s";
-    /* TODO */
+
     for(int i=0; i<num_cols; i++)
     {
         char* col = PQescapeIdentifier(
             connection, columns[i], strlen(columns[i])
         );
-        sprintf(
-            _columns,
-            col,
-            i==num_cols-1? "":",%s%s"
-        );
+        sprintf(_columns, col, i==num_cols-1? "":",%s%s");
         PQfreemem(col);
-
     }
-    int err = 0;
-    if(err)
-        printf("Error occures: %d\n", err);
 
     int num = sprintf(
         query,
@@ -71,6 +62,7 @@ int create_insert_query(
         _columns,
         values
     );
+
     printf("query: %s\n", query);
     PQfreemem(_table);
 
@@ -225,6 +217,7 @@ int select_job_data_by_jobid(eps_job_data_t* data, PGconn* connection, int jobid
 
     return 0;
 }
+
 /********************************** DEVICES **********************************/
 /* IN connection, data, returns int */
 int insert_device_data(PGconn* connection, eps_device_data_t* data)
@@ -243,15 +236,13 @@ int insert_device_data(PGconn* connection, eps_device_data_t* data)
     }
 
     PGresult* result = PQexec(connection, query);
-
     err = check_query_result(result, connection);
-
     PQclear(result);
 
     return err;
 }
 
-/* Using transaction so insert all data in one commit */
+/* Using transaction so insert multiple data in one commit */
 int insert_device_data_bulk_ta(
     PGconn* connection, eps_device_data_t** data, int num_data
 ){
@@ -261,9 +252,8 @@ int insert_device_data_bulk_ta(
     CHECK_PQ_ERR(res, 1);
 
     for(int i=0; i < num_data; i++)
-    {
         insert_device_data(connection, data[i]);
-    }
+
     res = PQexec(connection, "COMMIT");
     CHECK_PQ_ERR(res, 1);
 
@@ -276,6 +266,9 @@ int insert_device_data_bulk_ta(
 /*
 OUT num_elems
 OUT err
+
+For validation num_elems should be equal to nnodes of corresponding entry in
+meta table ("job_id" == jobid).
 */
 eps_device_data_t** select_device_data_by_jobid(
     int* num_elems, int err, PGconn* connection, int jobid
@@ -339,6 +332,8 @@ eps_device_data_t** select_device_data_by_jobid(
         );
     }
 
+    *num_elems = nrows;
+    err = 0;
     return data;
 }
 

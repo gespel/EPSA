@@ -8,6 +8,7 @@ SLURM_BUILD = $(SLURM_VERSION)
 # !!! Edit this to be valid for your setup
 SLURM_SRC_DIR = $(HOME)/src/slurm
 
+
 EMA_DIR = /perfacct/slurm-libs/EMA
 PQ_DIR = /perfacct/slurm-libs/postgresql
 
