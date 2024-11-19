@@ -12,7 +12,6 @@
 #define VALUES_BUFFER_SIZE 256
 
 #define META_COLS_SIZE 4
-
 #define META_DATA_VALS(db_conn, data, str) \
     do{\
         sprintf(\
@@ -43,7 +42,7 @@
     do{\
         sprintf(\
             str,\
-            "%d,'%s','%s',%llu,'%s',%lld",\
+            "%d,%s,%s,%llu,%s,%lld",\
             data->jobid,\
             PQescapeLiteral(db_conn, data->nodename, strlen(data->nodename)),\
             PQescapeLiteral(db_conn, data->device, strlen(data->device)),\
@@ -69,11 +68,13 @@ int create_insert_query(
 int insert_meta_data(PGconn* connection, eps_meta_data_t* data);
 int insert_job_data(PGconn* connection, eps_job_data_t* data);
 int insert_device_data(PGconn* connection, eps_device_data_t* data);
+int insert_device_data_bulk_ta(
+    PGconn* connection, eps_device_data_t* data, int num_data
+);
 
-eps_device_data_t** select_device_data_by_jobid(
-    int* num_elems, int err, PGconn* db_conn, int jobid
+eps_device_data_t* select_device_data_by_jobid(
+    int* num_elems, int* err, PGconn* db_conn, int jobid
 );
 int select_job_data_by_jobid(eps_job_data_t* data, PGconn* db_conn, int jobid);
 int select_meta_data_by_jobid(eps_meta_data_t* data, PGconn* db_conn, int jobid);
-
 #endif

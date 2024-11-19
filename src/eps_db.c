@@ -32,7 +32,7 @@ PGconn* connect_db()
 int check_connection(PGconn* connection)
 {
     INFO("Checking db connection (%p)...", connection);
-    return PQstatus(connection) != CONNECTION_OK ? 1 : 0;
+    return PQstatus(connection) != CONNECTION_OK;
 }
 
 int create_insert_query(
@@ -44,17 +44,37 @@ int create_insert_query(
     char* values
 ){
     char* _table = PQescapeIdentifier(connection, table, strlen(table));
-    char* _columns = "%s%s";
-
+    int len = 0;
     for(int i=0; i<num_cols; i++)
     {
         char* col = PQescapeIdentifier(
             connection, columns[i], strlen(columns[i])
         );
-        sprintf(_columns, col, i==num_cols-1? "":",%s%s");
-        PQfreemem(col);
+        len += sizeof(col);
+    }
+    char* tmp_col = calloc(1, len + 3*num_cols - 1);
+    char* _columns = calloc(1, len + 3*num_cols - 1);
+
+    _columns = PQescapeIdentifier(
+        connection, columns[0], strlen(columns[0])
+    );
+
+    for(int i=1; i<num_cols; i++)
+    {
+        printf("Escape column %d\n", i);
+        char* col = PQescapeIdentifier(
+            connection, columns[i], strlen(columns[i])
+        );
+
+        sprintf(tmp_col, "%s,%s", _columns, col);
+        // PQfreemem(col); // Required or not?
+        if(tmp_col != NULL)
+            strncpy(_columns, tmp_col, strlen(tmp_col));
+        _columns[strlen(tmp_col)] = '\0';
+
     }
 
+    printf("Build query.\n");
     int num = sprintf(
         query,
         "INSERT INTO %s (%s) VALUES(%s);",
@@ -100,13 +120,13 @@ int row_by_userid
     printf("query: %s\n", query);
     printf("Job ID row: %d\n", PQfnumber(*res, "job_id"));
     int nrows = PQntuples(*res);
-    if(nrows != 1)
+    if(nrows == 0)
     {
-        char msg[] = "Single entry expected. Found %d entries. Query: %s\n";
-        printf(msg, nrows, query);
         PQclear(*res);
         return 1;
     }
+    char msg[] = "Found %d entries. Query: %s\n";
+    printf(msg, nrows, query);
 
     return 0;
 }
@@ -118,15 +138,18 @@ int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
     char values[VALUES_BUFFER_SIZE];
 
     META_DATA_VALS(connection, data, values);
+    printf("Create insert query...\n");
     int err = create_insert_query(
         query, connection, "meta", META_COLS, META_COLS_SIZE , values
     );
+    printf("Insert query created.\n");
     if (err) {
         ERROR("failed to construct query");
         return err;
     }
 
     PGresult* result = PQexec(connection, query);
+    printf("Insert query executed.\n");
 
     err = check_query_result(result, connection);
 
@@ -244,7 +267,7 @@ int insert_device_data(PGconn* connection, eps_device_data_t* data)
 
 /* Using transaction so insert multiple data in one commit */
 int insert_device_data_bulk_ta(
-    PGconn* connection, eps_device_data_t** data, int num_data
+    PGconn* connection, eps_device_data_t* data, int num_data
 ){
     PGresult* res;
 
@@ -252,7 +275,7 @@ int insert_device_data_bulk_ta(
     CHECK_PQ_ERR(res, 1);
 
     for(int i=0; i < num_data; i++)
-        insert_device_data(connection, data[i]);
+        insert_device_data(connection, &data[i]);
 
     res = PQexec(connection, "COMMIT");
     CHECK_PQ_ERR(res, 1);
@@ -270,12 +293,12 @@ OUT err
 For validation num_elems should be equal to nnodes of corresponding entry in
 meta table ("job_id" == jobid).
 */
-eps_device_data_t** select_device_data_by_jobid(
-    int* num_elems, int err, PGconn* connection, int jobid
+eps_device_data_t* select_device_data_by_jobid(
+    int* num_elems, int* err, PGconn* connection, int jobid
 ){
     char query[MAX_QUERY_SIZE];
     PGresult* res;
-    eps_device_data_t** data = NULL;
+    eps_device_data_t* data = NULL;
     sprintf(
         query,
         "SELECT * FROM devices WHERE job_id = %d EXTRACT(EPOCH FROM T_START) As unix_timestamp;",
@@ -286,7 +309,7 @@ eps_device_data_t** select_device_data_by_jobid(
     if(row_by_userid(connection, &res, "devices", jobid))
     {
         printf("No entry found!\n");
-        err = 1;
+        *err = 1;
         return NULL;
     }
 
@@ -296,7 +319,7 @@ eps_device_data_t** select_device_data_by_jobid(
         char msg[] = "No entry found. Query: %s";
         printf(msg, query);
         PQclear(res);
-        err = 1;
+        *err = 1;
         return NULL;
     }
 
@@ -304,71 +327,69 @@ eps_device_data_t** select_device_data_by_jobid(
 
     for(int i=0; i<nrows; i++)
     {
-        data[i]->jobid = (int) strtol(
+        data[i].jobid = (int) strtol(
             PQgetvalue(res, i, PQfnumber(res, "job_id")), (char **)NULL, 10
         );
-        data[i]->nodename = PQgetvalue(res, i, PQfnumber(res, "nodename"));
-        data[i]->device = PQgetvalue(res, i, PQfnumber(res, "device"));
-        data[i]->energy = strtoull(
+        data[i].nodename = PQgetvalue(res, i, PQfnumber(res, "nodename"));
+        data[i].device = PQgetvalue(res, i, PQfnumber(res, "device"));
+        data[i].energy = strtoull(
             PQgetvalue(res, i, PQfnumber(res, "energy")), (char **)NULL, 10
         );
-        data[i]->tstart = PQgetvalue(res, i, PQfnumber(res, "t_start"));
-        data[i]->duration = strtoull(
+        data[i].tstart = PQgetvalue(res, i, PQfnumber(res, "t_start"));
+        data[i].duration = strtoull(
             PQgetvalue(res, i, PQfnumber(res, "t_duration")), (char **)NULL, 10
         );
         // TODO: finalize
-        data[i]->device_type = NULL;
-        data[i]->exclusive = 0;
-        data[i]->resource = NULL;
+        data[i].device_type = NULL;
+        data[i].exclusive = 0;
+        data[i].resource = NULL;
         // data->device_type = PQgetvalue(res, i, PQfnumber(res, "device_type"));
         // data->exclusive = strtol(
         //    PQgetvalue(res, i, PQfnumber(res, "exclusive")), (char **)NULL, 10
         //);
         // data->exclusive = PQgetvalue(res, i, PQfnumber(res, "exclusive"));
-        data[i]->tstart_posix = strtol(
-            PQgetvalue(res, i, PQfnumber(res, "unix_timestamp")),
-            (char **)NULL,
-            10
-        );
+        data[i].tstart_posix = 0;
+        // strtol(
+        //     PQgetvalue(res, i, PQfnumber(res, "unix_timestamp")),
+        //     (char **)NULL,
+        //     10
+        // );
     }
 
     *num_elems = nrows;
-    err = 0;
+    *err = 0;
+
     return data;
 }
 
-int compose_job_data(eps_device_data_t** device_data, int num_elems, int jobid)
+int compose_job_data(PGconn* connection, eps_job_data_t* job_data, int jobid)
 {
     eps_job_data_t* data = calloc(1, sizeof(eps_job_data_t));
-    PGresult* res = NULL;
-    char* tstart;
+    int num_elems;
     long tstart_posix = LONG_MAX;
     unsigned long long duration, end = 0;
+    int err = 0;
+    eps_device_data_t* devices = select_device_data_by_jobid(
+        &num_elems, &err, connection, jobid
+    );
     for(int i=0; i<num_elems; i++)
     {
-        data->jobid = (int) strtol(
-            PQgetvalue(res, i, PQfnumber(res, "job_id")), (char **)NULL, 10
-        );
-        if(data->jobid != jobid)
+        if(devices[i].jobid != jobid)
             continue;
 
-        /* calculate summed energy consumption */
-        data->energy += strtoull(
-            PQgetvalue(res, i, PQfnumber(res, "energy")), (char **)NULL, 10
-        );
+        data->jobid = devices[i].jobid;
 
-        tstart = PQgetvalue(res, i, PQfnumber(res, "t_start"));
+        /* calculate summed energy consumption */
+        data->energy += devices[i].energy;
+
         /* use ealiest start time */
-        if(tstart_posix < data->tstart_posix)
+        if(devices[i].tstart_posix < tstart_posix)
         {
-            data->tstart_posix = tstart_posix;
-            data->tstart = tstart;
+            data->tstart_posix = devices[i].tstart_posix;
+            data->tstart = devices[i].tstart;
         }
-        duration = strtoull(
-            PQgetvalue(res, i, PQfnumber(res, "t_duration")),
-            (char **)NULL,
-            10
-        );
+        duration = devices[i].duration;
+
         /* Use latest end. */
         unsigned long long tmp_end = tstart_posix + duration;
         if(tmp_end > end)
