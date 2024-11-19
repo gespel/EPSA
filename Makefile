@@ -27,7 +27,8 @@ CFLAGS          ?= -Wall -fPIC -Iinclude \
 SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
 LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -lEMA
 
-
+PREP_SRC_FILES =
+SPANK_SRC_FILES =
 
 all: prep spank
 
@@ -42,10 +43,10 @@ test:
 default: $(PLUGIN_FILE)
 
 $(PLUGIN_FILE): $(SRC_FILE)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+	$(CC) $(CFLAGS) $(PREP_SRC_FILES) $^ $(LDFLAGS) -o $@
 
 $(SPANK_PLUGIN_FILE): $(SPANK_SRC_FILE)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+	$(CC) $(CFLAGS) $(SPANK_SRC_FILES) $^ $(LDFLAGS) -o $@
 
 install: $(PLUGIN_FILE)
 	install -m 755 $(PLUGIN_FILE) $(PLUGINS_DIR)
