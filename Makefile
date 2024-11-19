@@ -25,7 +25,8 @@ CC              = gcc
 CFLAGS          ?= -Wall -fPIC -Iinclude \
                    -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
 SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
-LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -lEMA
+PREP_LDFLAGS         ?= -shared
+SPANK_LDFLAGS         ?= -shared
 
 PREP_SRC_FILES =
 SPANK_SRC_FILES =
@@ -43,10 +44,10 @@ test:
 default: $(PLUGIN_FILE)
 
 $(PLUGIN_FILE): $(SRC_FILE)
-	$(CC) $(CFLAGS) $(PREP_SRC_FILES) $^ $(LDFLAGS) -o $@
+	$(CC) $(CFLAGS) $(PREP_SRC_FILES) $^ $(PREP_LDFLAGS) -o $@
 
 $(SPANK_PLUGIN_FILE): $(SPANK_SRC_FILE)
-	$(CC) $(CFLAGS) $(SPANK_SRC_FILES) $^ $(LDFLAGS) -o $@
+	$(CC) $(CFLAGS) $(SPANK_SRC_FILES) $^ $(SPANK_LDFLAGS) -o $@
 
 install: $(PLUGIN_FILE)
 	install -m 755 $(PLUGIN_FILE) $(PLUGINS_DIR)
