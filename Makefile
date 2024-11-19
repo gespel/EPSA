@@ -27,7 +27,7 @@ CC              = gcc
 PREP_CFLAGS          ?= -Wall -fPIC -Iinclude \
                    -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
 SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
-PREP_LDFLAGS         ?= -shared
+PREP_LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -L$(PQ_DIR)/libs -lEMA -lpq
 SPANK_LDFLAGS         ?= -shared
 
 PREP_SRC_FILES =
