@@ -4,7 +4,8 @@ SLURM_ROOT_DIR = /usr
 SLURM_INC_DIR = $(SLURM_ROOT_DIR)/local/slurm/include/
 SLURM_LIB_DIR = /usr/local/slurm/lib/slurm
 SLURM_BUILD = $(SLURM_VERSION)
-SLURM_BUILD_DIR = $(HOME)/slurm_build
+
+# !!! Edit this to be valid for your setup
 SLURM_SRC_DIR = $(HOME)/src/slurm
 
 EMA_DIR = /perfacct/slurm-libs/EMA
@@ -21,10 +22,14 @@ SRC_FILE = prep_eps.c
 SPANK_SRC_FILE = eps.c
 
 CC              = gcc
-CFLAGS          ?= -Wall -fPIC \
-                   -I$(SLURM_BUILD_DIR) -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
+PREP_CFLAGS          ?= -Wall -fPIC -Iinclude \
+                   -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
 SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
-LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -lEMA
+PREP_LDFLAGS         ?= -shared
+SPANK_LDFLAGS         ?= -shared
+
+PREP_SRC_FILES =
+SPANK_SRC_FILES =
 
 TESTS_DIR  = __test__
 
@@ -42,10 +47,10 @@ test:
 default: $(PLUGIN_FILE)
 
 $(PLUGIN_FILE): $(SRC_FILE)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+	$(CC) $(PREP_CFLAGS) $(PREP_SRC_FILES) $^ $(PREP_LDFLAGS) -o $@
 
 $(SPANK_PLUGIN_FILE): $(SPANK_SRC_FILE)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+	$(CC) $(SPANK_CFLAGS) $(SPANK_SRC_FILES) $^ $(SPANK_LDFLAGS) -o $@
 
 install: $(PLUGIN_FILE)
 	install -m 755 $(PLUGIN_FILE) $(PLUGINS_DIR)
