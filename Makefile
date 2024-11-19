@@ -30,7 +30,7 @@ SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
 PREP_LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -L$(PQ_DIR)/libs -lEMA -lpq
 SPANK_LDFLAGS         ?= -shared
 
-PREP_SRC_FILES =
+PREP_SRC_FILES = src/eps_resources.c src/eps_data.c src/eps_utils.c src/eps_db.c src/eps_ema.c
 SPANK_SRC_FILES =
 
 TESTS_DIR  = __test__
