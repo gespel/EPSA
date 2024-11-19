@@ -22,7 +22,7 @@ SRC_FILE = prep_eps.c
 SPANK_SRC_FILE = eps.c
 
 CC              = gcc
-CFLAGS          ?= -Wall -fPIC -Iinclude \
+PREP_CFLAGS          ?= -Wall -fPIC -Iinclude \
                    -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
 SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
 PREP_LDFLAGS         ?= -shared
@@ -44,10 +44,10 @@ test:
 default: $(PLUGIN_FILE)
 
 $(PLUGIN_FILE): $(SRC_FILE)
-	$(CC) $(CFLAGS) $(PREP_SRC_FILES) $^ $(PREP_LDFLAGS) -o $@
+	$(CC) $(PREP_CFLAGS) $(PREP_SRC_FILES) $^ $(PREP_LDFLAGS) -o $@
 
 $(SPANK_PLUGIN_FILE): $(SPANK_SRC_FILE)
-	$(CC) $(CFLAGS) $(SPANK_SRC_FILES) $^ $(SPANK_LDFLAGS) -o $@
+	$(CC) $(SPANK_CFLAGS) $(SPANK_SRC_FILES) $^ $(SPANK_LDFLAGS) -o $@
 
 install: $(PLUGIN_FILE)
 	install -m 755 $(PLUGIN_FILE) $(PLUGINS_DIR)
