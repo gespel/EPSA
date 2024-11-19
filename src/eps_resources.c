@@ -40,4 +40,5 @@ void print_resources(eps_resources_t* resrcs)
     printf("\tMemory used: %ld\n", resrcs->mem_used);
 
     printf("\tWhole node: %d\n", resrcs->whole_node);
+    printf("==========\n");
 }

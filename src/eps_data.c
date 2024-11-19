@@ -36,7 +36,6 @@ void print_metadata(eps_meta_data_t* data)
     printf("Nodes count: %d\n", data->nnodes);
     printf("Timestamp: %s\n", data->tstart);
     print_resources(data->resources);
-    printf("------------\n\n");
 }
 
 eps_job_data_t* get_job_data(
