@@ -42,9 +42,10 @@ prep: $(PLUGIN_FILE)
 spank: $(SPANK_PLUGIN_FILE)
 
 test:
-	$(CC) $(TESTS_DIR)/basic.c -o basic
-	$(CC) $(TESTS_DIR)/cgroup.c -o cgroup
-	$(CC) $(CFLAGS) -g src/eps_utils.c src/eps_resources.c src/eps_data.c src/eps_db.c $(TESTS_DIR)/db.c $(TEST_LDFLAGS) -o dbtest
+	$(CC) -g $(TESTS_DIR)/basic.c -o basic
+	$(CC) -g $(TESTS_DIR)/cgroup.c -o cgroup
+	$(CC) -Iinclude -I$(SLURM_SRC_DIR) -g src/eps_utils.c src/eps_resources.c src/eps_data.c \
+            src/eps_db.c $(TESTS_DIR)/db.c -L$(EMA_DIR)/lib -L$(PQ_DIR)/libs -lEMA -lpq -o dbtest
 
 
 default: $(PLUGIN_FILE)
