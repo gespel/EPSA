@@ -130,6 +130,13 @@ int row_by_userid
 
     return 0;
 }
+
+int posix_time_str(char* t_str, size_t buf_size, time_t* time)
+{
+    struct tm* timeinfo = localtime(time);
+    return strftime(t_str, buf_size, "%F %T", timeinfo) == 0;
+}
+
 /*********************************** META ************************************/
 /* IN connection, data, returns int */
 int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
@@ -178,7 +185,9 @@ int select_meta_data_by_jobid(
     data->nnodes = (int) strtol(
         PQgetvalue(res, 0, PQfnumber(res, "nnodes")), (char **)NULL, 10
     );
-    data->tstart = PQgetvalue(res, 0, PQfnumber(res, "t_start"));
+    data->tstart = strtol(
+        PQgetvalue(res, 0, PQfnumber(res, "t_start")), (char **)NULL, 10
+    );
     data->resources = NULL;
 
     return 0;
@@ -236,7 +245,9 @@ int select_job_data_by_jobid(eps_job_data_t* data, PGconn* connection, int jobid
     data->duration = strtoull(
         PQgetvalue(res, 0, PQfnumber(res, "duration")), (char **)NULL, 10
     );
-    data->tstart = PQgetvalue(res, 0, PQfnumber(res, "t_start"));
+    data->tstart = strtol(
+        PQgetvalue(res, 0, PQfnumber(res, "t_start")), (char **)NULL, 10
+    );
 
     return 0;
 }
@@ -299,29 +310,29 @@ eps_device_data_t* select_device_data_by_jobid(
     char query[MAX_QUERY_SIZE];
     PGresult* res;
     eps_device_data_t* data = NULL;
-    sprintf(
-        query,
-        "SELECT * FROM devices WHERE job_id = %d EXTRACT(EPOCH FROM T_START) As unix_timestamp;",
-        jobid
-    );
-    res = PQexec(connection, query);
+    // sprintf(
+    //     query,
+    //     "SELECT * FROM devices WHERE job_id = %d;",
+    //     jobid
+    // );
+    // res = PQexec(connection, query);
 
+    // int nrows = PQntuples(res);
+    // if(nrows < 1)
+    // {
+    //     char msg[] = "No entry found. Query: %s";
+    //     printf(msg, query);
+    //     PQclear(res);
+    //     *err = 1;
+    //     return NULL;
+    // }
     if(row_by_userid(connection, &res, "devices", jobid))
     {
         printf("No entry found!\n");
         *err = 1;
         return NULL;
     }
-
     int nrows = PQntuples(res);
-    if(nrows < 1)
-    {
-        char msg[] = "No entry found. Query: %s";
-        printf(msg, query);
-        PQclear(res);
-        *err = 1;
-        return NULL;
-    }
 
     data = calloc(nrows, sizeof(eps_device_data_t));
 
@@ -335,7 +346,11 @@ eps_device_data_t* select_device_data_by_jobid(
         data[i].energy = strtoull(
             PQgetvalue(res, i, PQfnumber(res, "energy")), (char **)NULL, 10
         );
-        data[i].tstart = PQgetvalue(res, i, PQfnumber(res, "t_start"));
+        data[i].tstart = strtol(
+            PQgetvalue(res, i, PQfnumber(res, "t_start")),
+            (char **)NULL,
+            10
+        );
         data[i].duration = strtoull(
             PQgetvalue(res, i, PQfnumber(res, "t_duration")), (char **)NULL, 10
         );
@@ -348,12 +363,6 @@ eps_device_data_t* select_device_data_by_jobid(
         //    PQgetvalue(res, i, PQfnumber(res, "exclusive")), (char **)NULL, 10
         //);
         // data->exclusive = PQgetvalue(res, i, PQfnumber(res, "exclusive"));
-        data[i].tstart_posix = 0;
-        // strtol(
-        //     PQgetvalue(res, i, PQfnumber(res, "unix_timestamp")),
-        //     (char **)NULL,
-        //     10
-        // );
     }
 
     *num_elems = nrows;
@@ -366,7 +375,7 @@ int compose_job_data(PGconn* connection, eps_job_data_t* job_data, int jobid)
 {
     eps_job_data_t* data = calloc(1, sizeof(eps_job_data_t));
     int num_elems;
-    long tstart_posix = LONG_MAX;
+    long tstart = LONG_MAX;
     unsigned long long duration, end = 0;
     int err = 0;
     eps_device_data_t* devices = select_device_data_by_jobid(
@@ -383,19 +392,18 @@ int compose_job_data(PGconn* connection, eps_job_data_t* job_data, int jobid)
         data->energy += devices[i].energy;
 
         /* use ealiest start time */
-        if(devices[i].tstart_posix < tstart_posix)
+        if(devices[i].tstart < tstart)
         {
-            data->tstart_posix = devices[i].tstart_posix;
             data->tstart = devices[i].tstart;
         }
         duration = devices[i].duration;
 
         /* Use latest end. */
-        unsigned long long tmp_end = tstart_posix + duration;
+        unsigned long long tmp_end = tstart + duration;
         if(tmp_end > end)
             end = tmp_end;
         /* use duration from ealierst start to latest end */
-        data->runtime = data->tstart_posix - end;
+        data->runtime = data->tstart - end;
         /* use longest measurement duration */
         if(duration > data->duration)
             data->duration = duration;

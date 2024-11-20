@@ -16,9 +16,9 @@
     do{\
         sprintf(\
             str,\
-            "%d,%s,%d,%d",\
+            "%d,%ld,%d,%d",\
             data->jobid,\
-            PQescapeLiteral(db_conn, data->tstart, strlen(data->tstart)),\
+            data->tstart,\
             data->nnodes,\
             data->userid\
         );\
@@ -29,10 +29,10 @@
     do{\
         sprintf(\
             str,\
-            "%d,%llu,'%s',%llu",\
+            "%d,%llu,%ld,%llu",\
             data->jobid,\
             data->energy,\
-            PQescapeLiteral(db_conn, data->tstart, strlen(data->tstart)),\
+            data->tstart,\
             data->duration\
         );\
     } while(0)
@@ -42,12 +42,12 @@
     do{\
         sprintf(\
             str,\
-            "%d,%s,%s,%llu,%s,%lld",\
+            "%d,%s,%s,%llu,%ld,%lld",\
             data->jobid,\
             PQescapeLiteral(db_conn, data->nodename, strlen(data->nodename)),\
             PQescapeLiteral(db_conn, data->device, strlen(data->device)),\
             data->energy,\
-            PQescapeLiteral(db_conn, data->tstart, strlen(data->tstart)),\
+            data->tstart,\
             data->duration\
         );\
     } while(0)

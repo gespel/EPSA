@@ -127,10 +127,10 @@ int test_select_meta_data(eps_meta_data_t* reference)
         err = 1;
         printf("Test failed. `nnodes` does not match!\n");
     }
-    if(strcmp(data.tstart, reference->tstart) != 0)
+    if(data.tstart != reference->tstart)
     {
         err = 1;
-        printf("Test failed. `tstart` does not match! ( %s vs. %s )\n", data.tstart, reference->tstart);
+        printf("Test failed. `tstart` does not match! ( %ld vs. %ld )\n", data.tstart, reference->tstart);
     }
     // if(data.resources = reference->ressources)
     //     printf("Test failed. `resources` does not match!\n")
@@ -178,12 +178,7 @@ int test_select_meta_data(eps_meta_data_t* reference)
 //         err = 1;
 //         printf("Test failed. `energy` does not match!\n");
 //     }
-//     if(data.tstart_posix != reference->tstart_posix)
-//     {
-//         err = 1;
-//         printf("Test failed. `tstart_posix` does not match!\n");
-//     }
-//     if(strcmp(data.tstart, reference->tstart) != 0)
+//     if(data.tstart != reference->tstart)
 //     {
 //         err = 1;
 //         printf("Test failed. `tstart` does not match!\n");
@@ -255,15 +250,13 @@ int test_select_device_data(eps_device_data_t* reference)
             printf("Test failed. `energy` does not match!\n");
         }
 
-        if(data[i].tstart_posix != reference[i].tstart_posix)
+        if(data[i].tstart != reference[i].tstart)
         {
             // err = 1;
-            printf("Test failed. `tstart_posix` does not match!\n");
-        }
-        if(strcmp(data[i].tstart, reference[i].tstart) != 0)
-        {
-            err = 1;
-            printf("Test failed. `tstart` does not match!( %s vs. %s )\n", data[i].tstart, reference[i].tstart);
+            printf(
+                "Test failed. `tstart` does not match (%ld != %ld)!\n",
+                data[i].tstart, reference[i].tstart
+            );
         }
         if(data[i].duration != reference[i].duration)
         {
@@ -310,12 +303,13 @@ int test1(int jobid)
 {
     printf("Start %s\n", __func__);
     int err = 0;
-    T_NOW(tstart); //ctime(time(NULL))??
+
+    time_t t_now = time(NULL);
     eps_meta_data_t meta_data = {
         .jobid = jobid,
         .userid = 123,
         .nnodes = 2,
-        .tstart = tstart,
+        .tstart = t_now,
         .resources = NULL,
     };
     int num_devices = 2;
@@ -324,8 +318,7 @@ int test1(int jobid)
             .jobid = jobid,
             .nodename = "node0",
             .energy = 876543210,
-            .tstart = tstart,
-            .tstart_posix = 0, //time(NULL),
+            .tstart = t_now,
             .duration = 123350,
             .runtime = 0,
             .device = "CPU-0",
@@ -336,8 +329,7 @@ int test1(int jobid)
             .jobid = jobid,
             .nodename = "node1",
             .energy = 123456789,
-            .tstart = tstart,
-            .tstart_posix = 0, //time(NULL),
+            .tstart = t_now,
             .duration = 123450,
             .runtime = 0,
             .device = "CPU-0",

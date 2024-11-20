@@ -11,11 +11,8 @@ eps_meta_data_t* get_metadata(const job_record_t* job)
 
     metadata->jobid = job->job_id;
     metadata->userid = job->user_id;
-
     metadata->nnodes = job->node_cnt;
-
-    metadata->tstart = to_string(&job->start_time);
-
+    metadata->tstart = job->start_time;
     metadata->resources = get_resources(job);
 
     return metadata;
@@ -24,7 +21,6 @@ eps_meta_data_t* get_metadata(const job_record_t* job)
 void free_metadata(eps_meta_data_t* data)
 {
     free(data->resources);
-    free(data->tstart);
     free(data);
 }
 
@@ -34,7 +30,7 @@ void print_metadata(eps_meta_data_t* data)
     printf("Job ID: %d\n", data->jobid);
     printf("User ID: %d\n", data->userid);
     printf("Nodes count: %d\n", data->nnodes);
-    printf("Timestamp: %s\n", data->tstart);
+    printf("Timestamp: %ld\n", data->tstart);
     print_resources(data->resources);
 }
 
@@ -45,7 +41,7 @@ eps_job_data_t* get_job_data(
 
     data->jobid = job->job_id;
     data->energy = energy;
-    data->tstart = to_string(&job->start_time);
+    data->tstart = job->start_time;
     data->duration = job->end_time - job->start_time;
 
     return data;
@@ -53,7 +49,6 @@ eps_job_data_t* get_job_data(
 
 void free_job_data(eps_job_data_t* data)
 {
-    free(data->tstart);
     free(data);
 }
 
@@ -61,7 +56,7 @@ void print_job_data(eps_job_data_t* data)
 {
     printf("Job ID: %d", data->jobid);
     printf("Energy: %lld", data->energy);
-    printf("Time started: %s", data->tstart);
+    printf("Time started: %ld", data->tstart);
     printf("Duration: %lld", data->duration);
 }
 
@@ -69,8 +64,7 @@ eps_device_data_t* get_device_data(
     const Device* device,
     const job_env_t* job,
     unsigned long long energy,
-    const time_t* tstart,
-    long tstart_posix,
+    time_t tstart,
     unsigned long long tstart_us,
     unsigned long long tend_us
 )
@@ -89,7 +83,7 @@ eps_device_data_t* get_device_data(
 
     data->energy = energy;
 
-    data->tstart = to_string(tstart);
+    data->tstart = tstart;
     data->duration = tend_us - tstart_us;
 
     // TODO: Find a way to write something meaningfull here...
@@ -103,7 +97,6 @@ void free_device_data(eps_device_data_t* data)
 {
     // TODO: Remove the latch here later...
     if (data->resource) free(data->resource);
-    free(data->tstart);
     free(data);
 }
 
@@ -113,7 +106,6 @@ void print_device_data(eps_device_data_t* data)
     printf("Node name: %s\n", data->nodename);
     printf("Device: %s\n", data->device);
     printf("Energy: %lld\n", data->energy);
-    printf("Time started: %s\n", data->tstart);
+    printf("Time started: %ld\n", data->tstart);
     printf("Duration: %lld\n", data->duration);
-    printf("Time started(posix): %ld\n", data->tstart_posix);
 }

@@ -14,7 +14,7 @@ typedef struct eps_meta_data
     int jobid;
     int userid;
     int nnodes;
-    char* tstart;
+    time_t tstart;
     eps_resources_t* resources;
 } eps_meta_data_t;
 
@@ -22,9 +22,8 @@ typedef struct eps_job_data
 {
     int jobid;
     unsigned long long energy;
-    char* tstart;
+    time_t tstart;
     unsigned long long duration;
-    long tstart_posix;
     unsigned long long runtime;
 } eps_job_data_t;
 
@@ -33,8 +32,7 @@ typedef struct eps_device_data
     int jobid;
     char* nodename;
     unsigned long long energy;
-    char* tstart;
-    long tstart_posix;
+    time_t tstart;
     unsigned long long duration;
     unsigned long long runtime;
     char* device;
@@ -57,8 +55,7 @@ eps_device_data_t* get_device_data(
     const Device* device,
     const job_env_t* job,
     unsigned long long energy,
-    const time_t* tstart,
-    long tstart_posix,
+    time_t tstart,
     unsigned long long tstart_us,
     unsigned long long tend_us
 );
