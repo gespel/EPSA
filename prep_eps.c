@@ -158,14 +158,13 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
             PQfinish(db_connection);
             return SLURM_ERROR;
         }
-        //int err = insert_meta_data(db_connection, data);
-        print_metadata(data);
+        int err = insert_meta_data(db_connection, data);
         free_metadata(data);
 
-        //if (err) {
-        //    slurm_error("failed to write data to db");
-        //    return SLURM_ERROR;
-        //}
+        if (err) {
+            slurm_error("failed to write data to db");
+            return SLURM_ERROR;
+        }
 
         slurm_info("Closing DB connection...");
         PQfinish(db_connection);
