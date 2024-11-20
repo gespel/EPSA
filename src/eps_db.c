@@ -293,7 +293,8 @@ eps_device_data_t* select_device_data_by_jobid(
 }
 
 /*********************************** JOB *************************************/
-int compose_job_data(PGconn* connection, eps_job_data_t* job_data, int jobid)
+/* Returns job data or NULL if an error has occurred*/
+eps_job_data_t* compose_job_data(PGconn* connection, int jobid)
 {
     eps_job_data_t* data = calloc(1, sizeof(eps_job_data_t));
     int num_elems;
@@ -303,24 +304,20 @@ int compose_job_data(PGconn* connection, eps_job_data_t* job_data, int jobid)
     eps_device_data_t* devices = select_device_data_by_jobid(
         &num_elems, &err, connection, jobid
     );
+    if(err)
+     return NULL;
+
     for(int i=0; i<num_elems; i++)
     {
         if(devices[i].jobid != jobid)
             continue;
-
         data->jobid = devices[i].jobid;
-
-        /* calculate summed energy consumption */
         data->energy += devices[i].energy;
-
-        /* use earliest start time */
         if(devices[i].tstart < tstart)
         {
             data->tstart = devices[i].tstart;
         }
         duration = devices[i].duration;
-
-        /* Use latest end. */
         unsigned long long tmp_end = tstart + duration;
         if(tmp_end > end)
             end = tmp_end;
@@ -330,5 +327,33 @@ int compose_job_data(PGconn* connection, eps_job_data_t* job_data, int jobid)
         if(duration > data->duration)
             data->duration = duration;
     }
-    return 0;
+    return data;
+}
+
+int has_valid_db_entries(PGconn* connection, int jobid)
+{
+    printf("Validate db entries for job: %d ...\n", jobid);
+    int num_devices, err = 0;
+    eps_meta_data_t meta;
+
+    err = select_meta_data_by_jobid(&meta, connection, jobid);
+    if(err)
+        return err;
+
+    eps_device_data_t* devices = select_device_data_by_jobid(
+        &num_devices, &err, connection, jobid
+    );
+    if(num_devices == 0)
+    {
+        printf("No device entries found.\n");
+        return 1;
+    }
+    PGresult* res = PQexec(
+        connection, "SELECT DISTINCT nodename FROM devices;"
+    );
+    int used_nodes = PQntuples(res);
+    if(err)
+        return err;
+
+    return meta.nnodes == used_nodes;
 }

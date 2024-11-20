@@ -62,4 +62,9 @@ eps_device_data_t* select_device_data_by_jobid(
     int* num_elems, int* err, PGconn* db_conn, int jobid
 );
 int select_meta_data_by_jobid(eps_meta_data_t* data, PGconn* db_conn, int jobid);
+
+/* Misc */
+eps_job_data_t* compose_job_data(PGconn* connection, int jobid);
+int has_valid_db_entries(PGconn* connection, int jobid);
+
 #endif

@@ -230,6 +230,9 @@ int test_select_device_data(eps_device_data_t* reference)
     // void* resource;
     // int exclusive;
     }
+    if(has_valid_db_entries(conn, reference[0].jobid))
+        printf("DB validation was successful!\n");
+
     PQfinish(conn);
 
     return err;
@@ -300,7 +303,7 @@ int test1(int jobid)
         return err;
     }
 
-    printf("test was successful\n");
+    printf("Test was successful!\n");
 
     print_metadata(&meta_data);
     for(int i=0; i<num_devices;i++)
