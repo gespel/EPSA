@@ -18,8 +18,6 @@
 
 const char* META_COLS[META_COLS_SIZE] = {
     "job_id", "t_start", "nnodes", "user_id"};
-const char* JOB_COLS[JOB_COLS_SIZE] = {
-    "job_id", "energy", "t_start", "t_duration"};
 const char* DEVICE_COLS[DEVICE_COLS_SIZE] = {
     "job_id", "nodename", "device", "energy", "t_start", "t_duration"};
 
@@ -193,65 +191,6 @@ int select_meta_data_by_jobid(
     return 0;
 }
 
-/************************************ JOB ************************************/
-/* IN connection, data, returns int */
-int insert_job_data(PGconn* connection, eps_job_data_t* data)
-{
-    char query[MAX_QUERY_SIZE];
-    char values[VALUES_BUFFER_SIZE];
-
-    JOB_DATA_VALS(connection, data, values);
-
-    int err = create_insert_query(
-        query, connection, "jobs", JOB_COLS, JOB_COLS_SIZE, values
-    );
-    if (err) {
-        ERROR("failed to construct query");
-        return err;
-    }
-
-    PGresult* result = PQexec(connection, query);
-
-    err = check_query_result(result, connection);
-
-    PQclear(result);
-
-    return err;
-}
-
-int select_job_data_by_jobid(eps_job_data_t* data, PGconn* connection, int jobid)
-{
-    char query[MAX_QUERY_SIZE];
-    PGresult* res;
-    sprintf( query, "SELECT * FROM jobs WHERE job_id = %d", jobid);
-    res = PQexec(connection, query);
-    printf("query: %s\n", query);
-    printf("Job ID row: %d\n", PQfnumber(res, "job_id"));
-    int nrows = PQntuples(res);
-    if(nrows != 1)
-    {
-        char msg[] = "Single entry expected. Found %d entries. Query: %s\n";
-        printf(msg, nrows, query);
-        PQclear(res);
-        return 1;
-    }
-
-    data->jobid = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(res, "job_id")), (char **)NULL, 10
-    );
-    data->energy = strtoull(
-        PQgetvalue(res, 0, PQfnumber(res, "energy")), (char **)NULL, 10
-    );
-    data->duration = strtoull(
-        PQgetvalue(res, 0, PQfnumber(res, "duration")), (char **)NULL, 10
-    );
-    data->tstart = strtol(
-        PQgetvalue(res, 0, PQfnumber(res, "t_start")), (char **)NULL, 10
-    );
-
-    return 0;
-}
-
 /********************************** DEVICES **********************************/
 /* IN connection, data, returns int */
 int insert_device_data(PGconn* connection, eps_device_data_t* data)
@@ -310,22 +249,7 @@ eps_device_data_t* select_device_data_by_jobid(
     char query[MAX_QUERY_SIZE];
     PGresult* res;
     eps_device_data_t* data = NULL;
-    // sprintf(
-    //     query,
-    //     "SELECT * FROM devices WHERE job_id = %d;",
-    //     jobid
-    // );
-    // res = PQexec(connection, query);
 
-    // int nrows = PQntuples(res);
-    // if(nrows < 1)
-    // {
-    //     char msg[] = "No entry found. Query: %s";
-    //     printf(msg, query);
-    //     PQclear(res);
-    //     *err = 1;
-    //     return NULL;
-    // }
     if(row_by_userid(connection, &res, "devices", jobid))
     {
         printf("No entry found!\n");
@@ -355,10 +279,8 @@ eps_device_data_t* select_device_data_by_jobid(
             PQgetvalue(res, i, PQfnumber(res, "t_duration")), (char **)NULL, 10
         );
         // TODO: finalize
-        data[i].device_type = NULL;
         data[i].exclusive = 0;
         data[i].resource = NULL;
-        // data->device_type = PQgetvalue(res, i, PQfnumber(res, "device_type"));
         // data->exclusive = strtol(
         //    PQgetvalue(res, i, PQfnumber(res, "exclusive")), (char **)NULL, 10
         //);
@@ -371,6 +293,7 @@ eps_device_data_t* select_device_data_by_jobid(
     return data;
 }
 
+/*********************************** JOB *************************************/
 int compose_job_data(PGconn* connection, eps_job_data_t* job_data, int jobid)
 {
     eps_job_data_t* data = calloc(1, sizeof(eps_job_data_t));
@@ -391,7 +314,7 @@ int compose_job_data(PGconn* connection, eps_job_data_t* job_data, int jobid)
         /* calculate summed energy consumption */
         data->energy += devices[i].energy;
 
-        /* use ealiest start time */
+        /* use earliest start time */
         if(devices[i].tstart < tstart)
         {
             data->tstart = devices[i].tstart;

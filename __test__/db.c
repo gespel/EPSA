@@ -140,65 +140,6 @@ int test_select_meta_data(eps_meta_data_t* reference)
     return err;
 }
 
-// int test_insert_job(eps_job_data_t* data)
-// {
-//     PGconn* conn = PQconnectdb(DB_CONN_INFO);
-//     int err = check_connection(conn);
-//     if(err) {
-//         printf("Connection check failed!");
-//         return err;
-//     }
-
-//     err = insert_job_data(conn, data);
-
-//     PQfinish(conn);
-
-//     return err;
-// }
-
-// int test_select_job_data(eps_job_data_t* reference)
-// {
-//     eps_job_data_t data;
-//     int err = 0;
-//     PGconn* conn = PQconnectdb(DB_CONN_INFO);
-//     err = check_connection(conn);
-//     if (err) {
-//         printf("Connection check failed!");
-//         return err;
-//     }
-
-//     select_job_data_by_jobid(&data, connection, reference->jobid);
-//     if(data.jobid != reference->jobid)
-//     {
-//         err = 1;
-//         printf("Test failed. `jobid` does not match!\n");
-//     }
-//     if(data.energy != reference->energy)
-//     {
-//         err = 1;
-//         printf("Test failed. `energy` does not match!\n");
-//     }
-//     if(data.tstart != reference->tstart)
-//     {
-//         err = 1;
-//         printf("Test failed. `tstart` does not match!\n");
-//     }
-//     if(data.duration != reference->duration)
-//     {
-//         err = 1;
-//         printf("Test failed. `duration` does not match!\n");
-//     }
-//     if(data.runtime != reference->runtime)
-//     {
-//         err = 1;
-//         printf("Test failed. `runtime` does not match!\n");
-//     }
-
-//     PQfinish(conn);
-
-//     return err;
-// }
-
 int test_insert_devices(eps_device_data_t* data, int num_data)
 {
     printf("Start %s\n", __func__);
@@ -273,11 +214,6 @@ int test_select_device_data(eps_device_data_t* reference)
             err = 1;
             printf("Test failed. `device` does not match!\n");
         }
-        // if(strcmp(data[i].device_type, reference[i].device_type) != 0)
-        // {
-        //     err = 1;
-        //     printf("Test failed. `device_type` does not match!\n");
-        // }
         // if(strcmp(data[i].resource, reference[i].resource) != 0)
         // {
         //     err = 1;

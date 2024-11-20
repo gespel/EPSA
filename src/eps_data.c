@@ -34,32 +34,6 @@ void print_metadata(eps_meta_data_t* data)
     print_resources(data->resources);
 }
 
-eps_job_data_t* get_job_data(
-    const job_record_t* job, unsigned long long energy)
-{
-    eps_job_data_t* data = malloc(sizeof(eps_job_data_t));
-
-    data->jobid = job->job_id;
-    data->energy = energy;
-    data->tstart = job->start_time;
-    data->duration = job->end_time - job->start_time;
-
-    return data;
-}
-
-void free_job_data(eps_job_data_t* data)
-{
-    free(data);
-}
-
-void print_job_data(eps_job_data_t* data)
-{
-    printf("Job ID: %d", data->jobid);
-    printf("Energy: %lld", data->energy);
-    printf("Time started: %ld", data->tstart);
-    printf("Duration: %lld", data->duration);
-}
-
 eps_device_data_t* get_device_data(
     const Device* device,
     const job_env_t* job,
@@ -78,14 +52,9 @@ eps_device_data_t* get_device_data(
     data->nodename = err ? NULL : nodename;
 
     data->device = (char*)EMA_get_device_name(device);
-    //TODO: Realize device type extraction...
-    data->device_type = NULL;
-
     data->energy = energy;
-
     data->tstart = tstart;
     data->duration = tend_us - tstart_us;
-
     // TODO: Find a way to write something meaningfull here...
     data->resource = NULL;
     data->exclusive = 0;

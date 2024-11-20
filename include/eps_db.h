@@ -24,19 +24,6 @@
         );\
     } while(0)
 
-#define JOB_COLS_SIZE 4
-#define JOB_DATA_VALS(db_conn, data, str) \
-    do{\
-        sprintf(\
-            str,\
-            "%d,%llu,%ld,%llu",\
-            data->jobid,\
-            data->energy,\
-            data->tstart,\
-            data->duration\
-        );\
-    } while(0)
-
 #define DEVICE_COLS_SIZE 6
 #define DEVICE_DATA_VALS(db_conn, data, str) \
     do{\
@@ -66,7 +53,6 @@ int create_insert_query(
 );
 
 int insert_meta_data(PGconn* connection, eps_meta_data_t* data);
-int insert_job_data(PGconn* connection, eps_job_data_t* data);
 int insert_device_data(PGconn* connection, eps_device_data_t* data);
 int insert_device_data_bulk_ta(
     PGconn* connection, eps_device_data_t* data, int num_data
@@ -75,6 +61,5 @@ int insert_device_data_bulk_ta(
 eps_device_data_t* select_device_data_by_jobid(
     int* num_elems, int* err, PGconn* db_conn, int jobid
 );
-int select_job_data_by_jobid(eps_job_data_t* data, PGconn* db_conn, int jobid);
 int select_meta_data_by_jobid(eps_meta_data_t* data, PGconn* db_conn, int jobid);
 #endif
