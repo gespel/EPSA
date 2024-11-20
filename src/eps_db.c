@@ -246,7 +246,6 @@ meta table ("job_id" == jobid).
 eps_device_data_t* select_device_data_by_jobid(
     int* num_elems, int* err, PGconn* connection, int jobid
 ){
-    char query[MAX_QUERY_SIZE];
     PGresult* res;
     eps_device_data_t* data = NULL;
 
