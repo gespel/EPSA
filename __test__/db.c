@@ -14,7 +14,7 @@
 #define CHECK_CONNECTION(conn) do { \
     int err = check_connection(conn); \
     if (err) { \
-        printf("Connection error: %s\n", PQerrorMessage(connection));
+        printf("Connection error: %s\n", PQerrorMessage(connection)); \
         PQfinish(conn); \
         return err; \
     } \
