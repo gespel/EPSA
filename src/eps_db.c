@@ -333,6 +333,9 @@ int has_valid_db_entries(PGconn* connection, int jobid)
     eps_device_data_t* devices = select_device_data_by_jobid(
         &num_devices, &err, connection, jobid
     );
+    if(err)
+        return err;
+
     if(num_devices == 0)
     {
         INFO("No device entries found.");
@@ -354,10 +357,9 @@ int has_valid_db_entries(PGconn* connection, int jobid)
         paramFormats,
         0
     );
+
     int used_nodes = PQntuples(res);
     PQclear(res);
-    if(err)
-        return err;
 
     int ret = meta.nnodes == used_nodes;
     if(ret)

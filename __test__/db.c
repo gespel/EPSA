@@ -3,23 +3,22 @@
 
 #include <time.h>
 
-#define T_NOW(X) \
-    char X[20]; \
-    time_t now;\
-    time(&now);\
-    struct tm *local_time = localtime(&now); \
-    do{\
-        sprintf(\
-            X, \
-            "%04d-%02d-%02d %02d:%02d:%02d", \
-            local_time->tm_year+1900, \
-            local_time->tm_mon, \
-            local_time->tm_mday, \
-            local_time->tm_hour, \
-            local_time->tm_min, \
-            local_time->tm_sec \
-        );\
-    } while(0)
+#define HANDLE_TEST_ERR(e) do { \
+    if(e) \
+    { \
+        printf("Test failed.\n"); \
+        return e; \
+    } \
+}while(0)
+
+#define CHECK_CONNECTION(conn) do { \
+    int err = check_connection(conn); \
+    if (err) { \
+        printf("Connection error: %s\n", PQerrorMessage(connection));
+        PQfinish(conn); \
+        return err; \
+    } \
+}while(0)
 
 PGconn* connection = NULL;
 
@@ -43,54 +42,16 @@ int main(int argc, char** argv){
     }
     int jid = (int) strtol(argv[1], (char **)NULL, 10);
 
-    /* Connecting DB. */
-    connection = PQconnectdb(DB_CONN_INFO);
-    printf("DB connected.\n");
-
-    /* Checking DB connection. */
-    int err = check_connection(connection);
-    if (err) {
-        exit_on_error(err, "Connection check failed!");
-    }
-
-    eps_meta_data_t data;
-
-    err = select_meta_data_by_jobid(&data, connection, jid);
-    int testable = 0;
-    if (err) {
-        testable = 1;
-        // free_metadata(&data);
-        // exit_on_error(err, "Failed to read metadata from db!");
-    }else{
-        // free_metadata(&data);
-        print_metadata(&data);
-    }
-
-    /* Disconnecting DB. */
-    PQfinish(connection);
-    printf("DB disconnected.\n");
-
-    if(testable)
-    {
-        err = test1(jid);
-        if(err)
-            exit_on_error(err, "Failed test1!");
-    }
+    exit_on_error(test1(jid), "test1 FAILED!");
 }
 
 int test_insert_meta(eps_meta_data_t* data)
 {
     printf("Start %s\n", __func__);
     PGconn* conn = PQconnectdb(DB_CONN_INFO);
-    int err = check_connection(conn);
-    if (err) {
-        printf("Connection check failed!");
-        return err;
-    }
-    printf("insert_meta_data...\n");
-    err = insert_meta_data(conn, data);
-    printf("insert_meta_data done.\n");
+    CHECK_CONNECTION(conn);
 
+    int err = insert_meta_data(conn, data);
     if(err)
         printf("Test failed. Could not insert meta data.\n");
 
@@ -105,11 +66,7 @@ int test_select_meta_data(eps_meta_data_t* reference)
     eps_meta_data_t data;
     int err = 0;
     PGconn* conn = PQconnectdb(DB_CONN_INFO);
-    err = check_connection(conn);
-    if (err) {
-        printf("Connection check failed!");
-        return err;
-    }
+    CHECK_CONNECTION(conn);
 
     select_meta_data_by_jobid(&data, conn, reference->jobid);
     if(data.jobid != reference->jobid)
@@ -144,16 +101,9 @@ int test_insert_devices(eps_device_data_t* data, int num_data)
 {
     printf("Start %s\n", __func__);
     PGconn* conn = PQconnectdb(DB_CONN_INFO);
-    int err = check_connection(conn);
-    if(err) {
-        printf("Connection check failed!");
-        return err;
-    }
-
-    err = insert_device_data_bulk_ta(conn, data, num_data);
-
+    CHECK_CONNECTION(conn);
+    int err = insert_device_data_bulk_ta(conn, data, num_data);
     PQfinish(conn);
-
     return err;
 }
 
@@ -162,71 +112,62 @@ int test_select_device_data(eps_device_data_t* reference)
     printf("Start %s\n", __func__);
     eps_device_data_t* data;
     int err = 0;
-    PGconn* conn = PQconnectdb(DB_CONN_INFO);
-    err = check_connection(conn);
-    if (err) {
-        printf("Connection check failed!");
-        return err;
-    }
+    int num_devices = 0;
+    PGconn* conn;
 
-    int num_devices;
+    conn = PQconnectdb(DB_CONN_INFO);
+    CHECK_CONNECTION(conn);
+    if(!has_valid_db_entries(conn, reference[0].jobid))
+        return 1;
+
     data = select_device_data_by_jobid(
         &num_devices, &err, conn, reference[0].jobid
     );
+
     for(int i=0; i<num_devices; i++)
     {
         if(data[i].jobid != reference[i].jobid)
         {
             err = 1;
-            printf("Test failed. `jobid` does not match!\n");
+            printf("`jobid` does not match!\n");
         }
         if(strcmp(data[i].nodename, reference[i].nodename) != 0)
         {
             err = 1;
-            printf("Test failed. `nodename` does not match!\n");
+            printf("`nodename` does not match!\n");
         }
         if(data[i].energy != reference[i].energy)
         {
             err = 1;
-            printf("Test failed. `energy` does not match!\n");
+            printf("`energy` does not match!\n");
         }
-
         if(data[i].tstart != reference[i].tstart)
         {
-            // err = 1;
-            printf(
-                "Test failed. `tstart` does not match (%ld != %ld)!\n",
-                data[i].tstart, reference[i].tstart
-            );
+            err = 1;
+            printf("`tstart` does not match!\n");
         }
         if(data[i].duration != reference[i].duration)
         {
             err = 1;
-            printf("Test failed. `duration` does not match!\n");
+            printf("`duration` does not match!\n");
         }
         if(data[i].runtime != reference[i].runtime)
         {
             err = 1;
-            printf("Test failed. `runtime` does not match! (%lld != %lld)\n", data[i].runtime, reference[i].runtime);
+            printf("`runtime` does not match!\n");
         }
         if(strcmp(data[i].device, reference[i].device) != 0)
         {
             err = 1;
-            printf("Test failed. `device` does not match!\n");
+            printf("`device` does not match!\n");
         }
-        // if(strcmp(data[i].resource, reference[i].resource) != 0)
-        // {
-        //     err = 1;
-        //     printf("Test failed. `resource` does not match!\n");
-        // }
         if(data[i].exclusive != reference[i].exclusive)
         {
-            // err = 1;
-            printf("Test failed. `exclusive` does not match! (%d != %d) \n", data[i].exclusive, reference[i].exclusive);
+            err = 1;
+            printf("`exclusive` does not match!\n");
         }
+        // TODO: Add check for resources.
     }
-    if(has_valid_db_entries(conn, reference[0].jobid))
-        printf("DB validation was successful!\n");
 
     PQfinish(conn);
 
@@ -236,8 +177,6 @@ int test_select_device_data(eps_device_data_t* reference)
 int test1(int jobid)
 {
     printf("Start %s\n", __func__);
-    int err = 0;
-
     time_t t_now = time(NULL);
     eps_meta_data_t meta_data = {
         .jobid = jobid,
@@ -272,36 +211,15 @@ int test1(int jobid)
         }
     };
 
-    err = test_insert_meta(&meta_data);
-    if(err)
-    {
-        printf("Test failed.\n");
-        return err;
-    }
-    err = test_insert_devices(device_data, num_devices);
-    if(err)
-    {
-        printf("Test failed.\n");
-        return err;
-    }
-
-    err = test_select_meta_data(&meta_data);
-    if(err)
-    {
-        printf("Test failed.\n");
-        return err;
-    }
-    err = test_select_device_data(device_data);
-    if(err)
-    {
-        printf("Test failed.\n");
-        return err;
-    }
-
-    printf("Test was successful!\n");
+    HANDLE_TEST_ERR(test_insert_meta(&meta_data));
+    HANDLE_TEST_ERR(test_insert_devices(device_data, num_devices));
+    HANDLE_TEST_ERR(test_select_meta_data(&meta_data));
+    HANDLE_TEST_ERR(test_select_device_data(device_data));
 
     print_metadata(&meta_data);
     for(int i=0; i<num_devices;i++)
         print_device_data(&device_data[i]);
-    return err;
+
+    printf("Test was successful!\n");
+    return 0;
 }
