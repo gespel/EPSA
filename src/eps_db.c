@@ -16,10 +16,8 @@
     if (PQresultStatus(res) == PGRES_FATAL_ERROR || PQresultStatus(res) != PGRES_COMMAND_OK)\
         return ret;
 
-const char* META_COLS[META_COLS_SIZE] = {
-    "job_id", "t_start", "nnodes", "user_id"};
-const char* DEVICE_COLS[DEVICE_COLS_SIZE] = {
-    "job_id", "nodename", "device", "energy", "t_start", "t_duration"};
+#define META_COLS "job_id, t_start, nnodes, user_id"
+#define DEVICE_COLS "job_id, nodename, energy, t_start, t_duration, device, exclusiv"
 
 PGconn* connect_db()
 {
@@ -33,65 +31,14 @@ int check_connection(PGconn* connection)
     return PQstatus(connection) != CONNECTION_OK;
 }
 
-int create_insert_query(
-    char* query,
-    PGconn* connection,
-    const char* table,
-    const char** columns,
-    int num_cols,
-    char* values
-){
-    char* _table = PQescapeIdentifier(connection, table, strlen(table));
-    int len = 0;
-    for(int i=0; i<num_cols; i++)
-    {
-        char* col = PQescapeIdentifier(
-            connection, columns[i], strlen(columns[i])
-        );
-        len += sizeof(col);
-    }
-    char* tmp_col = calloc(1, len + 3*num_cols - 1);
-    char* _columns = calloc(1, len + 3*num_cols - 1);
-
-    _columns = PQescapeIdentifier(
-        connection, columns[0], strlen(columns[0])
-    );
-
-    for(int i=1; i<num_cols; i++)
-    {
-        printf("Escape column %d\n", i);
-        char* col = PQescapeIdentifier(
-            connection, columns[i], strlen(columns[i])
-        );
-
-        sprintf(tmp_col, "%s,%s", _columns, col);
-        // PQfreemem(col); // Required or not?
-        if(tmp_col != NULL)
-            strncpy(_columns, tmp_col, strlen(tmp_col));
-        _columns[strlen(tmp_col)] = '\0';
-
-    }
-
-    printf("Build query.\n");
-    int num = sprintf(
-        query,
-        "INSERT INTO %s (%s) VALUES(%s);",
-        _table,
-        _columns,
-        values
-    );
-
-    printf("query: %s\n", query);
-    PQfreemem(_table);
-
-    return num <= 0;
-}
-
 int check_query_result(PGresult* result, PGconn* connection)
 {
-    if (PQresultStatus(result) != PGRES_COMMAND_OK) {
+    ExecStatusType status = PQresultStatus(result);
+    int status_ok = status == PGRES_COMMAND_OK || status == PGRES_TUPLES_OK;
+    if (!status_ok) {
         ERROR(
-            "eps-db: failed to execute query: %s\n",
+            "eps-db: failed to execute query[%s]: %s\n",
+            PQresStatus(PQresultStatus(result)),
             PQerrorMessage(connection)
         );
         return 1;
@@ -102,29 +49,37 @@ int check_query_result(PGresult* result, PGconn* connection)
 int row_by_userid
     (PGconn* connection, PGresult** res, const char* table, int jobid)
 {
-    char query[MAX_QUERY_SIZE];
-    char* _table = PQescapeIdentifier(connection, table, strlen(table));
-    sprintf(
-        query,
-        "SELECT * FROM %s WHERE job_id = %d",
-        _table,
-        jobid
+    char* query = malloc(33 + strlen(table) + 1);
+    sprintf(query, "SELECT * FROM %s WHERE job_id = $1;",
+        PQescapeIdentifier(connection, table, strlen(table))
     );
 
-    PQfreemem(_table);
+    uint32_t bin_jobid = htonl((uint32_t) jobid);
+    const char* paramValues[1] = {(char*) &bin_jobid};
+    int paramLengths[1] = {sizeof(bin_jobid)};
+    int paramFormats[1] = {1};
 
-    *res = PQexec(connection, query);
+    *res = PQexecParams(
+        connection,
+        query,
+        1,
+        NULL,
+        paramValues,
+        paramLengths,
+        paramFormats,
+        1
+    );
 
-    printf("query: %s\n", query);
-    printf("Job ID row: %d\n", PQfnumber(*res, "job_id"));
+    check_query_result(*res, connection);
+
     int nrows = PQntuples(*res);
     if(nrows == 0)
     {
         PQclear(*res);
         return 1;
     }
-    char msg[] = "Found %d entries. Query: %s\n";
-    printf(msg, nrows, query);
+
+    INFO("Found %d entries in table %s with jobid=%d.", nrows, table, jobid);
 
     return 0;
 }
@@ -139,26 +94,38 @@ int posix_time_str(char* t_str, size_t buf_size, time_t* time)
 /* IN connection, data, returns int */
 int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
 {
-    char query[MAX_QUERY_SIZE];
-    char values[VALUES_BUFFER_SIZE];
+    uint32_t bin_jobid = htonl((uint32_t) data->jobid);
+    uint64_t bin_tstart = htole64((uint64_t) data->tstart);
+    uint32_t bin_nnodes = htonl((uint32_t) data->nnodes);
+    uint32_t bin_userid = htonl((uint32_t) data->userid);
 
-    META_DATA_VALS(connection, data, values);
-    printf("Create insert query...\n");
-    int err = create_insert_query(
-        query, connection, "meta", META_COLS, META_COLS_SIZE , values
+    int paramFormats[4] = {1, 1, 1, 1};
+    const char* paramValues[4] = {
+        (char*) &bin_jobid,
+        (char*) &bin_tstart,
+        (char*) &bin_nnodes,
+        (char*) &bin_userid
+    };
+    int paramLengths[4] = {
+        sizeof(bin_jobid),
+        sizeof(bin_tstart),
+        sizeof(bin_nnodes),
+        sizeof(bin_userid)
+    };
+
+    PGresult* res = PQexecParams(
+        connection,
+        "INSERT INTO meta ("META_COLS") VALUES($1, $2, $3, $4);",
+        4,
+        NULL,
+        paramValues,
+        paramLengths,
+        paramFormats,
+        0
     );
-    printf("Insert query created.\n");
-    if (err) {
-        ERROR("failed to construct query");
-        return err;
-    }
+    int err = check_query_result(res, connection);
 
-    PGresult* result = PQexec(connection, query);
-    printf("Insert query executed.\n");
-
-    err = check_query_result(result, connection);
-
-    PQclear(result);
+    PQclear(res);
 
     return err;
 }
@@ -170,23 +137,24 @@ int select_meta_data_by_jobid(
 
     if(row_by_userid(connection, &res, "meta", jobid))
     {
-        printf("No entry found!\n");
+        INFO("No entry found in table meta with jobid=%d!", jobid);
         return 1;
     }
-    data->jobid = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(res, "job_id")), (char **)NULL, 10
+    data->jobid = ntohl(
+        *((uint32_t*) PQgetvalue(res, 0, PQfnumber(res, "job_id")))
     );
-
-    data->userid = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(res, "user_id")), (char **)NULL, 10
+    data->userid = ntohl(
+        *((uint32_t*) PQgetvalue(res, 0, PQfnumber(res, "user_id")))
     );
-    data->nnodes = (int) strtol(
-        PQgetvalue(res, 0, PQfnumber(res, "nnodes")), (char **)NULL, 10
+    data->nnodes = ntohl(
+        *((uint32_t*) PQgetvalue(res, 0, PQfnumber(res, "nnodes")))
     );
-    data->tstart = strtol(
-        PQgetvalue(res, 0, PQfnumber(res, "t_start")), (char **)NULL, 10
+    data->tstart = le64toh(
+        *((uint64_t*) PQgetvalue(res, 0, PQfnumber(res, "t_start")))
     );
     data->resources = NULL;
+
+    PQclear(res);
 
     return 0;
 }
@@ -195,22 +163,45 @@ int select_meta_data_by_jobid(
 /* IN connection, data, returns int */
 int insert_device_data(PGconn* connection, eps_device_data_t* data)
 {
-    char query[MAX_QUERY_SIZE];
-    char values[VALUES_BUFFER_SIZE];
+    uint32_t bin_jobid = htonl((uint32_t) data->jobid);
+    uint64_t bin_energy = htole64((uint64_t) data->energy);
+    uint64_t bin_tstart = htole64((uint64_t) data->tstart);
+    uint64_t bin_duration = htole64((uint64_t) data->duration);
+    bool bin_exclusive = (bool) htonl(data->exclusive);
 
-    DEVICE_DATA_VALS(connection, data, values);
+    int paramFormats[7] = {1, 0, 1, 1, 1, 0, 1};
+    const char* paramValues[7] = {
+        (char*) &bin_jobid,
+        data->nodename,
+        (char*) &bin_energy,
+        (char*) &bin_tstart,
+        (char*) &bin_duration,
+        data->device,
+        (char*) &bin_exclusive
+    };
+    int paramLengths[7] = {
+        sizeof(bin_jobid),
+        strlen(data->nodename),
+        sizeof(bin_energy),
+        sizeof(bin_tstart),
+        sizeof(bin_duration),
+        strlen(data->device),
+        sizeof(bin_exclusive)
+    };
 
-    int err = create_insert_query(
-        query, connection, "devices", DEVICE_COLS, DEVICE_COLS_SIZE, values
+    PGresult* res = PQexecParams(
+        connection,
+        "INSERT INTO devices ("DEVICE_COLS") VALUES($1, $2, $3, $4, $5, $6, $7);",
+        7,
+        NULL,
+        paramValues,
+        paramLengths,
+        paramFormats,
+        0
     );
-    if (err) {
-        ERROR("failed to construct query");
-        return err;
-    }
 
-    PGresult* result = PQexec(connection, query);
-    err = check_query_result(result, connection);
-    PQclear(result);
+    int err = check_query_result(res, connection);
+    PQclear(res);
 
     return err;
 }
@@ -233,6 +224,8 @@ int insert_device_data_bulk_ta(
     res = PQexec(connection, "END");
     CHECK_PQ_ERR(res, 1);
 
+    PQclear(res);
+
     return 0;
 }
 
@@ -251,40 +244,37 @@ eps_device_data_t* select_device_data_by_jobid(
 
     if(row_by_userid(connection, &res, "devices", jobid))
     {
-        printf("No entry found!\n");
+        INFO("No entry found in table devices with jobid=%d!", jobid);
         *err = 1;
         return NULL;
     }
     int nrows = PQntuples(res);
-
     data = calloc(nrows, sizeof(eps_device_data_t));
 
     for(int i=0; i<nrows; i++)
     {
-        data[i].jobid = (int) strtol(
-            PQgetvalue(res, i, PQfnumber(res, "job_id")), (char **)NULL, 10
+        data[i].jobid = ntohl(
+            *((uint32_t*) PQgetvalue(res, i, PQfnumber(res, "job_id")))
         );
         data[i].nodename = PQgetvalue(res, i, PQfnumber(res, "nodename"));
         data[i].device = PQgetvalue(res, i, PQfnumber(res, "device"));
-        data[i].energy = strtoull(
-            PQgetvalue(res, i, PQfnumber(res, "energy")), (char **)NULL, 10
+        data[i].energy = le64toh(
+            *((uint64_t*) PQgetvalue(res, i, PQfnumber(res, "energy")))
         );
-        data[i].tstart = strtol(
-            PQgetvalue(res, i, PQfnumber(res, "t_start")),
-            (char **)NULL,
-            10
+        data[i].tstart = le64toh(
+            *((uint64_t*) PQgetvalue(res, i, PQfnumber(res, "t_start")))
         );
-        data[i].duration = strtoull(
-            PQgetvalue(res, i, PQfnumber(res, "t_duration")), (char **)NULL, 10
+        data[i].duration = le64toh(
+            *((uint64_t*) PQgetvalue(res, i, PQfnumber(res, "t_duration")))
+        );
+        data[i].exclusive = ntohl(
+           *((bool*) PQgetvalue(res, i, PQfnumber(res, "exclusiv")))
         );
         // TODO: finalize
-        data[i].exclusive = 0;
         data[i].resource = NULL;
-        // data->exclusive = strtol(
-        //    PQgetvalue(res, i, PQfnumber(res, "exclusive")), (char **)NULL, 10
-        //);
-        // data->exclusive = PQgetvalue(res, i, PQfnumber(res, "exclusive"));
     }
+
+    PQclear(res);
 
     *num_elems = nrows;
     *err = 0;
@@ -332,7 +322,7 @@ eps_job_data_t* compose_job_data(PGconn* connection, int jobid)
 
 int has_valid_db_entries(PGconn* connection, int jobid)
 {
-    printf("Validate db entries for job: %d ...\n", jobid);
+    INFO("DB validation for jobid=%d...", jobid);
     int num_devices, err = 0;
     eps_meta_data_t meta;
 
@@ -345,15 +335,35 @@ int has_valid_db_entries(PGconn* connection, int jobid)
     );
     if(num_devices == 0)
     {
-        printf("No device entries found.\n");
+        INFO("No device entries found.");
         return 1;
     }
-    PGresult* res = PQexec(
-        connection, "SELECT DISTINCT nodename FROM devices;"
+
+    uint32_t bin_jobid = htonl((uint32_t) jobid);
+    int paramFormats[1] = {1};
+    const char* paramValues[1] = {(char*) &bin_jobid};
+    int paramLengths[1] = {sizeof(bin_jobid)};
+
+    PGresult* res = PQexecParams(
+        connection,
+        "SELECT DISTINCT nodename FROM devices WHERE job_id = $1;",
+        1,
+        NULL,
+        paramValues,
+        paramLengths,
+        paramFormats,
+        0
     );
     int used_nodes = PQntuples(res);
+    PQclear(res);
     if(err)
         return err;
 
-    return meta.nnodes == used_nodes;
+    int ret = meta.nnodes == used_nodes;
+    if(ret)
+        INFO("DB validation for jobid=%d was successful!", jobid);
+    else
+        INFO("DB validation for jobid=%d FAILED!", jobid);
+
+    return ret;
 }

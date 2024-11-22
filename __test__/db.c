@@ -224,11 +224,6 @@ int test_select_device_data(eps_device_data_t* reference)
             // err = 1;
             printf("Test failed. `exclusive` does not match! (%d != %d) \n", data[i].exclusive, reference[i].exclusive);
         }
-    // char* device;
-    // void* device_type; /* EMA plugin type? */
-    // // TODO: Clarify what this should be...
-    // void* resource;
-    // int exclusive;
     }
     if(has_valid_db_entries(conn, reference[0].jobid))
         printf("DB validation was successful!\n");
