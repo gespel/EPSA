@@ -1,10 +1,19 @@
 /*
   Please use the following function to AVOID SQL INJECTION:
+    PGresult *PQexecParams(PGconn *conn,
+                       const char *command,
+                       int nParams,
+                       const Oid *paramTypes,
+                       const char * const *paramValues,
+                       const int *paramLengths,
+                       const int *paramFormats,
+                       int resultFormat);
     char *PQescapeLiteral(PGconn *conn, const char *str, size_t length);
     char *PQescapeIdentifier(PGconn *conn, const char *str, size_t length);
 
-  https://www.postgresql.org/docs/17/libpq-exec.html#LIBPQ-EXEC-ESCAPE-STRING
-
+For further details check:
+- https://www.postgresql.org/docs/17/libpq-exec.html#LIBPQ-PQEXECPARAMS
+- https://www.postgresql.org/docs/17/libpq-exec.html#LIBPQ-EXEC-ESCAPE-STRING
 */
 
 #include <eps_db.h>
