@@ -53,7 +53,6 @@ int create_insert_query(
 );
 
 int insert_meta_data(PGconn* connection, eps_meta_data_t* data);
-int insert_device_data(PGconn* connection, eps_device_data_t* data);
 int insert_device_data_bulk_ta(
     PGconn* connection, eps_device_data_t* data, int num_data
 );

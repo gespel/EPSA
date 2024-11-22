@@ -161,7 +161,7 @@ int select_meta_data_by_jobid(
 
 /********************************** DEVICES **********************************/
 /* IN connection, data, returns int */
-int insert_device_data(PGconn* connection, eps_device_data_t* data)
+int _insert_device_data(PGconn* connection, eps_device_data_t* data)
 {
     uint32_t bin_jobid = htonl((uint32_t) data->jobid);
     uint64_t bin_energy = htole64((uint64_t) data->energy);
@@ -216,7 +216,7 @@ int insert_device_data_bulk_ta(
     CHECK_PQ_ERR(res, 1);
 
     for(int i=0; i < num_data; i++)
-        insert_device_data(connection, &data[i]);
+        _insert_device_data(connection, &data[i]);
 
     res = PQexec(connection, "COMMIT");
     CHECK_PQ_ERR(res, 1);
