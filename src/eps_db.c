@@ -217,7 +217,7 @@ int _insert_device_data(PGconn* connection, eps_device_data_t* data)
 
 /* Using transaction so insert multiple data in one commit */
 int insert_device_data_bulk_ta(
-    PGconn* connection, eps_device_data_t* data, int num_data
+    PGconn* connection, eps_device_data_t** data, int num_data
 ){
     PGresult* res;
 
@@ -225,7 +225,7 @@ int insert_device_data_bulk_ta(
     CHECK_PQ_ERR(res, 1);
 
     for(int i=0; i < num_data; i++)
-        _insert_device_data(connection, &data[i]);
+        _insert_device_data(connection, data[i]);
 
     res = PQexec(connection, "COMMIT");
     CHECK_PQ_ERR(res, 1);
