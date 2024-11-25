@@ -34,7 +34,7 @@ PGconn* connect_db()
     // TODO: Find a secure way to log connection info (perhaps partially e.g.
     //       only the host address), or remove the connection info from this log
     //       completely.
-    INFO("Connectiong to db: (%s)...", DB_CONN_INFO);
+    INFO("Connecting to db: (%s)...", DB_CONN_INFO);
     return PQconnectdb(DB_CONN_INFO);
 }
 
