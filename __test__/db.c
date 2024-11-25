@@ -87,7 +87,7 @@ int test_select_meta_data(eps_meta_data_t* reference)
     if(data.tstart != reference->tstart)
     {
         err = 1;
-        printf("Test failed. `tstart` does not match! ( %ld vs. %ld )\n", data.tstart, reference->tstart);
+        printf("Test failed. `tstart` does not match!\n");
     }
     // if(data.resources = reference->ressources)
     //     printf("Test failed. `resources` does not match!\n")

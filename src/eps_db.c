@@ -67,7 +67,7 @@ int row_by_userid
         PQescapeIdentifier(connection, table, strlen(table))
     );
 
-    uint32_t bin_jobid = htonl((uint32_t) jobid);
+    uint32_t bin_jobid = htobe32((uint32_t) jobid);
     const char* paramValues[1] = {(char*) &bin_jobid};
     int paramLengths[1] = {sizeof(bin_jobid)};
     int paramFormats[1] = {1};
@@ -107,10 +107,10 @@ int posix_time_str(char* t_str, size_t buf_size, time_t* time)
 /* IN connection, data, returns int */
 int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
 {
-    uint32_t bin_jobid = htonl((uint32_t) data->jobid);
-    uint64_t bin_tstart = htole64((uint64_t) data->tstart);
-    uint32_t bin_nnodes = htonl((uint32_t) data->nnodes);
-    uint32_t bin_userid = htonl((uint32_t) data->userid);
+    uint32_t bin_jobid = htobe32((uint32_t) data->jobid);
+    uint64_t bin_tstart = htobe64((uint64_t) data->tstart);
+    uint32_t bin_nnodes = htobe32((uint32_t) data->nnodes);
+    uint32_t bin_userid = htobe32((uint32_t) data->userid);
 
     int paramFormats[4] = {1, 1, 1, 1};
     const char* paramValues[4] = {
@@ -153,16 +153,16 @@ int select_meta_data_by_jobid(
         INFO("No entry found in table meta with jobid=%d!", jobid);
         return 1;
     }
-    data->jobid = ntohl(
+    data->jobid = be32toh(
         *((uint32_t*) PQgetvalue(res, 0, PQfnumber(res, "job_id")))
     );
-    data->userid = ntohl(
+    data->userid = be32toh(
         *((uint32_t*) PQgetvalue(res, 0, PQfnumber(res, "user_id")))
     );
-    data->nnodes = ntohl(
+    data->nnodes = be32toh(
         *((uint32_t*) PQgetvalue(res, 0, PQfnumber(res, "nnodes")))
     );
-    data->tstart = le64toh(
+    data->tstart = be64toh(
         *((uint64_t*) PQgetvalue(res, 0, PQfnumber(res, "t_start")))
     );
     data->resources = NULL;
@@ -176,11 +176,11 @@ int select_meta_data_by_jobid(
 /* IN connection, data, returns int */
 int _insert_device_data(PGconn* connection, eps_device_data_t* data)
 {
-    uint32_t bin_jobid = htonl((uint32_t) data->jobid);
-    uint64_t bin_energy = htole64((uint64_t) data->energy);
-    uint64_t bin_tstart = htole64((uint64_t) data->tstart);
-    uint64_t bin_duration = htole64((uint64_t) data->duration);
-    bool bin_exclusive = (bool) htonl(data->exclusive);
+    uint32_t bin_jobid = htobe32((uint32_t) data->jobid);
+    uint64_t bin_energy = htobe64((uint64_t) data->energy);
+    uint64_t bin_tstart = htobe64((uint64_t) data->tstart);
+    uint64_t bin_duration = htobe64((uint64_t) data->duration);
+    bool bin_exclusive = (bool) htole32(data->exclusive);
 
     int paramFormats[7] = {1, 0, 1, 1, 1, 0, 1};
     const char* paramValues[7] = {
@@ -266,21 +266,21 @@ eps_device_data_t* select_device_data_by_jobid(
 
     for(int i=0; i<nrows; i++)
     {
-        data[i].jobid = ntohl(
+        data[i].jobid = be32toh(
             *((uint32_t*) PQgetvalue(res, i, PQfnumber(res, "job_id")))
         );
         data[i].nodename = PQgetvalue(res, i, PQfnumber(res, "nodename"));
         data[i].device = PQgetvalue(res, i, PQfnumber(res, "device"));
-        data[i].energy = le64toh(
+        data[i].energy = be64toh(
             *((uint64_t*) PQgetvalue(res, i, PQfnumber(res, "energy")))
         );
-        data[i].tstart = le64toh(
+        data[i].tstart = be64toh(
             *((uint64_t*) PQgetvalue(res, i, PQfnumber(res, "t_start")))
         );
-        data[i].duration = le64toh(
+        data[i].duration = be64toh(
             *((uint64_t*) PQgetvalue(res, i, PQfnumber(res, "t_duration")))
         );
-        data[i].exclusive = ntohl(
+        data[i].exclusive = be32toh(
            *((bool*) PQgetvalue(res, i, PQfnumber(res, "exclusiv")))
         );
         // TODO: finalize
@@ -356,7 +356,7 @@ int has_valid_db_entries(PGconn* connection, int jobid)
         return 1;
     }
 
-    uint32_t bin_jobid = htonl((uint32_t) jobid);
+    uint32_t bin_jobid = htobe32((uint32_t) jobid);
     int paramFormats[1] = {1};
     const char* paramValues[1] = {(char*) &bin_jobid};
     int paramLengths[1] = {sizeof(bin_jobid)};
