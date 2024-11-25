@@ -112,10 +112,12 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
             return SLURM_ERROR;
         }
 
+        eps_device_data_t* device_data[devices.size];
+
         for (size_t i = 0; i < devices.size; i++)
         {
             consumption[i] = e1[i] - e0[i];
-            eps_device_data_t* data = get_device_data(
+            device_data[i]= get_device_data(
                 devices.array[i],
                 job_env,
                 consumption[i],
@@ -123,14 +125,16 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
                 tstart,
                 tend
             );
+        }
 
-            // TODO: Replace multiple writes with transaction...
-            //int err = insert_device_data(db_connection, data);
-            //if (err) {
-            //    slurm_error("failed to write data to db");
-            //}
-            print_device_data(data);
-            free_device_data(data);
+        int err = insert_device_data_bulk_ta(db_connection, device_data, devices.size);
+        if (err) {
+            slurm_error("failed to write data to db");
+        }
+
+        for (size_t i = 0; i < devices.size; i++)
+        {
+            free_device_data(device_data[i]);
         }
 
         slurm_info("Closing DB connection...");
