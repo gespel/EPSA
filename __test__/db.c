@@ -97,7 +97,7 @@ int test_select_meta_data(eps_meta_data_t* reference)
     return err;
 }
 
-int test_insert_devices(eps_device_data_t* data, int num_data)
+int test_insert_devices(eps_device_data_t** data, int num_data)
 {
     printf("Start %s\n", __func__);
     PGconn* conn = PQconnectdb(DB_CONN_INFO);
@@ -211,8 +211,13 @@ int test1(int jobid)
         }
     };
 
+    eps_device_data_t* device_data_ptr[] = {
+        &device_data[0],
+        &device_data[1]
+    };
+
     HANDLE_TEST_ERR(test_insert_meta(&meta_data));
-    HANDLE_TEST_ERR(test_insert_devices(device_data, num_devices));
+    HANDLE_TEST_ERR(test_insert_devices(device_data_ptr, num_devices));
     HANDLE_TEST_ERR(test_select_meta_data(&meta_data));
     HANDLE_TEST_ERR(test_select_device_data(device_data));
 
