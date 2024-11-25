@@ -339,9 +339,10 @@ int has_valid_db_entries(PGconn* connection, int jobid)
     if(err)
         return err;
 
-    eps_device_data_t* devices = select_device_data_by_jobid(
+    select_device_data_by_jobid(
         &num_devices, &err, connection, jobid
     );
+
     if(err)
         return err;
 
