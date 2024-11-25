@@ -47,9 +47,14 @@ eps_device_data_t* get_device_data(
 
     data->jobid = job->jobid;
 
-    char nodename[HOST_NAME_MAX];
+    char* nodename = (char*) malloc(HOST_NAME_MAX);
+    data->nodename = NULL;
     int err = gethostname(nodename, HOST_NAME_MAX);
-    data->nodename = err ? NULL : nodename;
+    if (err) {
+        data->nodename = NULL;
+    } else {
+        data->nodename = nodename;
+    }
 
     data->device = (char*)EMA_get_device_name(device);
     data->energy = energy;
@@ -66,6 +71,7 @@ void free_device_data(eps_device_data_t* data)
 {
     // TODO: Remove the latch here later...
     if (data->resource) free(data->resource);
+    free(data->nodename);
     free(data);
 }
 
@@ -76,7 +82,7 @@ void print_device_data(eps_device_data_t* data)
     printf("Node name: %s\n", data->nodename);
     printf("Device: %s\n", data->device);
     printf("Energy: %lld\n", data->energy);
-    printf("Time started: %ld\n", data->tstart);
+    printf("Time started: %lu\n", data->tstart);
     printf("Duration: %lld\n", data->duration);
 }
 
