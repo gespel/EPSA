@@ -31,8 +31,8 @@
             str,\
             "%d,%s,%s,%llu,%ld,%lld",\
             data->jobid,\
-            PQescapeLiteral(db_conn, data->nodename, strlen(data->nodename)),\
-            PQescapeLiteral(db_conn, data->device, strlen(data->device)),\
+            data->nodename,\
+            data->device,\
             data->energy,\
             data->tstart,\
             data->duration\
