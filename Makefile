@@ -42,6 +42,7 @@ spank: $(SPANK_PLUGIN_FILE)
 test:
 	$(CC) $(TESTS_DIR)/basic.c -o basic
 	$(CC) $(TESTS_DIR)/cgroup.c -o cgroup
+	$(CC) $(TESTS_DIR)/exit_failure.c -o fail
 
 
 default: $(PLUGIN_FILE)
