@@ -43,6 +43,7 @@ test:
 	$(CC) $(TESTS_DIR)/basic.c -o basic
 	$(CC) $(TESTS_DIR)/cgroup.c -o cgroup
 	$(CC) $(TESTS_DIR)/exit_failure.c -o fail
+	$(CC) $(TESTS_DIR)/raise_sigsegv.c -o segf
 
 
 default: $(PLUGIN_FILE)
