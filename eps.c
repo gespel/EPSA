@@ -1,34 +1,8 @@
-#include <stddef.h>
-#include <stdint.h>
-
 #include <slurm/spank.h>
 
 #define PLUGIN_NAME "Spank/Eps"
 
 SPANK_PLUGIN(eps, 1)
-
-static int _ema_opt_process(int, const char*, int);
-
-/* Provide a --eps option. */
-struct spank_option spank_options[] =
-{
-    { "eps", "", "Enables EMA (Spank) plugin for Slurm.", 0, 0,
-        (spank_opt_cb_f) _ema_opt_process
-    },
-    SPANK_OPTIONS_TABLE_END
-};
-
-/* Evaluate option arguments. */
-static int _ema_opt_process(int val, const char *optarg, int remote)
-{
-    if (optarg == NULL)
-    {
-        slurm_info("args: NULL\n");
-        return ESPANK_SUCCESS;
-    }
-
-    return ESPANK_ERROR;
-}
 
 /********************************
  *
@@ -42,14 +16,6 @@ int slurm_spank_init(spank_t sp, int ac, char **av) {
 
 int slurm_spank_exit(spank_t sp, int ac, char **av) {
     slurm_info("Exit: " PLUGIN_NAME);
-    uint32_t nid, jid;
-    if(spank_context() == S_CTX_REMOTE)
-    {
-        spank_get_item(sp, S_JOB_NODEID, &nid);
-        spank_get_item(sp, S_JOB_ID, &jid);
-        slurm_info("Node ID: %u", nid);
-        slurm_info("Job ID: %d", jid);
-    }
     return 0;
 }
 
@@ -60,14 +26,5 @@ int slurm_spank_job_prolog (spank_t sp, int ac, char **av) {
 
 int slurm_spank_job_epilog (spank_t sp, int ac, char **av) {
     slurm_info("Epilog: " PLUGIN_NAME);
-
-    uint32_t nid, jid;
-
-    spank_get_item(sp, S_JOB_NODEID, &nid);
-    spank_get_item(sp, S_JOB_ID, &jid);
-
-    slurm_info("Node ID: %u", nid);
-    slurm_info("Job ID: %d", jid);
-
     return 0;
 }
