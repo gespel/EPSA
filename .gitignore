@@ -4,3 +4,5 @@
 basic
 cgroup
 dbtest
+fail
+segf

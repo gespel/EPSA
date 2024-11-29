@@ -46,6 +46,10 @@ test:
 	$(CC) -g $(TESTS_DIR)/cgroup.c -o cgroup
 	$(CC) -Iinclude -I$(SLURM_SRC_DIR) -g src/eps_utils.c src/eps_resources.c src/eps_data.c \
             src/eps_db.c $(TESTS_DIR)/db.c -L$(EMA_DIR)/lib -L$(PQ_DIR)/libs -lEMA -lpq -o dbtest
+	$(CC) $(TESTS_DIR)/basic.c -o basic
+	$(CC) $(TESTS_DIR)/cgroup.c -o cgroup
+	$(CC) $(TESTS_DIR)/exit_failure.c -o fail
+	$(CC) $(TESTS_DIR)/raise_sigsegv.c -o segf
 
 
 default: $(PLUGIN_FILE)
@@ -64,5 +68,6 @@ clean:
 	rm -f $(PLUGIN_FILE)
 	rm -f $(SPANK_PLUGIN_FILE)
 	rm -f basic cgroup dbtest
+	rm -f basic cgroup fail segf
 
 mrproper: clean
