@@ -1,3 +1,4 @@
+#include <eps_db.h>
 #include <slurm/spank.h>
 
 #define PLUGIN_NAME "Spank/Eps"
@@ -11,6 +12,25 @@ SPANK_PLUGIN(eps, 1)
  ********************************/
 int slurm_spank_init(spank_t sp, int ac, char **av) {
     slurm_info("Init: " PLUGIN_NAME);
+
+    if (spank_context() == S_CTX_LOCAL) {
+        PGconn* db_connection = connect_db();
+
+        int connection_is_not_ok = check_connection(db_connection);
+
+        if (connection_is_not_ok) {
+            slurm_error(
+                "problems with db connection: %s",
+                PQerrorMessage(db_connection)
+            );
+            PQfinish(db_connection);
+            return 1;
+        }
+
+        slurm_info("Closing DB connection...");
+        PQfinish(db_connection);
+    }
+
     return 0;
 }
 
