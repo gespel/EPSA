@@ -11,6 +11,7 @@
 SPANK_PLUGIN(eps, 1)
 
 const char* task_init_log_file = "/tmp/task_init.log";
+const char* efp_log = "/tmp/efp.log";
 
 void remove_log_file(const char* log_file) {
     char cmd[256];
@@ -33,14 +34,16 @@ void log_cgroup(pid_t pid, const char* log_file) {
 void run_child_process() {
     char msg[256];
 
+    remove_log_file(efp_log);
+
     pid_t child_pid = getpid();
     pid_t parent_pid = getppid();
 
     sprintf(msg, "Child PID: %d", child_pid);
-    log_message(msg, task_init_log_file);
+    log_message(msg, efp_log);
 
     sprintf(msg, "Parent PID: %d", parent_pid);
-    log_message(msg, task_init_log_file);
+    log_message(msg, efp_log);
 
     // INFO: Currently if the sleep is there, you will not see
     //       the child exit log. Probably is is because the forked
@@ -53,7 +56,7 @@ void run_child_process() {
     //sleep(3);
 
     sprintf(msg, "Child exiting success...");
-    log_message(msg, task_init_log_file);
+    log_message(msg, efp_log);
     exit(EXIT_SUCCESS);
 }
 
@@ -101,7 +104,6 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             log_message(msg, task_init_log_file);
             return 0;
     }
-
     return 0;
 }
 
