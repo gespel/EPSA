@@ -24,12 +24,12 @@ SPANK_SRC_FILE = eps.c
 CC              = gcc
 PREP_CFLAGS          ?= -Wall -fPIC -Iinclude \
                    -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
-SPANK_CFLAGS    ?= -Wall -fPIC -I$(SLURM_INC_DIR)
+SPANK_CFLAGS    ?= -Wall -fPIC -Iinclude -I$(SLURM_INC_DIR)
 PREP_LDFLAGS         ?= -shared
 SPANK_LDFLAGS         ?= -shared
 
 PREP_SRC_FILES =
-SPANK_SRC_FILES =
+SPANK_SRC_FILES = src/eps_utils.c src/eps_efp.c
 
 TESTS_DIR  = __test__
 
