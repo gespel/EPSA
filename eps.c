@@ -72,6 +72,10 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     sprintf(msg, "Hook PID: %d", hook_pid);
     log_message(msg, task_init_log_file);
 
+    sprintf(msg, "Hook Cgroup:");
+    log_message(msg, task_init_log_file);
+    log_cgroup(hook_pid, task_init_log_file);
+
     pid_t pid = fork();
 
     switch(pid) {
@@ -85,9 +89,16 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             sprintf(msg, "Child PID: %d", pid);
             log_message(msg, task_init_log_file);
 
+            sprintf(msg, "Hook Cgroup (After fork):");
+            log_message(msg, task_init_log_file);
+            log_cgroup(hook_pid, task_init_log_file);
+
+            sprintf(msg, "Child Cgroup (After fork):");
+            log_message(msg, task_init_log_file);
+            log_cgroup(pid, task_init_log_file);
+
             sprintf(msg, "Init hook exits...");
             log_message(msg, task_init_log_file);
-
             return 0;
     }
 
