@@ -1,50 +1,95 @@
-#include <slurm/spank.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <string.h>
 #include <unistd.h>
+
+#include <slurm/spank.h>
 
 #define PLUGIN_NAME "Spank/Eps"
 
 SPANK_PLUGIN(eps, 1)
 
-const char* global = "global";
+const char* task_init_log_file = "/tmp/task_init.log";
+
+void remove_log_file(const char* log_file) {
+    char cmd[256];
+    sprintf(cmd,"rm %s", log_file);
+    system(cmd);
+}
+
+void log_message(const char* message, const char* log_file) {
+    char cmd[1024];
+    sprintf(cmd, "echo '%s' >> %s", message, log_file);
+    system(cmd);
+}
+
+void run_child_process() {
+    char msg[256];
+
+    pid_t child_pid = getpid();
+    pid_t parent_pid = getppid();
+
+    sprintf(msg, "Child PID: %d", child_pid);
+    log_message(msg, task_init_log_file);
+
+    sprintf(msg, "Parent PID: %d", parent_pid);
+    log_message(msg, task_init_log_file);
+
+    // INFO: Currently if the sleep is there, you will not see
+    //       the child exit log. Probably is is because the forked
+    //       process appears in the process group of slurmstepd and 
+    //       when it exits, it kills all spawned processes in that group.
+    //       this is just my assumption by now, it is kinda hard to
+    //       tell for sure...
+    //sprintf(msg, "Child sleeping...");
+    //log_message(msg, task_init_log_file);
+    //sleep(3);
+
+    sprintf(msg, "Child exiting success...");
+    log_message(msg, task_init_log_file);
+    exit(EXIT_SUCCESS);
+}
 
 /********************************
  *
  * Spank functions
  *
  ********************************/
-int slurm_spank_init(spank_t sp, int ac, char **av) {
-    slurm_info("Init: " PLUGIN_NAME);
+
+int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     pid_t hook_pid = getpid();
+    char msg[256];
 
-    slurm_info("PID: %d", hook_pid);
-    slurm_info("Global: %s", global);
+    remove_log_file(task_init_log_file);
 
-    if (spank_context() == S_CTX_LOCAL) {
-        pid_t pid = fork();
+    sprintf(msg, "Hook PID: %d", hook_pid);
+    log_message(msg, task_init_log_file);
 
-        switch(pid) {
-            case -1:
-                perror("fork");
-                return 1;
-            case 0:
-                pid_t child_pid = getpid();
-                pid_t parent_pid = getppid();
-                slurm_info("Child PID: %d", child_pid);
-                slurm_info("Parent PID: %d", parent_pid);
-                slurm_info("Global: %s", global);
-                slurm_info("Child exiting success...");
-                exit(EXIT_SUCCESS);
-            default:
-                slurm_info("Child PID: %d", pid);
-                slurm_info("Init hook exits...");
-                return 0;
-        }
+    pid_t pid = fork();
 
+    switch(pid) {
+        case -1:
+            sprintf(msg, "error: fork: %s", strerror(errno));
+            log_message(msg, task_init_log_file);
+            return 1;
+        case 0:
+            run_child_process();
+        default:
+            sprintf(msg, "Child PID: %d", pid);
+            log_message(msg, task_init_log_file);
+
+            sprintf(msg, "Init hook exits...");
+            log_message(msg, task_init_log_file);
+
+            return 0;
     }
 
+    return 0;
+}
+
+int slurm_spank_init(spank_t sp, int ac, char **av) {
+    slurm_info("Init: " PLUGIN_NAME);
     return 0;
 }
 
