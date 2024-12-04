@@ -35,7 +35,7 @@ void efp_main() {
     //       this is just my assumption by now, it is kinda hard to
     //       tell for sure...
     //sprintf(msg, "Child sleeping...");
-    //log_message(msg, task_init_log_file);
+    //log_message(msg, efp_log);
     //sleep(3);
 
     sprintf(msg, "Child exiting success...");
