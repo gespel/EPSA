@@ -7,7 +7,7 @@ int main() {
     printf("USER: %s\n", getenv("USER"));
     system("id");
 
-    sleep(10);
+    sleep(2);
 
     return 0;
 }
