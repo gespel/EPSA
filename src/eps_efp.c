@@ -38,6 +38,8 @@ void efp_main() {
     //log_message(msg, efp_log);
     //sleep(3);
 
+
+    system("echo 1 >> /tmp/efp_exit.beacon");
     sprintf(msg, "Child exiting success...");
     log_message(msg, efp_log);
     exit(EXIT_SUCCESS);
