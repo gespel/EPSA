@@ -24,6 +24,12 @@ void log_message(const char* message, const char* log_file) {
     system(cmd);
 }
 
+void log_cgroup(pid_t pid, const char* log_file) {
+    char cmd[256];
+    sprintf(cmd, "cat /proc/%d/cgroup >> %s", pid, log_file);
+    system(cmd);
+}
+
 void run_child_process() {
     char msg[256];
 
