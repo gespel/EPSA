@@ -45,6 +45,14 @@ void run_child_process() {
     sprintf(msg, "Parent PID: %d", parent_pid);
     log_message(msg, efp_log);
 
+    sprintf(msg, "Child Cgroup:");
+    log_message(msg, efp_log);
+    log_cgroup(child_pid, efp_log);
+
+    sprintf(msg, "Parent Cgroup:");
+    log_message(msg, efp_log);
+    log_cgroup(parent_pid, efp_log);
+
     // INFO: Currently if the sleep is there, you will not see
     //       the child exit log. Probably is is because the forked
     //       process appears in the process group of slurmstepd and 
