@@ -14,7 +14,10 @@ void efp_main() {
     pid_t child_pid = getpid();
     pid_t parent_pid = getppid();
 
-    sprintf(msg, "Child PID: %d", child_pid);
+    sprintf(msg, "EFP PID: %d", child_pid);
+    log_message(msg, efp_log);
+
+    sprintf(msg, "EFP Process GID: %d", getpgid(child_pid));
     log_message(msg, efp_log);
 
     sprintf(msg, "Parent PID: %d", parent_pid);
