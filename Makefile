@@ -44,6 +44,7 @@ test:
 	$(CC) $(TESTS_DIR)/cgroup.c -o cgroup
 	$(CC) $(TESTS_DIR)/exit_failure.c -o fail
 	$(CC) $(TESTS_DIR)/raise_sigsegv.c -o segf
+	$(CC) -Iinclude -g src/eps_socket.c $(TESTS_DIR)/efp.c -o efp
 
 
 default: $(PLUGIN_FILE)
