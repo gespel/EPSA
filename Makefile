@@ -62,6 +62,6 @@ install: $(PLUGIN_FILE)
 clean:
 	rm -f $(PLUGIN_FILE)
 	rm -f $(SPANK_PLUGIN_FILE)
-	rm -f basic cgroup fail segf
+	rm -f basic cgroup fail segf efp
 
 mrproper: clean
