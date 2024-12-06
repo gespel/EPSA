@@ -14,6 +14,7 @@
 SPANK_PLUGIN(eps, 1)
 
 const char* task_init_log_file = "/tmp/task_init.log";
+const char* task_exit_log_file = "/tmp/task_exit.log";
 
 /********************************
  *
@@ -73,6 +74,29 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     return 0;
 }
 
+int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
+    pid_t hook_pid = getpid();
+    pid_t hook_pgid = getpgid(hook_pid);
+    pid_t hook_sid = getsid(hook_pid);
+    char msg[256];
+
+    remove_log_file(task_exit_log_file);
+
+    sprintf(msg, "Hook PID: %d", hook_pid);
+    log_message(msg, task_exit_log_file);
+
+    sprintf(msg, "Hook SID: %d", hook_sid);
+    log_message(msg, task_exit_log_file);
+
+    sprintf(msg, "Hook Process GID: %d", hook_pgid);
+    log_message(msg, task_exit_log_file);
+
+    sprintf(msg, "Hook Cgroup:");
+    log_message(msg, task_exit_log_file);
+    log_cgroup(hook_pid, task_exit_log_file);
+
+    return 0;
+}
 int slurm_spank_init(spank_t sp, int ac, char **av) {
     slurm_info("Init: " PLUGIN_NAME);
     return 0;
