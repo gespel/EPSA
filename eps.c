@@ -24,11 +24,15 @@ const char* task_init_log_file = "/tmp/task_init.log";
 int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     pid_t hook_pid = getpid();
     pid_t hook_pgid = getpgid(hook_pid);
+    pid_t hook_sid = getsid(hook_pid);
     char msg[256];
 
     remove_log_file(task_init_log_file);
 
     sprintf(msg, "Hook PID: %d", hook_pid);
+    log_message(msg, task_init_log_file);
+
+    sprintf(msg, "Hook SID: %d", hook_sid);
     log_message(msg, task_init_log_file);
 
     sprintf(msg, "Hook Process GID: %d", hook_pgid);
@@ -46,7 +50,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             log_message(msg, task_init_log_file);
             return 1;
         case 0:
-            efp_main();
+            efp_main(hook_pgid);
         default:
             sprintf(msg, "Child PID: %d", pid);
             log_message(msg, task_init_log_file);
