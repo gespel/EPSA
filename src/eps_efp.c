@@ -14,6 +14,7 @@ void efp_main(pid_t pgid, int jid) {
 
     char* efp_log_file_path = get_efp_log_file_path(jid);
     int log_fd = get_log_file_fd(efp_log_file_path);
+    free(efp_log_file_path);
 
     char* sem_name = get_sem_name(jid);
 
@@ -23,6 +24,7 @@ void efp_main(pid_t pgid, int jid) {
         log_message(msg, log_fd);
         exit(EXIT_FAILURE);
     }
+    free(sem_name);
 
     int sem_val;
     sem_getvalue(mutex, &sem_val);
@@ -67,8 +69,6 @@ void efp_main(pid_t pgid, int jid) {
     log_message(msg, log_fd);
 
     sem_close(mutex);
-    free(efp_log_file_path);
-    free(sem_name);
     close(log_fd);
 
     exit(EXIT_SUCCESS);

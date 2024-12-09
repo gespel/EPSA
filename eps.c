@@ -29,6 +29,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
 
     char* log_file_path = get_init_log_file_path(jid);
     int log_fd = get_log_file_fd(log_file_path);
+    free(log_file_path);
 
     pid_t hook_pid = getpid();
     pid_t hook_pgid = getpgid(hook_pid);
@@ -65,7 +66,6 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             return 0;
     }
 
-    free(log_file_path);
     close(log_fd);
 
     return 0;
@@ -81,6 +81,7 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     
     char* log_file_path = get_exit_log_file_path(jid);
     int log_fd = get_log_file_fd(log_file_path);
+    free(log_file_path);
     char* sem_name = get_sem_name(jid);
 
     char msg[128];
@@ -91,6 +92,7 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
         log_message(msg, log_fd);
         return 1;
     }
+    free(sem_name);
 
     int sem_val;
     sem_getvalue(mutex, &sem_val);
@@ -102,6 +104,8 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     sem_getvalue(mutex, &sem_val);
     sprintf(msg, "/efpsem: %d\n", sem_val);
     log_message(msg, log_fd);
+
+    sem_close(mutex);
 
     pid_t hook_pid = getpid();
     pid_t hook_pgid = getpgid(hook_pid);
@@ -116,9 +120,6 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     sprintf(msg, "Hook Process GID: %d\n", hook_pgid);
     log_message(msg, log_fd);
 
-    sem_unlink(sem_name);
-    free(log_file_path);
-    free(sem_name);
     close(log_fd);
 
     return 0;
