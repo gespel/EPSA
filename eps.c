@@ -107,6 +107,12 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
 
     sem_close(mutex);
 
+    // TODO: Realize waiting (with timeout) for the EFP to exit or fail.
+    //       EMA finalization and DB communications will take some time,
+    //       and if the hook exits early, the EFP most probably will be killed.
+    // WARN: This is temporary workaround, will be remobed...
+    sleep(3);
+
     pid_t hook_pid = getpid();
     pid_t hook_pgid = getpgid(hook_pid);
     pid_t hook_sid = getsid(hook_pid);

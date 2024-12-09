@@ -55,6 +55,9 @@ int get_log_file_fd(const char* filename) {
     int filename_length = strlen(filename);
 
     // INFO: Remove file if exists...
+    // TODO: Imrpove this, currently it uglifies the output of srun,
+    //       should be a way to check for file existence first, and omit this
+    //       invocation...
     char cmd[filename_length + 4];
     sprintf(cmd, "rm %s", filename);
     system(cmd);
