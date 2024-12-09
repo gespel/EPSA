@@ -29,7 +29,7 @@ PREP_LDFLAGS         ?= -shared
 SPANK_LDFLAGS         ?= -shared
 
 PREP_SRC_FILES =
-SPANK_SRC_FILES = src/eps_utils.c src/eps_efp.c
+SPANK_SRC_FILES = src/eps_utils.c src/eps_sem.c src/eps_efp.c
 
 TESTS_DIR  = __test__
 

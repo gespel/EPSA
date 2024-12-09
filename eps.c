@@ -1,14 +1,13 @@
 #include <errno.h>
-#include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 #include <slurm/spank.h>
 
 #include <eps_utils.h>
+#include <eps_sem.h>
 #include <eps_efp.h>
 
 #define PLUGIN_NAME "Spank/Eps"
@@ -20,7 +19,6 @@ SPANK_PLUGIN(eps, 1)
  * Spank functions
  *
  ********************************/
-
 int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     uint32_t jid;
 
@@ -43,6 +41,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
 
     sprintf(msg, "Hook SID: %d\n", hook_sid);
     log_message(msg, log_fd);
+
     sprintf(msg, "Hook Process GID: %d\n", hook_pgid);
     log_message(msg, log_fd);
 
@@ -79,15 +78,34 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     if (err) {
         return 1;
     }
-
+    
     char* log_file_path = get_exit_log_file_path(jid);
     int log_fd = get_log_file_fd(log_file_path);
+    char* sem_name = get_sem_name(jid);
+
+    char msg[128];
+
+    sem_t* mutex = get_efp_mutex(sem_name, 0);
+    if (!mutex) {
+        sprintf(msg, "error: get_efp_mutex: %s", strerror(errno));
+        log_message(msg, log_fd);
+        return 1;
+    }
+
+    int sem_val;
+    sem_getvalue(mutex, &sem_val);
+    sprintf(msg, "/efpsem: %d\n", sem_val);
+    log_message(msg, log_fd);
+
+    sem_post(mutex);
+
+    sem_getvalue(mutex, &sem_val);
+    sprintf(msg, "/efpsem: %d\n", sem_val);
+    log_message(msg, log_fd);
 
     pid_t hook_pid = getpid();
     pid_t hook_pgid = getpgid(hook_pid);
     pid_t hook_sid = getsid(hook_pid);
-
-    char msg[256];
 
     sprintf(msg, "Hook PID: %d\n", hook_pid);
     log_message(msg, log_fd);
@@ -98,7 +116,9 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     sprintf(msg, "Hook Process GID: %d\n", hook_pgid);
     log_message(msg, log_fd);
 
+    sem_unlink(sem_name);
     free(log_file_path);
+    free(sem_name);
     close(log_fd);
 
     return 0;
