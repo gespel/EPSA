@@ -7,6 +7,8 @@
 #include <eps_efp.h>
 #include <eps_utils.h>
 
+#include <EMA.h>
+
 #define SEM_NAME "/efpsem"
 
 void efp_main(pid_t pgid, int jid) {
@@ -60,10 +62,28 @@ void efp_main(pid_t pgid, int jid) {
     sprintf(msg, "EFP New Process GID: %d\n", getpgid(child_pid));
     log_message(msg, log_fd);
 
+    sprintf(msg, "Initializig EMA...\n");
+    log_message(msg, log_fd);
+    int err = EMA_init(NULL);
+
+    if (err) {
+        sprintf(msg, "Failed to initialize EMA: %d\n", err);
+        log_message(msg, log_fd);
+        exit(EXIT_FAILURE);
+    }
+
     sprintf(msg, "Child waiting...\n");
     log_message(msg, log_fd);
 
     sem_wait(mutex);
+
+    sprintf(msg, "Finalizing EMA...\n");
+    log_message(msg, log_fd);
+    err = EMA_finalize(NULL);
+    if (err) {
+        sprintf(msg, "Failed to finalize EMA: %d\n", err);
+        log_message(msg, log_fd);
+    }
 
     sprintf(msg, "Child exiting success...\n");
     log_message(msg, log_fd);
