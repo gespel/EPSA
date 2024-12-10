@@ -9,7 +9,6 @@
 
 #include <EMA.h>
 
-#define SEM_NAME "/efpsem"
 
 void efp_main(pid_t pgid, int jid) {
     char msg[256];
@@ -28,26 +27,12 @@ void efp_main(pid_t pgid, int jid) {
     }
     free(sem_name);
 
-    int sem_val;
-    sem_getvalue(mutex, &sem_val);
-    sprintf(msg, "/efpsem: %d\n", sem_val);
-    log_message(msg, log_fd);
-
     pid_t child_pid = getpid();
-    pid_t parent_pid = getppid();
 
     sprintf(msg, "EFP PID: %d\n", child_pid);
     log_message(msg, log_fd);
 
-    sprintf(msg, "EFP Process SID: %d\n", getsid(child_pid));
-    log_message(msg, log_fd);
-
-    sprintf(msg, "EFP Process GID: %d\n", getpgid(child_pid));
-    log_message(msg, log_fd);
-
-    sprintf(msg, "Parent PID: %d\n", parent_pid);
-    log_message(msg, log_fd);
-
+    // NOTE: Is it really needed after all?
     sprintf(msg, "Moving efp to its own session...\n");
     log_message(msg, log_fd);
 
@@ -57,9 +42,6 @@ void efp_main(pid_t pgid, int jid) {
     }
 
     sprintf(msg, "EFP New Process SID: %d\n", getsid(child_pid));
-    log_message(msg, log_fd);
-
-    sprintf(msg, "EFP New Process GID: %d\n", getpgid(child_pid));
     log_message(msg, log_fd);
 
     sprintf(msg, "Initializig EMA...\n");

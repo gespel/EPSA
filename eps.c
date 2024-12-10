@@ -33,17 +33,10 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
 
     pid_t hook_pid = getpid();
     pid_t hook_pgid = getpgid(hook_pid);
-    pid_t hook_sid = getsid(hook_pid);
 
     char msg[LOG_MSG_BUFF_SIZE];
 
     sprintf(msg, "Hook PID: %d\n", hook_pid);
-    log_message(msg, log_fd);
-
-    sprintf(msg, "Hook SID: %d\n", hook_sid);
-    log_message(msg, log_fd);
-
-    sprintf(msg, "Hook Process GID: %d\n", hook_pgid);
     log_message(msg, log_fd);
 
     pid_t pid = fork();
@@ -86,6 +79,13 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
 
     char msg[LOG_MSG_BUFF_SIZE];
 
+    pid_t hook_pid = getpid();
+
+    sprintf(msg, "Hook PID: %d\n", hook_pid);
+    log_message(msg, log_fd);
+
+    sprintf(msg, "Obtaining semaphore...\n");
+    log_message(msg, log_fd);
     sem_t* mutex = get_efp_mutex(sem_name, 0);
     if (!mutex) {
         sprintf(msg, "error: get_efp_mutex: %s", strerror(errno));
@@ -94,37 +94,21 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     }
     free(sem_name);
 
-    int sem_val;
-    sem_getvalue(mutex, &sem_val);
-    sprintf(msg, "/efpsem: %d\n", sem_val);
+    sprintf(msg, "Unlocking semaphore...\n");
     log_message(msg, log_fd);
-
     sem_post(mutex);
 
-    sem_getvalue(mutex, &sem_val);
-    sprintf(msg, "/efpsem: %d\n", sem_val);
+    sprintf(msg, "Closing semaphore...\n");
     log_message(msg, log_fd);
-
     sem_close(mutex);
 
     // TODO: Realize waiting (with timeout) for the EFP to exit or fail.
     //       EMA finalization and DB communications will take some time,
     //       and if the hook exits early, the EFP most probably will be killed.
     // WARN: This is temporary workaround, will be remobed...
+    sprintf(msg, "Waiting for EFP to finish or fail...\n");
+    log_message(msg, log_fd);
     sleep(3);
-
-    pid_t hook_pid = getpid();
-    pid_t hook_pgid = getpgid(hook_pid);
-    pid_t hook_sid = getsid(hook_pid);
-
-    sprintf(msg, "Hook PID: %d\n", hook_pid);
-    log_message(msg, log_fd);
-
-    sprintf(msg, "Hook SID: %d\n", hook_sid);
-    log_message(msg, log_fd);
-
-    sprintf(msg, "Hook Process GID: %d\n", hook_pgid);
-    log_message(msg, log_fd);
 
     close(log_fd);
 
