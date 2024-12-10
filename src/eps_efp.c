@@ -20,42 +20,34 @@ void efp_main(int jid) {
 
     sem_t* mutex = get_efp_mutex(sem_name, 1);
     if (!mutex) {
-        sprintf(msg, "error: get_efp_mutex: %s", strerror(errno));
-        log_message(msg, log_fd);
+        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
     free(sem_name);
 
     pid_t child_pid = getpid();
 
-    sprintf(msg, "EFP PID: %d\n", child_pid);
-    log_message(msg, log_fd);
+    LOG(msg, log_fd, "EFP PID: %d\n", child_pid);
 
-    sprintf(msg, "Initializig EMA...\n");
-    log_message(msg, log_fd);
+    LOG(msg, log_fd, "Initializig EMA...\n");
     int err = EMA_init(NULL);
 
     if (err) {
-        sprintf(msg, "Failed to initialize EMA: %d\n", err);
-        log_message(msg, log_fd);
+        LOG(msg, log_fd, "Failed to initialize EMA: %d\n", err);
         exit(EXIT_FAILURE);
     }
 
-    sprintf(msg, "Child waiting...\n");
-    log_message(msg, log_fd);
+    LOG(msg, log_fd, "Child waiting...\n");
 
     sem_wait(mutex);
 
-    sprintf(msg, "Finalizing EMA...\n");
-    log_message(msg, log_fd);
+    LOG(msg, log_fd, "Finalizing EMA...\n");
     err = EMA_finalize(NULL);
     if (err) {
-        sprintf(msg, "Failed to finalize EMA: %d\n", err);
-        log_message(msg, log_fd);
+        LOG(msg, log_fd, "Failed to finalize EMA: %d\n", err);
     }
 
-    sprintf(msg, "Child exiting success...\n");
-    log_message(msg, log_fd);
+    LOG(msg, log_fd, "Child exiting success...\n");
 
     sem_close(mutex);
     close(log_fd);
