@@ -2,9 +2,20 @@
 #include <eps_shm.h>
 #include <fcntl.h>
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
+#define SHM_REGION_NAME_BASE "/epsshm_"
+
+
+char* get_shared_memory_region_name(int jid) {
+    size_t size = strlen(SHM_REGION_NAME_BASE) + 15;
+    char* path = calloc(size, sizeof(char));
+    snprintf(path, size, "%s%d.log", SHM_REGION_NAME_BASE, jid);
+    return path;
+}
 
 int create_shared_memory_region(const char* name, size_t size)
 {
