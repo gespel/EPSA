@@ -20,7 +20,7 @@ void efp_main(int jid) {
 
     sem_t* mutex = get_efp_mutex(sem_name, 1);
     if (!mutex) {
-        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+        LOG(msg, log_fd, "error: get_efp_mutex: %s\n", strerror(errno));
         exit(EXIT_FAILURE);
     }
     free(sem_name);
@@ -35,6 +35,16 @@ void efp_main(int jid) {
     if (err) {
         LOG(msg, log_fd, "Failed to initialize EMA: %d\n", err);
         exit(EXIT_FAILURE);
+    }
+
+    DevicePtrArray devices = EMA_get_devices();
+
+    if (!devices.size) {
+        LOG(msg, log_fd, "Error: No EMA devices detected!\n");
+    } else {
+        for (int i = 0; i < devices.size; i++) {
+            LOG(msg, log_fd, "Device %d: %s\n", i, EMA_get_device_name(devices.array[i]));
+        }
     }
 
     LOG(msg, log_fd, "Child waiting...\n");
