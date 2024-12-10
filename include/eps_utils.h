@@ -15,7 +15,7 @@ char* get_exit_log_file_path(int jid);
 int get_log_file_fd(const char* filename);
 
 #define LOG(BUF, FD, MSG, ...) do { \
-        sprintf(BUF, MSG, ##__VA_ARGS__); \
+        sprintf(BUF, MSG "\n", ##__VA_ARGS__); \
         log_message(BUF, FD); \
     } while (0)
 
