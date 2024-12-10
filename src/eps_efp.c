@@ -34,33 +34,57 @@ void efp_main(int jid) {
 
     if (err) {
         LOG(msg, log_fd, "Failed to initialize EMA: %d", err);
+        sem_close(mutex);
+        close(log_fd);
         exit(EXIT_FAILURE);
     }
 
     DevicePtrArray devices = EMA_get_devices();
 
-    if (!devices.size) {
-        LOG(msg, log_fd, "Error: No EMA devices detected!");
-    } else {
+    if (devices.size) {
+        unsigned long long* e0 =
+            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
+        unsigned long long* e1 =
+            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
+        unsigned long long* consumptions =
+            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
+
         for (int i = 0; i < devices.size; i++) {
             LOG(msg, log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
+            e0[i] = EMA_get_energy_uj(devices.array[i]);
         }
+
+        LOG(msg, log_fd, "Child waiting...");
+
+        sem_wait(mutex);
+
+        LOG(msg, log_fd, "Consumptions:");
+        for (int i = 0; i < devices.size; i++) {
+            e1[i] = EMA_get_energy_uj(devices.array[i]);
+            consumptions[i] = e1[i] - e0[i];
+            LOG(msg, log_fd, "\t%s: %llu", EMA_get_device_name(devices.array[i]), consumptions[i]);
+        }
+
+        free(e0);
+        free(e1);
+        free(consumptions);
+
+        LOG(msg, log_fd, "Finalizing EMA...");
+        err = EMA_finalize(NULL);
+        if (err) {
+            LOG(msg, log_fd, "Failed to finalize EMA: %d", err);
+        }
+
+        LOG(msg, log_fd, "Child exiting success...");
+
+        sem_close(mutex);
+        close(log_fd);
+
+        exit(EXIT_SUCCESS);
+    } else {
+        LOG(msg, log_fd, "Error: No EMA devices detected!");
+        sem_close(mutex);
+        close(log_fd);
+        exit(EXIT_FAILURE);
     }
-
-    LOG(msg, log_fd, "Child waiting...");
-
-    sem_wait(mutex);
-
-    LOG(msg, log_fd, "Finalizing EMA...");
-    err = EMA_finalize(NULL);
-    if (err) {
-        LOG(msg, log_fd, "Failed to finalize EMA: %d", err);
-    }
-
-    LOG(msg, log_fd, "Child exiting success...");
-
-    sem_close(mutex);
-    close(log_fd);
-
-    exit(EXIT_SUCCESS);
 }
