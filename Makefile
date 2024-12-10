@@ -44,8 +44,6 @@ test:
 	$(CC) $(TESTS_DIR)/cgroup.c -o cgroup
 	$(CC) $(TESTS_DIR)/exit_failure.c -o fail
 	$(CC) $(TESTS_DIR)/raise_sigsegv.c -o segf
-	$(CC) -Iinclude -g src/eps_socket.c $(TESTS_DIR)/efp.c -o efp
-
 
 default: $(PLUGIN_FILE)
 
@@ -62,6 +60,6 @@ install: $(PLUGIN_FILE)
 clean:
 	rm -f $(PLUGIN_FILE)
 	rm -f $(SPANK_PLUGIN_FILE)
-	rm -f basic cgroup fail segf efp
+	rm -f basic cgroup fail segf
 
 mrproper: clean
