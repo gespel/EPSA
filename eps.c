@@ -1,8 +1,10 @@
 #include <errno.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/wait.h>
 
 #include <slurm/spank.h>
 
@@ -154,7 +156,17 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     // WARN: This is temporary workaround, will be remobed...
     sprintf(msg, "Waiting for EFP to finish or fail...\n");
     log_message(msg, log_fd);
-    sleep(3);
+    while(1) {
+        int ret = kill(*efp_pid, 0);
+        if (ret == -1 && errno == ESRCH) break;
+        usleep(500);
+    }
+    //int status;
+    //int ret = waitpid(*efp_pid, &status, WUNTRACED | WCONTINUED);
+    //if (ret == -1) {
+    //    sprintf(msg, "error: waitpid: %s\n", strerror(errno));
+    //    log_message(msg, log_fd);
+    //}
 
     sprintf(msg, "Cleaning up shared memory...\n");
     log_message(msg, log_fd);

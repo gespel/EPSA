@@ -67,8 +67,6 @@ void efp_main(pid_t pgid, int jid) {
         log_message(msg, log_fd);
     }
 
-    // INFO: Currently this palce can potentialy not be reached by the time
-    //       when the srun exits, see comments in task_exit hook.
     sprintf(msg, "Child exiting success...\n");
     log_message(msg, log_fd);
 
