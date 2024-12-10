@@ -130,22 +130,3 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
 
     return 0;
 }
-int slurm_spank_init(spank_t sp, int ac, char **av) {
-    slurm_info("Init: " PLUGIN_NAME);
-    return 0;
-}
-
-int slurm_spank_exit(spank_t sp, int ac, char **av) {
-    slurm_info("Exit: " PLUGIN_NAME);
-    return 0;
-}
-
-int slurm_spank_job_prolog (spank_t sp, int ac, char **av) {
-    slurm_info("Prolog: " PLUGIN_NAME);
-    return 0;
-}
-
-int slurm_spank_job_epilog (spank_t sp, int ac, char **av) {
-    slurm_info("Epilog: " PLUGIN_NAME);
-    return 0;
-}
