@@ -140,7 +140,6 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
         log_message(msg, log_fd);
         return 1;
     }
-    free(sem_name);
 
     sprintf(msg, "Unlocking semaphore...\n");
     log_message(msg, log_fd);
@@ -149,6 +148,8 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     sprintf(msg, "Closing semaphore...\n");
     log_message(msg, log_fd);
     sem_close(mutex);
+    sem_unlink(sem_name);
+    free(sem_name);
 
     // TODO: Realize waiting (with timeout) for the EFP to exit or fail.
     //       EMA finalization and DB communications will take some time,
