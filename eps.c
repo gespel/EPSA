@@ -35,7 +35,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     pid_t hook_pgid = getpgid(hook_pid);
     pid_t hook_sid = getsid(hook_pid);
 
-    char msg[128];
+    char msg[LOG_MSG_BUFF_SIZE];
 
     sprintf(msg, "Hook PID: %d\n", hook_pid);
     log_message(msg, log_fd);
@@ -84,7 +84,7 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     free(log_file_path);
     char* sem_name = get_sem_name(jid);
 
-    char msg[128];
+    char msg[LOG_MSG_BUFF_SIZE];
 
     sem_t* mutex = get_efp_mutex(sem_name, 0);
     if (!mutex) {
