@@ -1,5 +1,4 @@
 #include <errno.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -30,18 +29,6 @@ void efp_main(pid_t pgid, int jid) {
     pid_t child_pid = getpid();
 
     sprintf(msg, "EFP PID: %d\n", child_pid);
-    log_message(msg, log_fd);
-
-    // NOTE: Is it really needed after all?
-    sprintf(msg, "Moving efp to its own session...\n");
-    log_message(msg, log_fd);
-
-    if (setsid() == -1) {
-        sprintf(msg, "error: setsid: %s\n", strerror(errno));
-        log_message(msg, log_fd);
-    }
-
-    sprintf(msg, "EFP New Process SID: %d\n", getsid(child_pid));
     log_message(msg, log_fd);
 
     sprintf(msg, "Initializig EMA...\n");
