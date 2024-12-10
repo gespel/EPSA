@@ -9,7 +9,7 @@
 #include <EMA.h>
 
 
-void efp_main(pid_t pgid, int jid) {
+void efp_main(int jid) {
     char msg[256];
 
     char* efp_log_file_path = get_efp_log_file_path(jid);

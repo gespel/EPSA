@@ -35,7 +35,6 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     free(log_file_path);
 
     pid_t hook_pid = getpid();
-    pid_t hook_pgid = getpgid(hook_pid);
 
     char msg[LOG_MSG_BUFF_SIZE];
 
@@ -63,7 +62,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             log_message(msg, log_fd);
             return 1;
         case 0:
-            efp_main(hook_pgid, jid);
+            efp_main(jid);
         default:
             sprintf(msg, "Child PID: %d\n", pid);
             log_message(msg, log_fd);
