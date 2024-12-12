@@ -8,7 +8,9 @@ SLURM_BUILD = $(SLURM_VERSION)
 # !!! Edit this to be valid for your setup
 SLURM_SRC_DIR = $(HOME)/src/slurm
 
+
 EMA_DIR = /perfacct/slurm-libs/EMA
+PQ_DIR = /perfacct/slurm-libs/postgresql
 
 PLUGIN_TYPE = prep
 PLUGIN_NAME = eps
@@ -30,6 +32,12 @@ SPANK_LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -lEMA -Wl,--rpath=/perfacct/sl
 
 PREP_SRC_FILES =
 SPANK_SRC_FILES = src/eps_utils.c src/eps_sem.c src/eps_efp.c src/eps_shm.c
+SPANK_CFLAGS    ?= -Wall -fPIC -Iinclude -I$(SLURM_INC_DIR) -I$(SLURM_SRC_DIR)
+PREP_LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -L$(PQ_DIR)/libs -lEMA -lpq
+SPANK_LDFLAGS         ?= -shared -L$(PQ_DIR)/libs -lpq -Wl,--rpath=/perfacct/slurm-libs/postgresql/libs
+
+PREP_SRC_FILES = src/eps_resources.c src/eps_data.c src/eps_utils.c src/eps_db.c src/eps_ema.c
+SPANK_SRC_FILES = src/eps_resources.c src/eps_data.c src/eps_utils.c src/eps_db.c
 
 TESTS_DIR  = __test__
 
@@ -40,8 +48,10 @@ prep: $(PLUGIN_FILE)
 spank: $(SPANK_PLUGIN_FILE)
 
 test:
-	$(CC) $(TESTS_DIR)/basic.c -o basic
-	$(CC) $(TESTS_DIR)/cgroup.c -o cgroup
+	$(CC) -g $(TESTS_DIR)/basic.c -o basic
+	$(CC) -g $(TESTS_DIR)/cgroup.c -o cgroup
+	$(CC) -Iinclude -I$(SLURM_SRC_DIR) -g src/eps_utils.c src/eps_resources.c src/eps_data.c \
+            src/eps_db.c $(TESTS_DIR)/db.c -L$(EMA_DIR)/lib -L$(PQ_DIR)/libs -lEMA -lpq -o dbtest
 	$(CC) $(TESTS_DIR)/exit_failure.c -o fail
 	$(CC) $(TESTS_DIR)/raise_sigsegv.c -o segf
 
@@ -60,6 +70,6 @@ install: $(PLUGIN_FILE)
 clean:
 	rm -f $(PLUGIN_FILE)
 	rm -f $(SPANK_PLUGIN_FILE)
-	rm -f basic cgroup fail segf
+	rm -f basic cgroup dbtest fail segf
 
 mrproper: clean

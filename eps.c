@@ -7,7 +7,9 @@
 #include <sys/wait.h>
 #include <time.h>
 
+#include <eps_db.h>
 #include <slurm/spank.h>
+#include <unistd.h>
 
 #include <eps_utils.h>
 #include <eps_sem.h>

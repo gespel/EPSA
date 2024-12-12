@@ -3,6 +3,7 @@
 # Testing programs
 basic
 cgroup
+dbtest
 fail
 segf
 efp
