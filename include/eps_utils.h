@@ -8,6 +8,7 @@ void remove_log_file(const char* log_file);
 void log_message(const char* message, int fd);
 void log_cgroup(pid_t pid, const char* log_file);
 
+char* get_suffixed_name(const char* base, int jid);
 char* get_efp_log_file_path(int jid);
 char* get_init_log_file_path(int jid);
 char* get_exit_log_file_path(int jid);
