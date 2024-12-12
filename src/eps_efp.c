@@ -2,8 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <eps_sem.h>
+#include <eps_db.h>
 #include <eps_efp.h>
+#include <eps_sem.h>
 #include <eps_utils.h>
 
 #include <EMA.h>
@@ -91,6 +92,22 @@ void efp_main(int jid) {
         if (err) {
             LOG(msg, log_fd, "Failed to finalize EMA: %d", err);
         }
+
+        LOG(msg, log_fd, "Connecting to db...");
+        PGconn* db_connection = connect_db();
+        int connection_is_not_ok = check_connection(db_connection);
+        if (connection_is_not_ok) {
+            LOG(
+                msg,
+                log_fd,
+                "error: problems with db connection: %s",
+                PQerrorMessage(db_connection)
+            );
+            PQfinish(db_connection);
+        }
+
+        LOG(msg, log_fd, "Closing db connection...");
+        PQfinish(db_connection);
 
         sem_post(mutex2);
 
