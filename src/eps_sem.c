@@ -4,15 +4,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <eps_utils.h>
 #include <eps_sem.h>
 
 #define SEM_NAME_BASE "/efpsem_"
+#define SEM_NAME2_BASE "/efpsem_2_"
 
 char* get_sem_name(int jid) {
-    size_t size = strlen(SEM_NAME_BASE) + 15;
-    char* path = calloc(size, sizeof(char));
-    snprintf(path, size, "%s%d.log", SEM_NAME_BASE, jid);
-    return path;
+    return get_suffixed_name(SEM_NAME_BASE, jid);
+}
+
+char* get_sem2_name(int jid) {
+    return get_suffixed_name(SEM_NAME2_BASE, jid);
 }
 
 sem_t* get_efp_mutex(const char* name, int new) {

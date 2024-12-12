@@ -15,6 +15,7 @@
 
 #define PLUGIN_NAME "Spank/Eps"
 
+
 SPANK_PLUGIN(eps, 1)
 
 /********************************
@@ -90,7 +91,6 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     char* log_file_path = get_exit_log_file_path(jid);
     int log_fd = get_log_file_fd(log_file_path);
     free(log_file_path);
-    char* sem_name = get_sem_name(jid);
 
     char msg[LOG_MSG_BUFF_SIZE];
 
@@ -117,28 +117,39 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     LOG(msg, log_fd, "Reading shared memory...");
     LOG(msg, log_fd, "EFP's PID: %d...", *efp_pid);
 
-    LOG(msg, log_fd, "Obtaining semaphore...");
+    LOG(msg, log_fd, "Obtaining semaphores...");
+    char* sem_name = get_sem_name(jid);
+    char* sem_name2 = get_sem2_name(jid);
+
     sem_t* mutex = get_efp_mutex(sem_name, 0);
     if (!mutex) {
         LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
         return 1;
     }
 
-    LOG(msg, log_fd, "Unlocking semaphore...");
-    sem_post(mutex);
+    sem_t* mutex2 = get_efp_mutex(sem_name2, 0);
+    if (!mutex2) {
+        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+        return 1;
+    }
 
-    LOG(msg, log_fd, "Closing semaphore...");
-    sem_close(mutex);
-    sem_unlink(sem_name);
-    free(sem_name);
+    LOG(msg, log_fd, "Unlocking semaphore (resuming EFP)...");
+    sem_post(mutex);
 
     LOG(msg, log_fd, "Waiting for EFP to finish or fail...");
     // TODO: Add timeout on which to send SIGKILL to EFP (for cases when it hangs)...
-    while(1) {
-        int ret = kill(*efp_pid, 0);
-        if (ret == -1 && errno == ESRCH) break;
-        usleep(500);
-    }
+    sem_wait(mutex2);
+    sleep(2);
+
+    LOG(msg, log_fd, "Closing semaphores...");
+    sem_close(mutex);
+    sem_close(mutex2);
+
+    sem_unlink(sem_name);
+    sem_unlink(sem_name2);
+
+    free(sem_name);
+    free(sem_name2);
 
     LOG(msg, log_fd, "Cleaning up shared memory...");
     unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));

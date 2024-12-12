@@ -16,7 +16,13 @@ void efp_main(int jid) {
     int log_fd = get_log_file_fd(efp_log_file_path);
     free(efp_log_file_path);
 
+    pid_t efp_pid = getpid();
+
+    LOG(msg, log_fd, "EFP PID: %d", efp_pid);
+
+    LOG(msg, log_fd, "Obtaining semaphores...");
     char* sem_name = get_sem_name(jid);
+    char* sem_name2 = get_sem2_name(jid);
 
     sem_t* mutex = get_efp_mutex(sem_name, 1);
     if (!mutex) {
@@ -25,9 +31,12 @@ void efp_main(int jid) {
     }
     free(sem_name);
 
-    pid_t child_pid = getpid();
-
-    LOG(msg, log_fd, "EFP PID: %d", child_pid);
+    sem_t* mutex2 = get_efp_mutex(sem_name2, 1);
+    if (!mutex2) {
+        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+    free(sem_name2);
 
     LOG(msg, log_fd, "Initializig EMA...");
     int err = EMA_init(NULL);
@@ -54,7 +63,7 @@ void efp_main(int jid) {
             e0[i] = EMA_get_energy_uj(devices.array[i]);
         }
 
-        LOG(msg, log_fd, "Child waiting...");
+        LOG(msg, log_fd, "EFP waiting...");
 
         sem_wait(mutex);
 
@@ -75,16 +84,28 @@ void efp_main(int jid) {
             LOG(msg, log_fd, "Failed to finalize EMA: %d", err);
         }
 
-        LOG(msg, log_fd, "Child exiting success...");
+        sem_post(mutex2);
 
+        LOG(msg, log_fd, "Closing semaphores...");
         sem_close(mutex);
+        sem_close(mutex2);
+
+        LOG(msg, log_fd, "EFP exiting success...");
         close(log_fd);
 
         exit(EXIT_SUCCESS);
     } else {
         LOG(msg, log_fd, "Error: No EMA devices detected!");
+
+        sem_post(mutex2);
+
+        LOG(msg, log_fd, "Closing semaphores...");
         sem_close(mutex);
+        sem_close(mutex2);
+
+        LOG(msg, log_fd, "EFP exiting failure...");
         close(log_fd);
+
         exit(EXIT_FAILURE);
     }
 }
