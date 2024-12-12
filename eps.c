@@ -7,14 +7,12 @@
 #include <sys/wait.h>
 #include <time.h>
 
-#include <eps_db.h>
 #include <slurm/spank.h>
-#include <unistd.h>
 
-#include <eps_utils.h>
-#include <eps_sem.h>
 #include <eps_efp.h>
+#include <eps_sem.h>
 #include <eps_shm.h>
+#include <eps_utils.h>
 
 #define PLUGIN_NAME "Spank/Eps"
 #define EFP_WAIT_TIMEOUT 10 /* in seconds */
