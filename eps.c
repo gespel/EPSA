@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/wait.h>
+#include <time.h>
 
 #include <slurm/spank.h>
 
@@ -14,6 +15,7 @@
 #include <eps_shm.h>
 
 #define PLUGIN_NAME "Spank/Eps"
+#define EFP_WAIT_TIMEOUT 10 /* in seconds */
 
 
 SPANK_PLUGIN(eps, 1)
@@ -137,9 +139,22 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     sem_post(mutex);
 
     LOG(msg, log_fd, "Waiting for EFP to finish or fail...");
-    // TODO: Add timeout on which to send SIGKILL to EFP (for cases when it hangs)...
-    sem_wait(mutex2);
-    sleep(2);
+    struct timespec ts;
+    if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
+        LOG(msg, log_fd, "error: clock_gettime: %s", strerror(errno));
+        // Should we retrun here or use sem_trywait ?
+        return 1;
+    }
+
+    ts.tv_sec += EFP_WAIT_TIMEOUT;
+    int ret = sem_timedwait(mutex2, &ts);
+    if (ret == -1 && errno == ETIMEDOUT) {
+        LOG(msg, log_fd, "error: efp timed out!");
+        kill(*efp_pid, 9);
+    } else {
+        // INFO: Give EFP some time to write last logs and exit...
+        usleep(500000);
+    }
 
     LOG(msg, log_fd, "Closing semaphores...");
     sem_close(mutex);
