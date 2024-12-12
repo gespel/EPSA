@@ -45,6 +45,7 @@ void efp_main(int jid) {
     if (err) {
         LOG(msg, log_fd, "Failed to initialize EMA: %d", err);
         sem_close(mutex);
+        sem_close(mutex2);
         close(log_fd);
         exit(EXIT_FAILURE);
     }
