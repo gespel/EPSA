@@ -49,8 +49,8 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 {
         slurm_info("Ctld_prolog: %s", plugin_name);
 
-        slurm_info("Collecting job metadata...");
-        eps_meta_data_t* data = get_metadata(job_ptr);
+        slurm_info("Collecting job allocation data...");
+        eps_allocation_data_t* data = get_allocation_data(job_ptr);
 
         PGconn* db_connection = connect_db();
 
@@ -64,8 +64,8 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
             PQfinish(db_connection);
             return SLURM_ERROR;
         }
-        int err = insert_meta_data(db_connection, data);
-        free_metadata(data);
+        int err = insert_allocation_data(db_connection, data);
+        free_allocation_data(data);
 
         if (err) {
             slurm_info("error: failed to write data to db");

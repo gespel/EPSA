@@ -17,12 +17,12 @@ For further details check:
 */
 
 #include <eps_db.h>
+
 #define CHECK_PQ_ERR(res, ret) \
     if (PQresultStatus(res) == PGRES_FATAL_ERROR || PQresultStatus(res) != PGRES_COMMAND_OK)\
         return ret;
 
-#define META_COLS "job_id, t_start, nnodes, user_id"
-#define DEVICE_COLS "job_id, nodename, energy, t_start, t_duration, device, exclusiv"
+#define ALLOC_COLS "job_id, t_start, nnodes, user_id"
 
 PGconn* connect_db()
 {
@@ -97,12 +97,12 @@ int posix_time_str(char* t_str, size_t buf_size, time_t* time)
     return strftime(t_str, buf_size, "%F %T", timeinfo) == 0;
 }
 
-/*********************************** META ************************************/
+/*********************************** ALLOCATION ************************************/
 /* IN connection, data, returns int */
-int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
+int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
 {
     uint32_t bin_jobid = htobe32((uint32_t) data->jobid);
-    uint64_t bin_tstart = htobe64((uint64_t) data->tstart);
+    uint64_t bin_tstart = htobe64((uint64_t) data->ts);
     uint32_t bin_nnodes = htobe32((uint32_t) data->nnodes);
     uint32_t bin_userid = htobe32((uint32_t) data->userid);
 
@@ -120,9 +120,10 @@ int insert_meta_data(PGconn* connection, eps_meta_data_t* data)
         sizeof(bin_userid)
     };
 
+    // TODO: Change the insertion target table to allcations...
     PGresult* res = PQexecParams(
         connection,
-        "INSERT INTO meta ("META_COLS") VALUES($1, $2, $3, $4);",
+        "INSERT INTO meta ("ALLOC_COLS") VALUES($1, $2, $3, $4);",
         4,
         NULL,
         paramValues,

@@ -5,16 +5,17 @@
 #include "src/slurmctld/slurmctld.h"
 
 
-typedef struct eps_meta_data
+typedef struct eps_allocation_data
 {
     int jobid;
     int userid;
     int nnodes;
-    time_t tstart;
-} eps_meta_data_t;
+    // TODO: Adjust type here...
+    time_t ts;
+} eps_allocation_data_t;
 
-eps_meta_data_t* get_metadata(const job_record_t* job);
-void free_metadata(eps_meta_data_t* data);
-void print_metadata(eps_meta_data_t* data);
+eps_allocation_data_t* get_allocation_data(const job_record_t* job);
+void free_allocation_data(eps_allocation_data_t* data);
+void print_allocation_data(eps_allocation_data_t* data);
 
 #endif

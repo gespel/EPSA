@@ -1,30 +1,31 @@
-#include <eps_data.h>
-#include <eps_utils.h>
 #include <stdlib.h>
 
+#include <eps_data.h>
 
-eps_meta_data_t* get_metadata(const job_record_t* job)
+
+eps_allocation_data_t* get_allocation_data(const job_record_t* job)
 {
-    eps_meta_data_t* metadata = malloc(sizeof(eps_meta_data_t));
+    eps_allocation_data_t* data = malloc(sizeof(eps_allocation_data_t));
 
-    metadata->jobid = job->job_id;
-    metadata->userid = job->user_id;
-    metadata->nnodes = job->node_cnt;
-    metadata->tstart = job->start_time;
+    data->jobid = job->job_id;
+    data->userid = job->user_id;
+    data->nnodes = job->node_cnt;
+    // TODO: Save it in the right format (ts + tz_info, maybe as string)...
+    data->ts= job->start_time;
 
-    return metadata;
+    return data;
 }
 
-void free_metadata(eps_meta_data_t* data)
+void free_allocation_data(eps_allocation_data_t* data)
 {
     free(data);
 }
 
-void print_metadata(eps_meta_data_t* data)
+void print_allocation_data(eps_allocation_data_t* data)
 {
     printf("\n--- META ---\n");
     printf("Job ID: %d\n", data->jobid);
     printf("User ID: %d\n", data->userid);
     printf("Nodes count: %d\n", data->nnodes);
-    printf("Timestamp: %ld\n", data->tstart);
+    printf("Timestamp: %ld\n", data->ts);
 }
