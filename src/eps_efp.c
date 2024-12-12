@@ -55,28 +55,36 @@ void efp_main(int jid) {
             (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
         unsigned long long* e1 =
             (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
-        unsigned long long* consumptions =
+
+        unsigned long long* t0 =
+            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
+        unsigned long long* t1 =
             (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
 
         for (int i = 0; i < devices.size; i++) {
             LOG(msg, log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
             e0[i] = EMA_get_energy_uj(devices.array[i]);
+            t0[i] = EMA_get_time_in_us();
+            LOG(msg, log_fd, "\t e0: %llu", e0[i]);
+            LOG(msg, log_fd, "\t t0: %llu", t0[i]);
         }
 
         LOG(msg, log_fd, "EFP waiting...");
 
         sem_wait(mutex);
 
-        LOG(msg, log_fd, "Consumptions:");
         for (int i = 0; i < devices.size; i++) {
             e1[i] = EMA_get_energy_uj(devices.array[i]);
-            consumptions[i] = e1[i] - e0[i];
-            LOG(msg, log_fd, "\t%s: %llu", EMA_get_device_name(devices.array[i]), consumptions[i]);
+            t1[i] = EMA_get_time_in_us();
+            LOG(msg, log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
+            LOG(msg, log_fd, "\te1: %llu", e1[i]);
+            LOG(msg, log_fd, "\tt1: %llu", t1[i]);
         }
 
         free(e0);
         free(e1);
-        free(consumptions);
+        free(t0);
+        free(t1);
 
         LOG(msg, log_fd, "Finalizing EMA...");
         err = EMA_finalize(NULL);
