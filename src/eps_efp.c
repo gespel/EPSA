@@ -1,6 +1,8 @@
 #include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include <eps_db.h>
 #include <eps_efp.h>
@@ -72,7 +74,6 @@ void efp_main(int jid, int nodeid, time_t tstart) {
         }
 
         LOG(msg, log_fd, "EFP waiting...");
-
         sem_wait(mutex);
 
         for (int i = 0; i < devices.size; i++) {
@@ -83,10 +84,6 @@ void efp_main(int jid, int nodeid, time_t tstart) {
             LOG(msg, log_fd, "\tt1: %llu", t1[i]);
         }
 
-        free(e0);
-        free(e1);
-        free(t0);
-        free(t1);
 
         LOG(msg, log_fd, "Finalizing EMA...");
         err = EMA_finalize(NULL);
@@ -107,8 +104,69 @@ void efp_main(int jid, int nodeid, time_t tstart) {
             PQfinish(db_connection);
         }
 
+        time_t tend;
+        time(&tend);
+        // Handle potential error here ?
+
+        char nodename[HOST_NAME_MAX];
+        err = gethostname(nodename, HOST_NAME_MAX);
+        if (err) {
+            LOG(msg, log_fd, "error: gethostname: %s", strerror(errno));
+            snprintf(nodename, HOST_NAME_MAX, "Undefined");
+        }
+
+        eps_execution_data_t execution;
+        execution.jobid = jid;
+        execution.nodename = nodename;
+        execution.nodeid = nodeid;
+        execution.tstart = tstart;
+        execution.tend = tend;
+
+        LOG(msg, log_fd, "Execution:");
+            LOG(msg, log_fd, "\tjobid: %d", execution.jobid);
+            LOG(msg, log_fd, "\tnodename: %s", execution.nodename);
+            LOG(msg, log_fd, "\tnodeid: %d", execution.nodeid);
+            LOG(msg, log_fd, "\ttstart: %ld", execution.tstart);
+            LOG(msg, log_fd, "\ttend: %ld", execution.tend);
+
+        //TODO: Strart transaction...
+        //TODO: Make a write to DB and obtain construct execution id...
+        int execution_id = 42;
+
+        for (int i = 0; i < devices.size; i++) {
+            eps_measurement_data_t measurement;
+
+            measurement.execution_id = execution_id;
+            measurement.device_name = EMA_get_device_name(devices.array[i]);
+            // TODO: This is temporary, replace with real device uid once implemented
+            //       on EMA side...
+            measurement.device_uid = "42";
+            measurement.e0 = e0[i];
+            measurement.e1 = e1[i];
+            measurement.t0 = t0[i];
+            measurement.t1 = t1[i];
+
+            LOG(msg, log_fd, "Measurement:");
+            LOG(msg, log_fd, "\texecution_id: %d", measurement.execution_id);
+            LOG(msg, log_fd, "\tdevice_name: %s", measurement.device_name);
+            LOG(msg, log_fd, "\tdevice_uid: %s", measurement.device_uid);
+            LOG(msg, log_fd, "\te0: %llu", measurement.e0);
+            LOG(msg, log_fd, "\te1: %llu", measurement.e1);
+            LOG(msg, log_fd, "\tt0: %llu", measurement.t0);
+            LOG(msg, log_fd, "\tt1: %llu", measurement.t1);
+
+            //TODO: Write measurement to DB...
+        }
+
+        //TODO: Commit transaction...
+
         LOG(msg, log_fd, "Closing db connection...");
         PQfinish(db_connection);
+
+        free(e0);
+        free(e1);
+        free(t0);
+        free(t1);
 
         sem_post(mutex2);
 
