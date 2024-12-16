@@ -143,13 +143,13 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
 
     sem_t* mutex = get_efp_mutex(sem_name, 0);
     if (!mutex) {
-        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+        LOG(msg, log_fd, "error: get_efp_mutex[%s]: %s",sem_name, strerror(errno));
         return 1;
     }
 
     sem_t* mutex2 = get_efp_mutex(sem_name2, 0);
     if (!mutex2) {
-        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+        LOG(msg, log_fd, "error: get_efp_mutex[%s]: %s",sem_name2, strerror(errno));
         return 1;
     }
 
