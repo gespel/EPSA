@@ -11,6 +11,9 @@
 
 #include <EMA.h>
 
+typedef unsigned long long energy_t;
+typedef unsigned long long ustime_t;
+
 
 void efp_main(int jid, int nodeid, time_t tstart) {
     char msg[256];
@@ -29,14 +32,26 @@ void efp_main(int jid, int nodeid, time_t tstart) {
 
     sem_t* mutex = get_efp_mutex(sem_name, 1);
     if (!mutex) {
-        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+        LOG(
+            msg,
+            log_fd,
+            "error: get_efp_mutex[%s]: %s",
+            sem_name,
+            strerror(errno)
+        );
         exit(EXIT_FAILURE);
     }
     free(sem_name);
 
     sem_t* mutex2 = get_efp_mutex(sem_name2, 1);
     if (!mutex2) {
-        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+        LOG(
+            msg,
+            log_fd,
+            "error: get_efp_mutex[%s]: %s",
+            sem_name2,
+            strerror(errno)
+        );
         exit(EXIT_FAILURE);
     }
     free(sem_name2);
@@ -55,22 +70,19 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     DevicePtrArray devices = EMA_get_devices();
 
     if (devices.size) {
-        unsigned long long* e0 =
-            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
-        unsigned long long* e1 =
-            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
+        energy_t* e0 =
+            (energy_t*)calloc(devices.size, sizeof(energy_t));
+        energy_t* e1 =
+            (energy_t*)calloc(devices.size, sizeof(energy_t));
 
-        unsigned long long* t0 =
-            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
-        unsigned long long* t1 =
-            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
+        ustime_t* t0 =
+            (ustime_t*)calloc(devices.size, sizeof(ustime_t));
+        ustime_t* t1 =
+            (ustime_t*)calloc(devices.size, sizeof(ustime_t));
 
         for (int i = 0; i < devices.size; i++) {
-            LOG(msg, log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
             e0[i] = EMA_get_energy_uj(devices.array[i]);
             t0[i] = EMA_get_time_in_us();
-            LOG(msg, log_fd, "\t e0: %llu", e0[i]);
-            LOG(msg, log_fd, "\t t0: %llu", t0[i]);
         }
 
         LOG(msg, log_fd, "EFP waiting...");
@@ -79,9 +91,6 @@ void efp_main(int jid, int nodeid, time_t tstart) {
         for (int i = 0; i < devices.size; i++) {
             e1[i] = EMA_get_energy_uj(devices.array[i]);
             t1[i] = EMA_get_time_in_us();
-            LOG(msg, log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
-            LOG(msg, log_fd, "\te1: %llu", e1[i]);
-            LOG(msg, log_fd, "\tt1: %llu", t1[i]);
         }
 
 
