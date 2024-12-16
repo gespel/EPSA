@@ -18,10 +18,10 @@ typedef struct eps_execution_data
 {
     int jobid;
     const char* nodename;
-    int node_id;
+    int nodeid;
     // TODO: Adjust types here...
-    time_t ts_start;
-    time_t ts_end;
+    time_t tstart;
+    time_t tend;
 } eps_execution_data_t;
 
 typedef struct eps_measurement_data
