@@ -10,7 +10,7 @@
 #include <EMA.h>
 
 
-void efp_main(int jid) {
+void efp_main(int jid, int nodeid, time_t tstart) {
     char msg[256];
 
     char* efp_log_file_path = get_efp_log_file_path(jid);

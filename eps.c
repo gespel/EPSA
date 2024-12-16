@@ -26,6 +26,8 @@ SPANK_PLUGIN(eps, 1)
  *
  ********************************/
 int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
+    char msg[LOG_MSG_BUFF_SIZE];
+    time_t tstart;
     uint32_t jid;
 
     spank_err_t err = spank_get_item(sp, S_JOB_ID, &jid);
@@ -37,9 +39,13 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     int log_fd = get_log_file_fd(log_file_path);
     free(log_file_path);
 
-    pid_t hook_pid = getpid();
+    time(&tstart);
+    if (tstart == -1) {
+        LOG(msg, log_fd, "error: time: %s", strerror(errno));
+        return 1;
+    }
 
-    char msg[LOG_MSG_BUFF_SIZE];
+    pid_t hook_pid = getpid();
 
     LOG(msg, log_fd, "Hook PID: %d", hook_pid);
 
@@ -55,13 +61,25 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     }
     free(shm_name);
 
+    uint32_t nodeid = 0;
+    err = spank_get_item(sp, S_JOB_NODEID, &nodeid);
+    if (err) {
+        LOG(
+            msg, log_fd, 
+            "error: spank_get_item[nodeid]: %s",
+            spank_strerror(errno)
+        );
+    }
+
+    LOG(msg, log_fd, "Node ID: %d", nodeid);
+
     pid_t pid = fork();
     switch(pid) {
         case -1:
             LOG(msg, log_fd, "error: fork: %s", strerror(errno));
             return 1;
         case 0:
-            efp_main(jid);
+            efp_main(jid, nodeid, tstart);
         default:
             LOG(msg, log_fd, "Child PID: %d", pid);
 
