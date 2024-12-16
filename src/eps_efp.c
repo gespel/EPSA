@@ -93,13 +93,6 @@ void efp_main(int jid, int nodeid, time_t tstart) {
             t1[i] = EMA_get_time_in_us();
         }
 
-
-        LOG(msg, log_fd, "Finalizing EMA...");
-        err = EMA_finalize(NULL);
-        if (err) {
-            LOG(msg, log_fd, "Failed to finalize EMA: %d", err);
-        }
-
         LOG(msg, log_fd, "Connecting to db...");
         PGconn* db_connection = connect_db();
         int connection_is_not_ok = check_connection(db_connection);
@@ -171,6 +164,12 @@ void efp_main(int jid, int nodeid, time_t tstart) {
 
         LOG(msg, log_fd, "Closing db connection...");
         PQfinish(db_connection);
+
+        LOG(msg, log_fd, "Finalizing EMA...");
+        err = EMA_finalize(NULL);
+        if (err) {
+            LOG(msg, log_fd, "Failed to finalize EMA: %d", err);
+        }
 
         free(e0);
         free(e1);
