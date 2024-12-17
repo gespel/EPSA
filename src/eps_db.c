@@ -22,7 +22,7 @@ For further details check:
     if (PQresultStatus(res) == PGRES_FATAL_ERROR || PQresultStatus(res) != PGRES_COMMAND_OK)\
         return ret;
 
-#define ALLOC_COLS "job_id, t_start, nnodes, user_id"
+#define ALLOC_COLS "jobid,  nnodes, userid, ts"
 
 PGconn* connect_db()
 {
