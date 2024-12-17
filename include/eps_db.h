@@ -7,7 +7,7 @@
 
 // TODO: Discuss and agree on the approach to make this value(s)
 //       configurable.
-#define DB_CONN_INFO "postgresql://test:testtest2@10.10.10.142/test"
+#define DB_CONN_INFO "postgresql://eps:epssecret@10.10.10.142:5433/eps"
 
 PGconn* connect_db();
 
