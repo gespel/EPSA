@@ -23,5 +23,6 @@ int create_insert_query(
 );
 
 int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data);
+int insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* id);
 
 #endif

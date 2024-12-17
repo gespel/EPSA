@@ -23,6 +23,7 @@ For further details check:
         return ret;
 
 #define ALLOC_COLS "jobid,  nnodes, userid, ts"
+#define EXEC_COLS "jobid,  node_name, node_id, ts_start, ts_end"
 
 PGconn* connect_db()
 {
@@ -122,7 +123,6 @@ int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
         sizeof(ts)
     };
 
-    // TODO: Change the insertion target table to allcations...
     PGresult* res = PQexecParams(
         connection,
         "INSERT INTO allocations ("ALLOC_COLS") VALUES($1, $2, $3, to_timestamp($4));",
@@ -139,3 +139,56 @@ int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
 
     return err;
 }
+
+/*********************************** EXECUTION ************************************/
+/* IN connection, data, returns int */
+int insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* id)
+{
+    uint32_t bin_jobid = htobe32((uint32_t) data->jobid);
+    uint32_t bin_nodeid = htobe32((uint32_t) data->nodeid);
+
+    char tstart[12];
+    snprintf(tstart, 12, "%ld", data->tstart);
+
+    char tend[12];
+    snprintf(tend, 12, "%ld", data->tend);
+
+    int paramFormats[5] = {1, 0, 1, 0, 0};
+    const char* paramValues[5] = {
+        (char*) &bin_jobid,
+        data->nodename,
+        (char*) &bin_nodeid,
+        tstart,
+        tend
+    };
+    int paramLengths[5] = {
+        sizeof(bin_jobid),
+        sizeof(data->nodename),
+        sizeof(bin_nodeid),
+        sizeof(tstart),
+        sizeof(tend)
+    };
+
+    PGresult* res = PQexecParams(
+        connection,
+        "INSERT INTO executions ("EXEC_COLS") VALUES($1, $2, $3, to_timestamp($4), to_timestamp($5)) RETURNING id;",
+        5,
+        NULL,
+        paramValues,
+        paramLengths,
+        paramFormats,
+        0
+    );
+    int err = check_query_result(res, connection);
+    if (err) return err;
+
+    for (int i = 0; i < PQntuples(res); i++) {
+      for (int j = 0; j < PQnfields(res); j++) {
+        *id = strtol(PQgetvalue(res, i, j), NULL, 10);
+      }
+    }
+
+    PQclear(res);
+
+    return 0;
+
