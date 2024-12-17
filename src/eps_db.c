@@ -102,28 +102,30 @@ int posix_time_str(char* t_str, size_t buf_size, time_t* time)
 int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
 {
     uint32_t bin_jobid = htobe32((uint32_t) data->jobid);
-    uint64_t bin_tstart = htobe64((uint64_t) data->ts);
     uint32_t bin_nnodes = htobe32((uint32_t) data->nnodes);
     uint32_t bin_userid = htobe32((uint32_t) data->userid);
 
-    int paramFormats[4] = {1, 1, 1, 1};
+    char ts[12];
+    snprintf(ts, 12, "%ld", data->ts);
+
+    int paramFormats[4] = {1, 1, 1, 0};
     const char* paramValues[4] = {
         (char*) &bin_jobid,
-        (char*) &bin_tstart,
         (char*) &bin_nnodes,
-        (char*) &bin_userid
+        (char*) &bin_userid,
+        ts
     };
     int paramLengths[4] = {
         sizeof(bin_jobid),
-        sizeof(bin_tstart),
         sizeof(bin_nnodes),
-        sizeof(bin_userid)
+        sizeof(bin_userid),
+        sizeof(ts)
     };
 
     // TODO: Change the insertion target table to allcations...
     PGresult* res = PQexecParams(
         connection,
-        "INSERT INTO meta ("ALLOC_COLS") VALUES($1, $2, $3, $4);",
+        "INSERT INTO allocations ("ALLOC_COLS") VALUES($1, $2, $3, to_timestamp($4));",
         4,
         NULL,
         paramValues,
