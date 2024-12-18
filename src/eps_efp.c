@@ -110,6 +110,21 @@ void efp_main(int jid, int nodeid, time_t tstart) {
             snprintf(nodename, HOST_NAME_MAX, "Undefined");
         }
 
+        PGresult* res = PQexec(db_connection, "BEGIN");
+
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+            LOG(
+                msg,
+                log_fd,
+                "error: failed to BEGIN transation:%s",
+                PQerrorMessage(db_connection)
+            );
+            PQclear(res);
+            PQfinish(db_connection);
+            // Clear semaphores here ?
+            exit(EXIT_FAILURE);
+        }
+
         eps_execution_data_t execution;
         execution.jobid = jid;
         execution.nodename = nodename;
@@ -149,7 +164,17 @@ void efp_main(int jid, int nodeid, time_t tstart) {
             }
         }
 
-        //TODO: Commit transaction...
+        res = PQexec(db_connection, "COMMIT");
+
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+            LOG(
+                msg,
+                log_fd,
+                "error: failed to COMMIT transation:%s",
+                PQerrorMessage(db_connection)
+            );
+            PQclear(res);
+        }
 
         LOG(msg, log_fd, "Closing db connection...");
         PQfinish(db_connection);
