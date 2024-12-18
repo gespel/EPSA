@@ -18,12 +18,9 @@ For further details check:
 
 #include <eps_db.h>
 
-#define CHECK_PQ_ERR(res, ret) \
-    if (PQresultStatus(res) == PGRES_FATAL_ERROR || PQresultStatus(res) != PGRES_COMMAND_OK)\
-        return ret;
-
 #define ALLOC_COLS "jobid,  nnodes, userid, ts"
 #define EXEC_COLS "jobid,  node_name, node_id, ts_start, ts_end"
+#define MES_COLS "exec_id,  device_name, device_uid, e0, e1, t0, t1"
 
 PGconn* connect_db()
 {
@@ -54,52 +51,6 @@ int check_query_result(PGresult* result, PGconn* connection)
     return 0;
 }
 
-int row_by_userid
-    (PGconn* connection, PGresult** res, const char* table, int jobid)
-{
-    char* query = malloc(33 + strlen(table) + 1);
-    sprintf(query, "SELECT * FROM %s WHERE job_id = $1;",
-        PQescapeIdentifier(connection, table, strlen(table))
-    );
-
-    uint32_t bin_jobid = htobe32((uint32_t) jobid);
-    const char* paramValues[1] = {(char*) &bin_jobid};
-    int paramLengths[1] = {sizeof(bin_jobid)};
-    int paramFormats[1] = {1};
-
-    *res = PQexecParams(
-        connection,
-        query,
-        1,
-        NULL,
-        paramValues,
-        paramLengths,
-        paramFormats,
-        1
-    );
-
-    check_query_result(*res, connection);
-
-    int nrows = PQntuples(*res);
-    if(nrows == 0)
-    {
-        PQclear(*res);
-        return 1;
-    }
-
-    printf("Found %d entries in table %s with jobid=%d.", nrows, table, jobid);
-
-    return 0;
-}
-
-int posix_time_str(char* t_str, size_t buf_size, time_t* time)
-{
-    struct tm* timeinfo = localtime(time);
-    return strftime(t_str, buf_size, "%F %T", timeinfo) == 0;
-}
-
-/*********************************** ALLOCATION ************************************/
-/* IN connection, data, returns int */
 int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
 {
     uint32_t bin_jobid = htobe32((uint32_t) data->jobid);
@@ -140,8 +91,6 @@ int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
     return err;
 }
 
-/*********************************** EXECUTION ************************************/
-/* IN connection, data, returns int */
 int insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* id)
 {
     uint32_t bin_jobid = htobe32((uint32_t) data->jobid);
@@ -191,4 +140,53 @@ int insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* i
     PQclear(res);
 
     return 0;
+}
 
+int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
+{
+    char exec_id[12];
+    snprintf(exec_id, 12, "%d", data->execution_id);
+
+    char e0[20], e1[20];
+    char t0[20], t1[20];
+
+    snprintf(e0, 20, "%llu", data->e0);
+    snprintf(e1, 20, "%llu", data->e1);
+    snprintf(t0, 20, "%llu", data->t0);
+    snprintf(t1, 20, "%llu", data->t1);
+
+    const char* paramValues[7] = {
+        exec_id,
+        data->device_name,
+        data->device_uid,
+        e0,
+        e1,
+        t0,
+        t1
+    };
+    int paramLengths[7] = {
+        sizeof(exec_id),
+        sizeof(data->device_name),
+        sizeof(data->device_uid),
+        sizeof(e0),
+        sizeof(e1),
+        sizeof(t0),
+        sizeof(t1)
+    };
+
+    PGresult* res = PQexecParams(
+        connection,
+        "INSERT INTO measurements ("MES_COLS") VALUES($1, $2, $3, $4, $5, $6, $7);",
+        7,
+        NULL,
+        paramValues,
+        paramLengths,
+        NULL,
+        0
+    );
+    int err = check_query_result(res, connection);
+
+    PQclear(res);
+
+    return err;
+}
