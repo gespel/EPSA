@@ -52,15 +52,8 @@ void efp_main(int jid) {
     DevicePtrArray devices = EMA_get_devices();
 
     if (devices.size) {
-        unsigned long long* e0 =
-            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
-        unsigned long long* e1 =
-            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
-
-        unsigned long long* t0 =
-            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
-        unsigned long long* t1 =
-            (unsigned long long*)calloc(devices.size, sizeof(unsigned long long));
+        unsigned long long e0[devices.size], e1[devices.size];
+        unsigned long long t0[devices.size], t1[devices.size];
 
         for (int i = 0; i < devices.size; i++) {
             LOG(msg, log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
@@ -81,11 +74,6 @@ void efp_main(int jid) {
             LOG(msg, log_fd, "\te1: %llu", e1[i]);
             LOG(msg, log_fd, "\tt1: %llu", t1[i]);
         }
-
-        free(e0);
-        free(e1);
-        free(t0);
-        free(t1);
 
         LOG(msg, log_fd, "Finalizing EMA...");
         err = EMA_finalize(NULL);
