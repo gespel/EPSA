@@ -140,16 +140,13 @@ void efp_main(int jid, int nodeid, time_t tstart) {
             measurement.t0 = t0[i];
             measurement.t1 = t1[i];
 
-            LOG(msg, log_fd, "Measurement:");
-            LOG(msg, log_fd, "\texecution_id: %d", measurement.execution_id);
-            LOG(msg, log_fd, "\tdevice_name: %s", measurement.device_name);
-            LOG(msg, log_fd, "\tdevice_uid: %s", measurement.device_uid);
-            LOG(msg, log_fd, "\te0: %llu", measurement.e0);
-            LOG(msg, log_fd, "\te1: %llu", measurement.e1);
-            LOG(msg, log_fd, "\tt0: %llu", measurement.t0);
-            LOG(msg, log_fd, "\tt1: %llu", measurement.t1);
-
-            //TODO: Write measurement to DB...
+            err = insert_measurement_data(db_connection, &measurement);
+            if (err) {
+                LOG(msg, log_fd, "error: failed measurement data insertion!");
+                //close semaphores ?
+                close(log_fd);
+                exit(EXIT_FAILURE);
+            }
         }
 
         //TODO: Commit transaction...
