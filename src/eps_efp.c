@@ -70,15 +70,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     DevicePtrArray devices = EMA_get_devices();
 
     if (devices.size) {
-        energy_t* e0 =
-            (energy_t*)calloc(devices.size, sizeof(energy_t));
-        energy_t* e1 =
-            (energy_t*)calloc(devices.size, sizeof(energy_t));
-
-        ustime_t* t0 =
-            (ustime_t*)calloc(devices.size, sizeof(ustime_t));
-        ustime_t* t1 =
-            (ustime_t*)calloc(devices.size, sizeof(ustime_t));
+        energy_t e0[devices.size], e1[devices.size];
+        ustime_t t0[devices.size], t1[devices.size];
 
         for (int i = 0; i < devices.size; i++) {
             e0[i] = EMA_get_energy_uj(devices.array[i]);
@@ -170,11 +163,6 @@ void efp_main(int jid, int nodeid, time_t tstart) {
         if (err) {
             LOG(msg, log_fd, "Failed to finalize EMA: %d", err);
         }
-
-        free(e0);
-        free(e1);
-        free(t0);
-        free(t1);
 
         sem_post(mutex2);
 
