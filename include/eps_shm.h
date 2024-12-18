@@ -3,8 +3,7 @@
 
 #include <stddef.h>
 
-// TODO: Refine this (currently unsafe)...
-#define EPS_MMODE 0646
+#define EPS_MMODE 0640
 
 int create_shared_memory_region(const char* name, size_t size);
 int open_shared_memory_region(const char* name);
