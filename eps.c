@@ -116,9 +116,6 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
         // To return or not to return ???
     }
 
-    LOG(msg, log_fd, "Reading shared memory...");
-    LOG(msg, log_fd, "EFP's PID: %d...", *efp_pid);
-
     LOG(msg, log_fd, "Obtaining semaphores...");
     char* sem_name = get_sem_name(jid);
     char* sem_name2 = get_sem2_name(jid);
