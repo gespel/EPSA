@@ -29,7 +29,7 @@ PREP_LDFLAGS         ?= -shared
 SPANK_LDFLAGS         ?= -shared -L$(EMA_DIR)/lib -lEMA -Wl,--rpath=/perfacct/slurm-libs/EMA/lib
 
 PREP_SRC_FILES =
-SPANK_SRC_FILES = src/eps_utils.c src/eps_sem.c src/eps_efp.c src/eps_shm.c
+SPANK_SRC_FILES = src/*.c
 
 TESTS_DIR  = __test__
 
