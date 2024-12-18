@@ -21,7 +21,7 @@ char* get_sem2_name(int jid) {
 sem_t* get_efp_mutex(const char* name, int new) {
     sem_t* mutex;
     if (new) {
-    sem_unlink(name);
+        sem_unlink(name);
         if ((mutex = sem_open(name ,O_CREAT,S_IRWXU,0)) == SEM_FAILED) {
             perror("sem_open");
             return NULL;
