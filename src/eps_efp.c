@@ -117,16 +117,15 @@ void efp_main(int jid, int nodeid, time_t tstart) {
         execution.tstart = tstart;
         execution.tend = tend;
 
-        LOG(msg, log_fd, "Execution:");
-            LOG(msg, log_fd, "\tjobid: %d", execution.jobid);
-            LOG(msg, log_fd, "\tnodename: %s", execution.nodename);
-            LOG(msg, log_fd, "\tnodeid: %d", execution.nodeid);
-            LOG(msg, log_fd, "\ttstart: %ld", execution.tstart);
-            LOG(msg, log_fd, "\ttend: %ld", execution.tend);
+        int execution_id;
 
-        //TODO: Strart transaction...
-        //TODO: Make a write to DB and obtain construct execution id...
-        int execution_id = 42;
+        err = insert_execution_data(db_connection, &execution, &execution_id);
+        if (err) {
+            LOG(msg, log_fd, "error: failed execution data insertion!");
+            //close semaphores ?
+            close(log_fd);
+            exit(EXIT_FAILURE);
+        }
 
         for (int i = 0; i < devices.size; i++) {
             eps_measurement_data_t measurement;
