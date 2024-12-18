@@ -16,6 +16,7 @@
 
 #define PLUGIN_NAME "Spank/Eps"
 #define EFP_WAIT_TIMEOUT 10 /* in seconds */
+#define EFP_EXIT_DELAY 500000 /* in microseconds */
 
 
 SPANK_PLUGIN(eps, 1)
@@ -65,7 +66,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
         default:
             LOG(msg, log_fd, "Child PID: %d", pid);
 
-            LOG(msg, log_fd, "Writing EFP's PID to shared memory");
+            LOG(msg, log_fd, "Writing EFP's PID to shared memory...");
             *efp_pid = pid;
 
             int err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
@@ -150,7 +151,7 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
         kill(*efp_pid, 9);
     } else {
         // INFO: Give EFP some time to write last logs and exit...
-        usleep(500000);
+        usleep(EFP_EXIT_DELAY);
     }
 
     LOG(msg, log_fd, "Closing semaphores...");
