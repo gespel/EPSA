@@ -16,7 +16,6 @@
 
 #define PLUGIN_NAME "Spank/Eps"
 #define EFP_WAIT_TIMEOUT 10 /* in seconds */
-#define EFP_EXIT_DELAY 500000 /* in microseconds */
 
 
 SPANK_PLUGIN(eps, 1)
