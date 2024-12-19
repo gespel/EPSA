@@ -149,9 +149,6 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     if (ret == -1 && errno == ETIMEDOUT) {
         LOG(msg, log_fd, "error: efp timed out!");
         kill(*efp_pid, 9);
-    } else {
-        // INFO: Give EFP some time to write last logs and exit...
-        usleep(EFP_EXIT_DELAY);
     }
 
     LOG(msg, log_fd, "Closing semaphores...");
