@@ -5,8 +5,7 @@ SLURM_INC_DIR = $(SLURM_ROOT_DIR)/local/slurm/include/
 SLURM_LIB_DIR = /usr/local/slurm/lib/slurm
 SLURM_BUILD = $(SLURM_VERSION)
 
-# !!! Edit this to be valid for your setup
-SLURM_SRC_DIR = $(HOME)/src/slurm
+SLURM_SRC_DIR = /tmp/src/slurm
 
 EMA_DIR = /perfacct/slurm-libs/EMA
 
