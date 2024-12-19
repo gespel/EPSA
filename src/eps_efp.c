@@ -5,6 +5,8 @@
 #include <time.h>
 
 #include <eps_db.h>
+#include <eps_cgroup.h>
+#include <eps_sem.h>
 #include <eps_efp.h>
 #include <eps_sem.h>
 #include <eps_utils.h>
@@ -183,6 +185,14 @@ void efp_main(int jid, int nodeid, time_t tstart) {
         err = EMA_finalize(NULL);
         if (err) {
             LOG(msg, log_fd, "Failed to finalize EMA: %d", err);
+        }
+
+        //INFO: This is important cause slurm will destroy the initial task/step
+        //      cgroups at some point and the process will get killed if not moved
+        //      from it's initial slurm-created cgroup at this point.
+        err = move_pid_to_cg("/sys/fs/cgroup/cgroup.procs", efp_pid);
+        if (err) {
+            LOG(msg, log_fd, "error: move_pid_to_cg:%s", strerror(errno));
         }
 
         sem_post(mutex2);
