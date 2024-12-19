@@ -5,10 +5,6 @@
 
 #include <eps_data.h>
 
-// TODO: Discuss and agree on the approach to make this value(s)
-//       configurable.
-#define DB_CONN_INFO "postgresql://eps:epssecret@10.10.10.142:5433/eps"
-
 PGconn* connect_db();
 
 int check_connection(PGconn* connection);

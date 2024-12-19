@@ -16,6 +16,8 @@ For further details check:
 - https://www.postgresql.org/docs/17/libpq-exec.html#LIBPQ-EXEC-ESCAPE-STRING
 */
 
+#include <unistd.h>
+
 #include <eps_db.h>
 
 #define ALLOC_COLS "jobid,  nnodes, userid, ts"
@@ -24,11 +26,8 @@ For further details check:
 
 PGconn* connect_db()
 {
-    // WARN: This is usecure to print whole connection string!
-    // TODO: Find a secure way to log connection info (perhaps partially e.g.
-    //       only the host address), or remove the connection info from this log
-    //       completely.
-    return PQconnectdb(DB_CONN_INFO);
+    char* conn_str = getenv("EPS_DB_CONN_STR");
+    return PQconnectdb(conn_str);
 }
 
 int check_connection(PGconn* connection)
