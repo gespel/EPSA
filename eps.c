@@ -61,6 +61,14 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     }
     free(shm_name);
 
+    LOG(msg, log_fd, "Obtaining semaphores...");
+    char* sem_name = get_sem_name(jid);
+    sem_t* mutex = get_efp_mutex(sem_name, 1);
+    if (!mutex) {
+        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+        return 1;
+    }
+
     uint32_t nodeid = 0;
     err = spank_get_item(sp, S_JOB_NODEID, &nodeid);
     if (err) {
@@ -72,14 +80,6 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     }
 
     LOG(msg, log_fd, "Node ID: %d", nodeid);
-
-    LOG(msg, log_fd, "Obtaining semaphores...");
-    char* sem_name = get_sem_name(jid);
-    sem_t* mutex = get_efp_mutex(sem_name, 1);
-    if (!mutex) {
-        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
-        return 1;
-    }
 
     pid_t pid = fork();
     switch(pid) {
