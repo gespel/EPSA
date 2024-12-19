@@ -55,6 +55,14 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     }
     free(shm_name);
 
+    LOG(msg, log_fd, "Obtaining semaphores...");
+    char* sem_name = get_sem_name(jid);
+    sem_t* mutex = get_efp_mutex(sem_name, 1);
+    if (!mutex) {
+        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+        return 1;
+    }
+
     pid_t pid = fork();
     switch(pid) {
         case -1:
@@ -63,6 +71,9 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
         case 0:
             efp_main(jid);
         default:
+            LOG(msg, log_fd, "Waiting for EFP initialization...");
+            sem_wait(mutex);
+
             LOG(msg, log_fd, "Child PID: %d", pid);
 
             LOG(msg, log_fd, "Writing EFP's PID to shared memory...");

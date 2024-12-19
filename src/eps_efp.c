@@ -25,7 +25,7 @@ void efp_main(int jid) {
     char* sem_name = get_sem_name(jid);
     char* sem_name2 = get_sem2_name(jid);
 
-    sem_t* mutex = get_efp_mutex(sem_name, 1);
+    sem_t* mutex = get_efp_mutex(sem_name, 0);
     if (!mutex) {
         LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
         exit(EXIT_FAILURE);
@@ -41,6 +41,8 @@ void efp_main(int jid) {
 
     LOG(msg, log_fd, "Initializig EMA...");
     int err = EMA_init(NULL);
+
+    sem_post(mutex);
 
     if (err) {
         LOG(msg, log_fd, "Failed to initialize EMA: %d", err);
