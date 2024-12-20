@@ -42,7 +42,6 @@ void efp_main(int jid) {
     LOG(msg, log_fd, "Initializig EMA...");
     int err = EMA_init(NULL);
 
-    sem_post(mutex);
 
     if (err) {
         LOG(msg, log_fd, "Failed to initialize EMA: %d", err);
@@ -61,6 +60,9 @@ void efp_main(int jid) {
     if (err) {
         LOG(msg, log_fd, "error: move_pid_to_cg:%s", strerror(errno));
     }
+
+    // INFO: Release the task_init hook waiting...
+    sem_post(mutex);
 
     if (devices.size) {
         unsigned long long e0[devices.size], e1[devices.size];
