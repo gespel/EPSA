@@ -2,7 +2,6 @@
 
 # Testing programs
 basic
-cgroup
 fail
 segf
 

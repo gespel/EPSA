@@ -40,7 +40,6 @@ spank: $(SPANK_PLUGIN_FILE)
 
 test:
 	$(CC) $(TESTS_DIR)/basic.c -o basic
-	$(CC) $(TESTS_DIR)/cgroup.c -o cgroup
 	$(CC) $(TESTS_DIR)/exit_failure.c -o fail
 	$(CC) $(TESTS_DIR)/raise_sigsegv.c -o segf
 
@@ -60,6 +59,6 @@ install: $(PLUGIN_FILE)
 clean:
 	rm -f $(PLUGIN_FILE)
 	rm -f $(SPANK_PLUGIN_FILE)
-	rm -f basic cgroup fail segf
+	rm -f basic fail segf
 
 mrproper: clean
