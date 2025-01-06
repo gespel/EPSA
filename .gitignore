@@ -5,3 +5,6 @@ basic
 cgroup
 fail
 segf
+
+# Utility shell scripts
+*.sh
