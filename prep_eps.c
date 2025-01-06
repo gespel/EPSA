@@ -17,39 +17,39 @@ const uint32_t plugin_version = SLURM_VERSION_NUMBER;
 
 extern int init(void)
 {
-        slurm_info("Init: %s", plugin_name);
-	return SLURM_SUCCESS;
+    slurm_info("Init: %s", plugin_name);
+    return SLURM_SUCCESS;
 }
 
 extern void fini(void)
 {
-        slurm_info("Fini: %s", plugin_name);
+    slurm_info("Fini: %s", plugin_name);
 }
 
 extern void prep_p_register_callbacks(prep_callbacks_t* callbacks) {}
 
 extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
 {
-        slurm_info("Prolog: %s", plugin_name);
-	return SLURM_SUCCESS;
+    slurm_info("Prolog: %s", plugin_name);
+    return SLURM_SUCCESS;
 }
 
 extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 {
-        slurm_info("Epilog: %s", plugin_name);
-	return SLURM_SUCCESS;
+    slurm_info("Epilog: %s", plugin_name);
+    return SLURM_SUCCESS;
 }
 
 extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 {
-        slurm_info("Ctld_prolog: %s", plugin_name);
-	return SLURM_SUCCESS;
+    slurm_info("Ctld_prolog: %s", plugin_name);
+    return SLURM_SUCCESS;
 }
 
 extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
 {
-        slurm_info("Ctld_epilog: %s", plugin_name);
-	return SLURM_SUCCESS;
+    slurm_info("Ctld_epilog: %s", plugin_name);
+    return SLURM_SUCCESS;
 }
 
 extern void prep_p_required(prep_call_type_t type, bool* required)
