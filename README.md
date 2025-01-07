@@ -8,15 +8,52 @@ DB. \*
 
 ## Build
 
-- `cd` into project's root directory;
-- run `make` to build plugins `.so` files;
-- run `make test` to build dummy test executables that you can later use for
-  tests with `srun` or standalone;
+### Prerequisites
 
-## Update nodes
+1. `Slurm` installed and configured on the cluster.
+2. `Slurm` source code present on the system used for the build.
 
-1. After building the plugins you need to copy the `.so` files to corresponding
-   locations that `slurm` scans for the plugins.
+   **IMPORTANT:** The source code version should match exactly (up to minor number)
+   the version of `Slurm` installed on your cluster. Othervise plugin compatability
+   issues may arise.
+
+### Steps
+
+1. Clone this repo.
+
+2. Create `build` directory in the root of this project, `cd` into it:
+
+   ```bash
+   mkdir build && cd build
+   ```
+
+3. Configure and generate build files with `cmake`:
+
+   - via `ccmake`:
+      ```bash
+      ccmake ..
+      ```
+      Then use tui to provide required pathes.
+
+   - via `cmake` command:
+      ```bash
+      cmake .. \
+      -DSLURM_INSTALL_DIR=/path/to/your/slurm/installation/directory \
+      -DSLURM_SRC_DIR=/path/to/slurm/sources/directory
+      ```
+
+4. Build the plugins by running `make` inside `build` directory.
+
+After successfull completion of the above steps you should have two plugin files inside
+`build` directory:
+
+- `eps.so` (SPANK plugin)
+- `prep_eps.so` (PREP plugin)
+
+## Installation
+
+1. After building the plugins copy the `.so` files from `build`
+   directory to corresponding locations that `slurm` scans for the plugins.
 
 2. You need to restart `slurm` daemons:
    - `slurmd` on compute nodes;
