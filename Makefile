@@ -44,7 +44,6 @@ spank: $(SPANK_PLUGIN_FILE)
 
 test:
 	$(CC) -g $(TESTS_DIR)/basic.c -o basic
-	$(CC) -g $(TESTS_DIR)/cgroup.c -o cgroup
 	$(CC) -g $(TESTS_DIR)/exit_failure.c -o fail
 	$(CC) -g $(TESTS_DIR)/raise_sigsegv.c -o segf
 
