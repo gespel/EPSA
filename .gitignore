@@ -1,9 +1,14 @@
 *.so
 
-# Testing programs
+# Testing
+__test__/
 basic
 fail
 segf
+test_*
 
 # Utility shell scripts
 *.sh
+
+# Misc outputs
+*.out
