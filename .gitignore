@@ -1,5 +1,8 @@
 *.so
 
+# Build
+build/
+
 # Testing
 __test__/
 basic
