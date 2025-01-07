@@ -5,6 +5,14 @@ set(SLURM_INSTALL_DIR "" CACHE PATH "A directory of slurm installation")
 set(SLURM_SRC_DIR "" CACHE PATH "A directory with slurm source code")
 set(EMA_INSTALL_DIR "" CACHE PATH "A directory of EMA installation")
 
+if(NOT SLURM_INSTALL_DIR)
+    message(FATAL_ERROR "You have to set up `SLURM_INSTALL_DIR` path!")
+endif()
+
+if(NOT SLURM_SRC_DIR)
+    message(FATAL_ERROR "You have to set up `SLURM_INSTALL_DIR` path!")
+endif()
+
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 add_library(eps SHARED)
