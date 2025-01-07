@@ -9,7 +9,7 @@ if(NOT SLURM_INSTALL_DIR)
 endif()
 
 if(NOT SLURM_SRC_DIR)
-    message(FATAL_ERROR "You have to set up `SLURM_INSTALL_DIR` path!")
+    message(FATAL_ERROR "You have to set up `SLURM_SRC_DIR` path!")
 endif()
 
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
