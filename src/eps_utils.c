@@ -40,16 +40,7 @@ char* get_exit_log_file_path(int jid) {
 }
 
 int get_log_file_fd(const char* filename) {
-    int filename_length = strlen(filename);
-
-    // INFO: Remove file if exists...
-    // TODO: Imrpove this, currently it uglifies the output of srun,
-    //       should be a way to check for file existence first, and omit this
-    //       invocation...
-    char cmd[filename_length + 4];
-    sprintf(cmd, "rm %s", filename);
-    system(cmd);
-
+    unlink(filename);
     int fd = open(filename, O_RDWR | O_CREAT, LOG_MODE);
     if (fd == -1) perror("open");
 
