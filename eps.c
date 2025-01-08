@@ -56,10 +56,11 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     free(shm_name);
 
     LOG(msg, log_fd, "Obtaining semaphores...");
+
     char* sem_name = get_sem_name(jid);
-    sem_t* mutex = get_efp_mutex(sem_name, 1);
-    if (!mutex) {
-        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+    sem_t* proceed_init = get_efp_sem(sem_name, 1);
+    if (!proceed_init) {
+        LOG(msg, log_fd, "error: get_efp_sem: %s", strerror(errno));
         return 1;
     }
 
@@ -72,7 +73,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             efp_main(jid);
         default:
             LOG(msg, log_fd, "Waiting for EFP initialization...");
-            sem_wait(mutex);
+            sem_wait(proceed_init);
 
             LOG(msg, log_fd, "Child PID: %d", pid);
 
@@ -128,23 +129,23 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     }
 
     LOG(msg, log_fd, "Obtaining semaphores...");
-    char* sem_name = get_sem_name(jid);
-    char* sem_name2 = get_sem2_name(jid);
 
-    sem_t* mutex = get_efp_mutex(sem_name, 0);
-    if (!mutex) {
-        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+    char* sem_name = get_sem_name(jid);
+    sem_t* resume_efp = get_efp_sem(sem_name, 0);
+    if (!resume_efp) {
+        LOG(msg, log_fd, "error: get_efp_sem: %s", strerror(errno));
         return 1;
     }
 
-    sem_t* mutex2 = get_efp_mutex(sem_name2, 0);
-    if (!mutex2) {
-        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+    char* sem_name2 = get_sem2_name(jid);
+    sem_t* efp_finalize = get_efp_sem(sem_name2, 0);
+    if (!efp_finalize) {
+        LOG(msg, log_fd, "error: get_efp_sem: %s", strerror(errno));
         return 1;
     }
 
     LOG(msg, log_fd, "Unlocking semaphore (resuming EFP)...");
-    sem_post(mutex);
+    sem_post(resume_efp);
 
     LOG(msg, log_fd, "Waiting for EFP to finish or fail...");
     struct timespec ts;
@@ -155,15 +156,15 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     }
 
     ts.tv_sec += EFP_WAIT_TIMEOUT;
-    int ret = sem_timedwait(mutex2, &ts);
+    int ret = sem_timedwait(efp_finalize, &ts);
     if (ret == -1 && errno == ETIMEDOUT) {
         LOG(msg, log_fd, "error: efp timed out!");
         kill(*efp_pid, 9);
     }
 
     LOG(msg, log_fd, "Closing semaphores...");
-    sem_close(mutex);
-    sem_close(mutex2);
+    sem_close(resume_efp);
+    sem_close(efp_finalize);
 
     sem_unlink(sem_name);
     sem_unlink(sem_name2);

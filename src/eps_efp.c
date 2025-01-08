@@ -24,18 +24,18 @@ void efp_main(int jid) {
     LOG(msg, log_fd, "Obtaining semaphores...");
 
     char* sem_name = get_sem_name(jid);
-    sem_t* mutex = get_efp_mutex(sem_name, 0);
+    sem_t* proceed_init = get_efp_sem(sem_name, 0);
     free(sem_name);
-    if (!mutex) {
-        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+    if (!proceed_init) {
+        LOG(msg, log_fd, "error: get_efp_sem: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     char* sem_name2 = get_sem2_name(jid);
-    sem_t* mutex2 = get_efp_mutex(sem_name2, 1);
+    sem_t* proceed_exit = get_efp_sem(sem_name2, 1);
     free(sem_name2);
-    if (!mutex2) {
-        LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
+    if (!proceed_exit) {
+        LOG(msg, log_fd, "error: get_efp_sem: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -44,8 +44,8 @@ void efp_main(int jid) {
 
     if (err) {
         LOG(msg, log_fd, "Failed to initialize EMA: %d", err);
-        sem_close(mutex);
-        sem_close(mutex2);
+        sem_close(proceed_init);
+        sem_close(proceed_exit);
         close(log_fd);
         exit(EXIT_FAILURE);
     }
@@ -61,7 +61,7 @@ void efp_main(int jid) {
     }
 
     // INFO: Release the task_init hook waiting...
-    sem_post(mutex);
+    sem_post(proceed_init);
 
     if (devices.size) {
         unsigned long long e0[devices.size], e1[devices.size];
@@ -77,7 +77,7 @@ void efp_main(int jid) {
 
         LOG(msg, log_fd, "EFP waiting...");
 
-        sem_wait(mutex);
+        sem_wait(proceed_init);
 
         for (int i = 0; i < devices.size; i++) {
             e1[i] = EMA_get_energy_uj(devices.array[i]);
@@ -93,12 +93,11 @@ void efp_main(int jid) {
             LOG(msg, log_fd, "Failed to finalize EMA: %d", err);
         }
 
-
-        sem_post(mutex2);
+        sem_post(proceed_exit);
 
         LOG(msg, log_fd, "Closing semaphores...");
-        sem_close(mutex);
-        sem_close(mutex2);
+        sem_close(proceed_init);
+        sem_close(proceed_exit);
 
         LOG(msg, log_fd, "EFP exiting success...");
         close(log_fd);
@@ -107,11 +106,11 @@ void efp_main(int jid) {
     } else {
         LOG(msg, log_fd, "Error: No EMA devices detected!");
 
-        sem_post(mutex2);
+        sem_post(proceed_exit);
 
         LOG(msg, log_fd, "Closing semaphores...");
-        sem_close(mutex);
-        sem_close(mutex2);
+        sem_close(proceed_init);
+        sem_close(proceed_exit);
 
         LOG(msg, log_fd, "EFP exiting failure...");
         close(log_fd);
