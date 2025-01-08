@@ -15,21 +15,9 @@
 #define TEXIT_LOG_PATH_BASE "/tmp/task_exit_"
 
 
-void remove_log_file(const char* log_file) {
-    char cmd[256];
-    sprintf(cmd,"rm %s", log_file);
-    system(cmd);
-}
-
 void log_message(const char* message, int fd) {
     if (fd <= 0) return;
     write(fd,message, strlen(message));
-}
-
-void log_cgroup(pid_t pid, const char* log_file) {
-    char cmd[256];
-    sprintf(cmd, "cat /proc/%d/cgroup >> %s", pid, log_file);
-    system(cmd);
 }
 
 char* get_suffixed_name(const char* base, int jid) {
