@@ -39,10 +39,7 @@ char* get_exit_log_file_path(int jid) {
     return get_suffixed_name(TEXIT_LOG_PATH_BASE, jid);
 }
 
-int get_log_file_fd(const char* filename) {
+FILE* get_log_file_fd(const char* filename) {
     unlink(filename);
-    int fd = open(filename, O_RDWR | O_CREAT, LOG_MODE);
-    if (fd == -1) perror("open");
-
-    return fd;
+    return fopen(filename, "w");
 }

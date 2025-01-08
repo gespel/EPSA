@@ -14,21 +14,21 @@ void efp_main(int jid) {
     char msg[256];
 
     char* efp_log_file_path = get_efp_log_file_path(jid);
-    int log_fd = get_log_file_fd(efp_log_file_path);
+    FILE* log_fd = get_log_file_fd(efp_log_file_path);
     free(efp_log_file_path);
 
     pid_t efp_pid = getpid();
 
-    LOG(msg, log_fd, "EFP PID: %d", efp_pid);
+    LOG(log_fd, "EFP PID: %d", efp_pid);
 
-    LOG(msg, log_fd, "Obtaining semaphores...");
+    LOG(log_fd, "Obtaining semaphores...");
 
     char* sem_name = get_sem_name(jid);
     sem_t* proceed_init = get_efp_sem(sem_name, 0);
     free(sem_name);
     if (!proceed_init) {
-        LOG(msg, log_fd, "error: get_efp_sem: %s", strerror(errno));
-        close(log_fd);
+        LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
+        fclose(log_fd);
         exit(EXIT_FAILURE);
     }
 
@@ -36,19 +36,19 @@ void efp_main(int jid) {
     sem_t* proceed_exit = get_efp_sem(sem_name2, 1);
     free(sem_name2);
     if (!proceed_exit) {
-        LOG(msg, log_fd, "error: get_efp_sem: %s", strerror(errno));
-        close(log_fd);
+        LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
+        fclose(log_fd);
         exit(EXIT_FAILURE);
     }
 
-    LOG(msg, log_fd, "Initializig EMA...");
+    LOG(log_fd, "Initializig EMA...");
     int err = EMA_init(NULL);
 
     if (err) {
-        LOG(msg, log_fd, "Failed to initialize EMA: %d", err);
+        LOG(log_fd, "Failed to initialize EMA: %d", err);
         sem_close(proceed_init);
         sem_close(proceed_exit);
-        close(log_fd);
+        fclose(log_fd);
         exit(EXIT_FAILURE);
     }
 
@@ -59,7 +59,7 @@ void efp_main(int jid) {
     //      from it's initial slurm-created cgroup at this point.
     err = move_pid_to_cg("/sys/fs/cgroup/cgroup.procs", efp_pid);
     if (err) {
-        LOG(msg, log_fd, "error: move_pid_to_cg:%s", strerror(errno));
+        LOG(log_fd, "error: move_pid_to_cg:%s", strerror(errno));
     }
 
     // INFO: Release the task_init hook waiting...
@@ -70,52 +70,52 @@ void efp_main(int jid) {
         unsigned long long t0[devices.size], t1[devices.size];
 
         for (int i = 0; i < devices.size; i++) {
-            LOG(msg, log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
+            LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
             e0[i] = EMA_get_energy_uj(devices.array[i]);
             t0[i] = EMA_get_time_in_us();
-            LOG(msg, log_fd, "\t e0: %llu", e0[i]);
-            LOG(msg, log_fd, "\t t0: %llu", t0[i]);
+            LOG(log_fd, "\t e0: %llu", e0[i]);
+            LOG(log_fd, "\t t0: %llu", t0[i]);
         }
 
-        LOG(msg, log_fd, "EFP waiting...");
+        LOG(log_fd, "EFP waiting...");
 
         sem_wait(proceed_init);
 
         for (int i = 0; i < devices.size; i++) {
             e1[i] = EMA_get_energy_uj(devices.array[i]);
             t1[i] = EMA_get_time_in_us();
-            LOG(msg, log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
-            LOG(msg, log_fd, "\te1: %llu", e1[i]);
-            LOG(msg, log_fd, "\tt1: %llu", t1[i]);
+            LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
+            LOG(log_fd, "\te1: %llu", e1[i]);
+            LOG(log_fd, "\tt1: %llu", t1[i]);
         }
 
-        LOG(msg, log_fd, "Finalizing EMA...");
+        LOG(log_fd, "Finalizing EMA...");
         err = EMA_finalize(NULL);
         if (err) {
-            LOG(msg, log_fd, "Failed to finalize EMA: %d", err);
+            LOG(log_fd, "Failed to finalize EMA: %d", err);
         }
 
         sem_post(proceed_exit);
 
-        LOG(msg, log_fd, "Closing semaphores...");
+        LOG(log_fd, "Closing semaphores...");
         sem_close(proceed_init);
         sem_close(proceed_exit);
 
-        LOG(msg, log_fd, "EFP exiting success...");
-        close(log_fd);
+        LOG(log_fd, "EFP exiting success...");
+        fclose(log_fd);
 
         exit(EXIT_SUCCESS);
     } else {
-        LOG(msg, log_fd, "Error: No EMA devices detected!");
+        LOG(log_fd, "Error: No EMA devices detected!");
 
         sem_post(proceed_exit);
 
-        LOG(msg, log_fd, "Closing semaphores...");
+        LOG(log_fd, "Closing semaphores...");
         sem_close(proceed_init);
         sem_close(proceed_exit);
 
-        LOG(msg, log_fd, "EFP exiting failure...");
-        close(log_fd);
+        LOG(log_fd, "EFP exiting failure...");
+        fclose(log_fd);
 
         exit(EXIT_FAILURE);
     }
