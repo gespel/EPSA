@@ -22,26 +22,25 @@ void efp_main(int jid) {
     LOG(msg, log_fd, "EFP PID: %d", efp_pid);
 
     LOG(msg, log_fd, "Obtaining semaphores...");
-    char* sem_name = get_sem_name(jid);
-    char* sem_name2 = get_sem2_name(jid);
 
+    char* sem_name = get_sem_name(jid);
     sem_t* mutex = get_efp_mutex(sem_name, 0);
+    free(sem_name);
     if (!mutex) {
         LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
-    free(sem_name);
 
+    char* sem_name2 = get_sem2_name(jid);
     sem_t* mutex2 = get_efp_mutex(sem_name2, 1);
+    free(sem_name2);
     if (!mutex2) {
         LOG(msg, log_fd, "error: get_efp_mutex: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
-    free(sem_name2);
 
     LOG(msg, log_fd, "Initializig EMA...");
     int err = EMA_init(NULL);
-
 
     if (err) {
         LOG(msg, log_fd, "Failed to initialize EMA: %d", err);
