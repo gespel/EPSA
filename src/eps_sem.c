@@ -7,15 +7,20 @@
 #include <eps_utils.h>
 #include <eps_sem.h>
 
-#define SEM_NAME_BASE "/efpsem_init_"
-#define SEM_NAME2_BASE "/efpsem_exit_"
+#define SEM_INIT_BASE "/efpsem_init_"
+#define SEM_EFP_BASE "/efpsem_efp_"
+#define SEM_EXIT_BASE "/efpsem_exit_"
 
-char* get_sem_name(int jid) {
-    return get_suffixed_name(SEM_NAME_BASE, jid);
+char* get_sem_init_name(int jid) {
+    return get_suffixed_name(SEM_INIT_BASE, jid);
 }
 
-char* get_sem2_name(int jid) {
-    return get_suffixed_name(SEM_NAME2_BASE, jid);
+char* get_sem_efp_name(int jid) {
+    return get_suffixed_name(SEM_EFP_BASE, jid);
+}
+
+char* get_sem_exit_name(int jid) {
+    return get_suffixed_name(SEM_EXIT_BASE, jid);
 }
 
 sem_t* get_efp_sem(const char* name, int new) {

@@ -58,7 +58,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
 
     LOG(log_fd, "Obtaining semaphores...");
 
-    char* sem_name = get_sem_name(jid);
+    char* sem_name = get_sem_init_name(jid);
     sem_t* proceed_init = get_efp_sem(sem_name, 1);
     if (!proceed_init) {
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
@@ -133,16 +133,16 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
 
     LOG(log_fd, "Obtaining semaphores...");
 
-    char* sem_name = get_sem_name(jid);
-    sem_t* resume_efp = get_efp_sem(sem_name, 0);
+    char* sem_efp_name = get_sem_efp_name(jid);
+    sem_t* resume_efp = get_efp_sem(sem_efp_name, 0);
     if (!resume_efp) {
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         fclose(log_fd);
         return 1;
     }
 
-    char* sem_name2 = get_sem2_name(jid);
-    sem_t* efp_finalize = get_efp_sem(sem_name2, 0);
+    char* sem_exit_name = get_sem_exit_name(jid);
+    sem_t* efp_finalize = get_efp_sem(sem_exit_name, 0);
     if (!efp_finalize) {
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         fclose(log_fd);
@@ -172,11 +172,11 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     sem_close(resume_efp);
     sem_close(efp_finalize);
 
-    sem_unlink(sem_name);
-    sem_unlink(sem_name2);
+    sem_unlink(sem_efp_name);
+    sem_unlink(sem_exit_name);
 
-    free(sem_name);
-    free(sem_name2);
+    free(sem_efp_name);
+    free(sem_exit_name);
 
     LOG(log_fd, "Cleaning up shared memory...");
     unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));

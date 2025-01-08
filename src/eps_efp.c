@@ -23,18 +23,27 @@ void efp_main(int jid) {
 
     LOG(log_fd, "Obtaining semaphores...");
 
-    char* sem_name = get_sem_name(jid);
-    sem_t* proceed_init = get_efp_sem(sem_name, 0);
-    free(sem_name);
+    char* sem_init_name = get_sem_init_name(jid);
+    sem_t* proceed_init = get_efp_sem(sem_init_name, 0);
+    free(sem_init_name);
     if (!proceed_init) {
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         fclose(log_fd);
         exit(EXIT_FAILURE);
     }
 
-    char* sem_name2 = get_sem2_name(jid);
-    sem_t* proceed_exit = get_efp_sem(sem_name2, 1);
-    free(sem_name2);
+    char* sem_efp_name = get_sem_efp_name(jid);
+    sem_t* proceed_efp = get_efp_sem(sem_efp_name, 1);
+    free(sem_efp_name);
+    if (!proceed_efp) {
+        LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
+        fclose(log_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    char* sem_exit_name = get_sem_exit_name(jid);
+    sem_t* proceed_exit = get_efp_sem(sem_exit_name, 1);
+    free(sem_exit_name);
     if (!proceed_exit) {
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         fclose(log_fd);
@@ -79,7 +88,7 @@ void efp_main(int jid) {
 
         LOG(log_fd, "EFP waiting...");
 
-        sem_wait(proceed_init);
+        sem_wait(proceed_efp);
 
         for (int i = 0; i < devices.size; i++) {
             e1[i] = EMA_get_energy_uj(devices.array[i]);
@@ -112,6 +121,7 @@ void efp_main(int jid) {
 
         LOG(log_fd, "Closing semaphores...");
         sem_close(proceed_init);
+        sem_close(proceed_efp);
         sem_close(proceed_exit);
 
         LOG(log_fd, "EFP exiting failure...");
