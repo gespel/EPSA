@@ -6,9 +6,11 @@
 
 #include <eps_cgroup.h>
 
+#define CGFILE_PATH_LENGTH 30
+
 char* get_proc_cgroup(pid_t pid) {
-    char cgfile[30];
-    snprintf(cgfile, 30, "/proc/%d/cgroup", pid);
+    char cgfile[CGFILE_PATH_LENGTH];
+    snprintf(cgfile, CGFILE_PATH_LENGTH, "/proc/%d/cgroup", pid);
 
     FILE* fd = fopen(cgfile, "r");
 
@@ -16,13 +18,15 @@ char* get_proc_cgroup(pid_t pid) {
         return NULL;
     }
 
-    char* _cgroup = calloc(256, sizeof(char));
-    fgets(_cgroup, 256, fd);
+    size_t n = 1;
+    char* cgroup = malloc(n);
 
-    char* cgroup = calloc(strlen(_cgroup), sizeof(char));
-    snprintf(cgroup, strlen(_cgroup), "%s", _cgroup);
-
+    ssize_t ret = getline(&cgroup, &n, fd);
     fclose(fd);
+    if (ret == -1) {
+        free(cgroup);
+        return NULL;
+    }
 
     return cgroup;
 }
