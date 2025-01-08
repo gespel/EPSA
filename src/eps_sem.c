@@ -7,8 +7,8 @@
 #include <eps_utils.h>
 #include <eps_sem.h>
 
-#define SEM_NAME_BASE "/efpsem_"
-#define SEM_NAME2_BASE "/efpsem_2_"
+#define SEM_NAME_BASE "/efpsem_init_"
+#define SEM_NAME2_BASE "/efpsem_exit_"
 
 char* get_sem_name(int jid) {
     return get_suffixed_name(SEM_NAME_BASE, jid);
