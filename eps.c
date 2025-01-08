@@ -49,11 +49,12 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
 
     unlink_shared_memory_region(shm_name);
     pid_t* efp_pid = (pid_t*)get_shared_memory_addr(shm_name, sizeof(pid_t*), &shmfd);
+    free(shm_name);
     if (!efp_pid) {
         LOG(msg, log_fd, "error: get_shared_memory_addr: %s", strerror(errno));
+        close(log_fd);
         return 1;
     }
-    free(shm_name);
 
     LOG(msg, log_fd, "Obtaining semaphores...");
 
@@ -68,6 +69,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     switch(pid) {
         case -1:
             LOG(msg, log_fd, "error: fork: %s", strerror(errno));
+            close(log_fd);
             return 1;
         case 0:
             efp_main(jid);
@@ -86,6 +88,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             }
 
             LOG(msg, log_fd, "Init hook exits...");
+            close(log_fd);
             return 0;
     }
 
@@ -116,16 +119,18 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     char* shm_name = get_shared_memory_region_name(jid);
 
     int shmfd = open_shared_memory_region(shm_name);
+    free(shm_name);
     if (shmfd == -1) {
         LOG(msg, log_fd, "error: open_shared_memory_region: %s", strerror(errno));
-        // To return or not to return ???
+        close(log_fd);
+        return 1;
     }
-    free(shm_name);
 
     pid_t* efp_pid = (pid_t*)map_shared_memory_region(shmfd, sizeof(pid_t*));
     if (!efp_pid) {
         LOG(msg, log_fd, "error: map_shared_memory_region: %s", strerror(errno));
-        // To return or not to return ???
+        close(log_fd);
+        return 1;
     }
 
     LOG(msg, log_fd, "Obtaining semaphores...");
@@ -134,6 +139,7 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     sem_t* resume_efp = get_efp_sem(sem_name, 0);
     if (!resume_efp) {
         LOG(msg, log_fd, "error: get_efp_sem: %s", strerror(errno));
+        close(log_fd);
         return 1;
     }
 
@@ -141,6 +147,7 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     sem_t* efp_finalize = get_efp_sem(sem_name2, 0);
     if (!efp_finalize) {
         LOG(msg, log_fd, "error: get_efp_sem: %s", strerror(errno));
+        close(log_fd);
         return 1;
     }
 
@@ -151,6 +158,7 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     struct timespec ts;
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
         LOG(msg, log_fd, "error: clock_gettime: %s", strerror(errno));
+        close(log_fd);
         // Should we retrun here or use sem_trywait ?
         return 1;
     }

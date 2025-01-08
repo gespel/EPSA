@@ -28,6 +28,7 @@ void efp_main(int jid) {
     free(sem_name);
     if (!proceed_init) {
         LOG(msg, log_fd, "error: get_efp_sem: %s", strerror(errno));
+        close(log_fd);
         exit(EXIT_FAILURE);
     }
 
@@ -36,6 +37,7 @@ void efp_main(int jid) {
     free(sem_name2);
     if (!proceed_exit) {
         LOG(msg, log_fd, "error: get_efp_sem: %s", strerror(errno));
+        close(log_fd);
         exit(EXIT_FAILURE);
     }
 
