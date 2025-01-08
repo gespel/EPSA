@@ -28,6 +28,7 @@ int create_shared_memory_region(const char* name, size_t size)
     int err = ftruncate(fd, size);
     if (err) {
         perror("ftruncate");
+        close(fd);
         return -1;
     }
 
