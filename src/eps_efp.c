@@ -11,8 +11,6 @@
 
 
 void efp_main(int jid) {
-    char msg[256];
-
     char* efp_log_file_path = get_efp_log_file_path(jid);
     FILE* log_fd = get_log_file_fd(efp_log_file_path);
     free(efp_log_file_path);
