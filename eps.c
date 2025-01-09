@@ -110,6 +110,8 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             fclose(log_fd);
             return 0;
     }
+
+    fclose(log_fd);
     return 0;
 }
 

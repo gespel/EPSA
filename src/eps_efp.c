@@ -19,6 +19,11 @@ typedef unsigned long long ustime_t;
 void efp_main(int jid, int nodeid, time_t tstart) {
     char msg[256];
 
+typedef unsigned long long Measurement;
+typedef unsigned long long Time;
+
+
+void efp_main(int jid) {
     char* efp_log_file_path = get_efp_log_file_path(jid);
     FILE* log_fd = get_log_file_fd(efp_log_file_path);
     free(efp_log_file_path);
@@ -81,8 +86,10 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     sem_post(proceed_init);
 
     if (devices.size) {
-        energy_t e0[devices.size], e1[devices.size];
-        ustime_t t0[devices.size], t1[devices.size];
+        Measurement* e0 = malloc(devices.size * sizeof(Measurement));
+        Measurement* e1 = malloc(devices.size * sizeof(Measurement));
+        Time* t0 = malloc(devices.size * sizeof(Time));
+        Time* t1 = malloc(devices.size * sizeof(Time));
 
         for (int i = 0; i < devices.size; i++) {
             e0[i] = EMA_get_energy_uj(devices.array[i]);
@@ -197,6 +204,11 @@ void efp_main(int jid, int nodeid, time_t tstart) {
         }
 
         sem_post(proceed_exit);
+
+        free(e0);
+        free(e1);
+        free(t0);
+        free(t1);
 
         LOG(log_fd, "Closing semaphores...");
         sem_close(proceed_init);
