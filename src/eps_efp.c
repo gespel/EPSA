@@ -9,6 +9,9 @@
 
 #include <EMA.h>
 
+typedef unsigned long long Measurement;
+typedef unsigned long long Time;
+
 
 void efp_main(int jid) {
     char* efp_log_file_path = get_efp_log_file_path(jid);
@@ -73,8 +76,10 @@ void efp_main(int jid) {
     sem_post(proceed_init);
 
     if (devices.size) {
-        unsigned long long e0[devices.size], e1[devices.size];
-        unsigned long long t0[devices.size], t1[devices.size];
+        Measurement* e0 = malloc(devices.size * sizeof(Measurement));
+        Measurement* e1 = malloc(devices.size * sizeof(Measurement));
+        Time* t0 = malloc(devices.size * sizeof(Time));
+        Time* t1 = malloc(devices.size * sizeof(Time));
 
         for (int i = 0; i < devices.size; i++) {
             LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
@@ -103,6 +108,11 @@ void efp_main(int jid) {
         }
 
         sem_post(proceed_exit);
+
+        free(e0);
+        free(e1);
+        free(t0);
+        free(t1);
 
         LOG(log_fd, "Closing semaphores...");
         sem_close(proceed_init);
