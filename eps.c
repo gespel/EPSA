@@ -6,6 +6,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <time.h>
+#include <unistd.h>
 
 #include <slurm/spank.h>
 
@@ -26,7 +27,6 @@ SPANK_PLUGIN(eps, 1)
  *
  ********************************/
 int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
-    char msg[LOG_MSG_BUFF_SIZE];
     time_t tstart;
     uint32_t jid;
 
@@ -41,7 +41,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
 
     time(&tstart);
     if (tstart == -1) {
-        LOG(msg, log_fd, "error: time: %s", strerror(errno));
+        LOG(log_fd, "error: time: %s", strerror(errno));
         return 1;
     }
 
@@ -76,13 +76,13 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     err = spank_get_item(sp, S_JOB_NODEID, &nodeid);
     if (err) {
         LOG(
-            msg, log_fd, 
+            log_fd, 
             "error: spank_get_item[nodeid]: %s",
             spank_strerror(errno)
         );
     }
 
-    LOG(msg, log_fd, "Node ID: %d", nodeid);
+    LOG(log_fd, "Node ID: %d", nodeid);
 
     pid_t pid = fork();
     switch(pid) {
@@ -124,8 +124,6 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     char* log_file_path = get_exit_log_file_path(jid);
     FILE* log_fd = get_log_file_fd(log_file_path);
     free(log_file_path);
-
-    char msg[LOG_MSG_BUFF_SIZE];
 
     pid_t hook_pid = getpid();
 

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <eps_utils.h>
 
@@ -14,11 +15,6 @@
 #define TINIT_LOG_PATH_BASE "/tmp/task_init_"
 #define TEXIT_LOG_PATH_BASE "/tmp/task_exit_"
 
-
-void log_message(const char* message, int fd) {
-    if (fd <= 0) return;
-    write(fd,message, strlen(message));
-}
 
 char* get_suffixed_name(const char* base, int jid) {
     size_t size = strlen(base) + SUFFIX_MAX_LENGTH;

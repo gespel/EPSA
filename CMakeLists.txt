@@ -6,6 +6,7 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "")
 set(SLURM_INSTALL_DIR "" CACHE PATH "A directory of slurm installation")
 set(SLURM_SRC_DIR "" CACHE PATH "A directory with slurm source code")
 set(EMA_INSTALL_DIR "" CACHE PATH "A directory of EMA installation")
+set(PQ_INSTALL_DIR "" CACHE PATH "A directory with PostgresQL installation")
 
 if(NOT SLURM_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `SLURM_INSTALL_DIR` path!")
@@ -19,6 +20,10 @@ if(NOT EMA_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `EMA_INSTALL_DIR` path!")
 endif()
 
+if(NOT PQ_INSTALL_DIR)
+    message(FATAL_ERROR "You have to set up `PQ_INSTALL_DIR` path!")
+endif()
+
 
 add_library(eps SHARED)
 target_sources(
@@ -29,17 +34,29 @@ target_sources(
     PRIVATE src/eps_sem.c
     PRIVATE src/eps_efp.c
     PRIVATE src/eps_shm.c
+    PRIVATE src/eps_data.c
+    PRIVATE src/eps_db.c
 )
-target_include_directories(eps PRIVATE ./include)
+target_include_directories(eps PRIVATE include)
+target_include_directories(eps PRIVATE ${SLURM_SRC_DIR})
 target_include_directories(eps PRIVATE ${SLURM_INSTALL_DIR}/include)
 target_include_directories(eps PRIVATE ${EMA_INSTALL_DIR}/include)
+target_include_directories(eps PRIVATE ${PQ_INSTALL_DIR}/include)
 target_link_libraries(eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
+# TODO: Fix this `s` ending in `lib` subdir.
+target_link_libraries(eps ${PQ_INSTALL_DIR}/libs/libpq.so)
 
 add_library(prep_eps SHARED)
 target_sources(
     prep_eps
     PRIVATE prep_eps.c
+    PRIVATE src/eps_utils.c
+    PRIVATE src/eps_data.c
+    PRIVATE src/eps_db.c
 )
-target_include_directories(prep_eps PRIVATE ./include)
+target_include_directories(prep_eps PRIVATE include)
 target_include_directories(prep_eps PRIVATE ${SLURM_SRC_DIR})
 target_include_directories(prep_eps PRIVATE ${SLURM_INSTALL_DIR}/include)
+target_include_directories(prep_eps PRIVATE ${PQ_INSTALL_DIR}/include)
+# TODO: Fix this `s` ending in `lib` subdir.
+target_link_libraries(prep_eps ${PQ_INSTALL_DIR}/libs/libpq.so)

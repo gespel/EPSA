@@ -85,11 +85,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
         ustime_t t0[devices.size], t1[devices.size];
 
         for (int i = 0; i < devices.size; i++) {
-            LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
             e0[i] = EMA_get_energy_uj(devices.array[i]);
             t0[i] = EMA_get_time_in_us();
-            LOG(log_fd, "\t e0: %llu", e0[i]);
-            LOG(log_fd, "\t t0: %llu", t0[i]);
         }
 
         LOG(log_fd, "EFP waiting...");
@@ -101,17 +98,17 @@ void efp_main(int jid, int nodeid, time_t tstart) {
             t1[i] = EMA_get_time_in_us();
         }
 
-        LOG(msg, log_fd, "Connecting to db...");
+        LOG(log_fd, "Connecting to db...");
         PGconn* db_connection = connect_db();
         int connection_is_not_ok = check_connection(db_connection);
         if (connection_is_not_ok) {
             LOG(
-                msg,
                 log_fd,
                 "error: problems with db connection: %s",
                 PQerrorMessage(db_connection)
             );
             PQfinish(db_connection);
+            // Clear semaphores here and return ?
         }
 
         time_t tend;
@@ -121,7 +118,7 @@ void efp_main(int jid, int nodeid, time_t tstart) {
         char nodename[HOST_NAME_MAX];
         err = gethostname(nodename, HOST_NAME_MAX);
         if (err) {
-            LOG(msg, log_fd, "error: gethostname: %s", strerror(errno));
+            LOG(log_fd, "error: gethostname: %s", strerror(errno));
             snprintf(nodename, HOST_NAME_MAX, "Undefined");
         }
 
@@ -129,7 +126,6 @@ void efp_main(int jid, int nodeid, time_t tstart) {
 
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
             LOG(
-                msg,
                 log_fd,
                 "error: failed to BEGIN transation:%s",
                 PQerrorMessage(db_connection)
@@ -137,6 +133,7 @@ void efp_main(int jid, int nodeid, time_t tstart) {
             PQclear(res);
             PQfinish(db_connection);
             // Clear semaphores here ?
+            fclose(log_fd);
             exit(EXIT_FAILURE);
         }
 
@@ -151,9 +148,9 @@ void efp_main(int jid, int nodeid, time_t tstart) {
 
         err = insert_execution_data(db_connection, &execution, &execution_id);
         if (err) {
-            LOG(msg, log_fd, "error: failed execution data insertion!");
-            //close semaphores ?
-            close(log_fd);
+            LOG(log_fd, "error: failed execution data insertion!");
+            // close semaphores ?
+            fclose(log_fd);
             exit(EXIT_FAILURE);
         }
 
@@ -172,9 +169,9 @@ void efp_main(int jid, int nodeid, time_t tstart) {
 
             err = insert_measurement_data(db_connection, &measurement);
             if (err) {
-                LOG(msg, log_fd, "error: failed measurement data insertion!");
+                LOG(log_fd, "error: failed measurement data insertion!");
                 //close semaphores ?
-                close(log_fd);
+                fclose(log_fd);
                 exit(EXIT_FAILURE);
             }
         }
@@ -183,7 +180,6 @@ void efp_main(int jid, int nodeid, time_t tstart) {
 
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
             LOG(
-                msg,
                 log_fd,
                 "error: failed to COMMIT transation:%s",
                 PQerrorMessage(db_connection)
@@ -191,14 +187,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
             PQclear(res);
         }
 
-        LOG(msg, log_fd, "Closing db connection...");
+        LOG(log_fd, "Closing db connection...");
         PQfinish(db_connection);
-
-        LOG(msg, log_fd, "Finalizing EMA...");
-            LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
-            LOG(log_fd, "\te1: %llu", e1[i]);
-            LOG(log_fd, "\tt1: %llu", t1[i]);
-        }
 
         LOG(log_fd, "Finalizing EMA...");
         err = EMA_finalize(NULL);
@@ -210,6 +200,7 @@ void efp_main(int jid, int nodeid, time_t tstart) {
 
         LOG(log_fd, "Closing semaphores...");
         sem_close(proceed_init);
+        sem_close(proceed_efp);
         sem_close(proceed_exit);
 
         LOG(log_fd, "EFP exiting success...");

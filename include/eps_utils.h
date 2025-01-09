@@ -2,11 +2,7 @@
 #define _EPS_UTILS_H
 
 #include <stdio.h>
-#include <unistd.h>
 
-#define LOG_MSG_BUFF_SIZE 128
-
-void log_message(const char* message, int fd);
 
 char* get_suffixed_name(const char* base, int jid);
 char* get_efp_log_file_path(int jid);
