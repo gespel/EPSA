@@ -12,18 +12,11 @@
 
 #include <EMA.h>
 
-typedef unsigned long long energy_t;
-typedef unsigned long long ustime_t;
-
-
-void efp_main(int jid, int nodeid, time_t tstart) {
-    char msg[256];
-
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
 
-void efp_main(int jid) {
+void efp_main(int jid, int nodeid, time_t tstart) {
     char* efp_log_file_path = get_efp_log_file_path(jid);
     FILE* log_fd = get_log_file_fd(efp_log_file_path);
     free(efp_log_file_path);
