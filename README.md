@@ -17,6 +17,8 @@ DB. \*
    the version of `Slurm` installed on your cluster. Othervise plugin compatability
    issues may arise.
 
+3. `EMA` library installed on all cluster nodes.
+
 ### Steps
 
 1. Clone this repo.
@@ -39,7 +41,8 @@ DB. \*
       ```bash
       cmake .. \
       -DSLURM_INSTALL_DIR=/path/to/your/slurm/installation/directory \
-      -DSLURM_SRC_DIR=/path/to/slurm/sources/directory
+      -DSLURM_SRC_DIR=/path/to/slurm/sources/directory \
+      -DEMA_INSTALL_DIR=/path/to/your/EMA/installation/directory
       ```
 
 4. Build the plugins by running `make` inside `build` directory.

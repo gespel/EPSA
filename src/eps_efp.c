@@ -20,53 +20,50 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     char msg[256];
 
     char* efp_log_file_path = get_efp_log_file_path(jid);
-    int log_fd = get_log_file_fd(efp_log_file_path);
+    FILE* log_fd = get_log_file_fd(efp_log_file_path);
     free(efp_log_file_path);
 
     pid_t efp_pid = getpid();
 
-    LOG(msg, log_fd, "EFP PID: %d", efp_pid);
+    LOG(log_fd, "EFP PID: %d", efp_pid);
 
-    LOG(msg, log_fd, "Obtaining semaphores...");
-    char* sem_name = get_sem_name(jid);
-    char* sem_name2 = get_sem2_name(jid);
+    LOG(log_fd, "Obtaining semaphores...");
 
-    sem_t* mutex = get_efp_mutex(sem_name, 0);
-    if (!mutex) {
-        LOG(
-            msg,
-            log_fd,
-            "error: get_efp_mutex[%s]: %s",
-            sem_name,
-            strerror(errno)
-        );
+    char* sem_init_name = get_sem_init_name(jid);
+    sem_t* proceed_init = get_efp_sem(sem_init_name, 0);
+    free(sem_init_name);
+    if (!proceed_init) {
+        LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
+        fclose(log_fd);
         exit(EXIT_FAILURE);
     }
-    free(sem_name);
 
-    sem_t* mutex2 = get_efp_mutex(sem_name2, 1);
-    if (!mutex2) {
-        LOG(
-            msg,
-            log_fd,
-            "error: get_efp_mutex[%s]: %s",
-            sem_name2,
-            strerror(errno)
-        );
+    char* sem_efp_name = get_sem_efp_name(jid);
+    sem_t* proceed_efp = get_efp_sem(sem_efp_name, 1);
+    free(sem_efp_name);
+    if (!proceed_efp) {
+        LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
+        fclose(log_fd);
         exit(EXIT_FAILURE);
     }
-    free(sem_name2);
 
-    LOG(msg, log_fd, "Initializig EMA...");
+    char* sem_exit_name = get_sem_exit_name(jid);
+    sem_t* proceed_exit = get_efp_sem(sem_exit_name, 1);
+    free(sem_exit_name);
+    if (!proceed_exit) {
+        LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
+        fclose(log_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    LOG(log_fd, "Initializig EMA...");
     int err = EMA_init(NULL);
 
-    sem_post(mutex);
-
     if (err) {
-        LOG(msg, log_fd, "Failed to initialize EMA: %d", err);
-        sem_close(mutex);
-        sem_close(mutex2);
-        close(log_fd);
+        LOG(log_fd, "Failed to initialize EMA: %d", err);
+        sem_close(proceed_init);
+        sem_close(proceed_exit);
+        fclose(log_fd);
         exit(EXIT_FAILURE);
     }
 
@@ -77,21 +74,27 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     //      from it's initial slurm-created cgroup at this point.
     err = move_pid_to_cg("/sys/fs/cgroup/cgroup.procs", efp_pid);
     if (err) {
-        LOG(msg, log_fd, "error: move_pid_to_cg:%s", strerror(errno));
+        LOG(log_fd, "error: move_pid_to_cg:%s", strerror(errno));
     }
+
+    // INFO: Release the task_init hook waiting...
+    sem_post(proceed_init);
 
     if (devices.size) {
         energy_t e0[devices.size], e1[devices.size];
         ustime_t t0[devices.size], t1[devices.size];
 
         for (int i = 0; i < devices.size; i++) {
+            LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
             e0[i] = EMA_get_energy_uj(devices.array[i]);
             t0[i] = EMA_get_time_in_us();
+            LOG(log_fd, "\t e0: %llu", e0[i]);
+            LOG(log_fd, "\t t0: %llu", t0[i]);
         }
 
+        LOG(log_fd, "EFP waiting...");
 
-        LOG(msg, log_fd, "EFP waiting...");
-        sem_wait(mutex);
+        sem_wait(proceed_efp);
 
         for (int i = 0; i < devices.size; i++) {
             e1[i] = EMA_get_energy_uj(devices.array[i]);
@@ -192,32 +195,39 @@ void efp_main(int jid, int nodeid, time_t tstart) {
         PQfinish(db_connection);
 
         LOG(msg, log_fd, "Finalizing EMA...");
-        err = EMA_finalize(NULL);
-        if (err) {
-            LOG(msg, log_fd, "Failed to finalize EMA: %d", err);
+            LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
+            LOG(log_fd, "\te1: %llu", e1[i]);
+            LOG(log_fd, "\tt1: %llu", t1[i]);
         }
 
-        sem_post(mutex2);
+        LOG(log_fd, "Finalizing EMA...");
+        err = EMA_finalize(NULL);
+        if (err) {
+            LOG(log_fd, "Failed to finalize EMA: %d", err);
+        }
 
-        LOG(msg, log_fd, "Closing semaphores...");
-        sem_close(mutex);
-        sem_close(mutex2);
+        sem_post(proceed_exit);
 
-        LOG(msg, log_fd, "EFP exiting success...");
-        close(log_fd);
+        LOG(log_fd, "Closing semaphores...");
+        sem_close(proceed_init);
+        sem_close(proceed_exit);
+
+        LOG(log_fd, "EFP exiting success...");
+        fclose(log_fd);
 
         exit(EXIT_SUCCESS);
     } else {
-        LOG(msg, log_fd, "Error: No EMA devices detected!");
+        LOG(log_fd, "Error: No EMA devices detected!");
 
-        sem_post(mutex2);
+        sem_post(proceed_exit);
 
-        LOG(msg, log_fd, "Closing semaphores...");
-        sem_close(mutex);
-        sem_close(mutex2);
+        LOG(log_fd, "Closing semaphores...");
+        sem_close(proceed_init);
+        sem_close(proceed_efp);
+        sem_close(proceed_exit);
 
-        LOG(msg, log_fd, "EFP exiting failure...");
-        close(log_fd);
+        LOG(log_fd, "EFP exiting failure...");
+        fclose(log_fd);
 
         exit(EXIT_FAILURE);
     }
