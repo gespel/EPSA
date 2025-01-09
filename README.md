@@ -61,17 +61,3 @@ After successfull completion of the above steps you should have two plugin files
 2. You need to restart `slurm` daemons:
    - `slurmd` on compute nodes;
    - `slurmctld` on the head (controller) node.
-
-### Suggested handy aliases
-
-```bash
-alias remake="make clean && make && make test"
-
-alias screstart="sudo systemctl restart slurmctld.service"
-alias scstatus="sudo systemctl status slurmctld.service"
-alias sclog="sudo journalctl -xefu slurmctld.service"k
-
-alias sdrestart="sudo systemctl restart slurmd.service"
-alias sdstatus="sudo systemctl status slurmd.service"
-alias sdlog="sudo journalctl -xefu slurmd.service"
-```
