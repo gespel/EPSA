@@ -10,7 +10,10 @@
 
 char* get_proc_cgroup(pid_t pid) {
     char cgfile[CGFILE_PATH_LENGTH];
-    snprintf(cgfile, CGFILE_PATH_LENGTH, "/proc/%d/cgroup", pid);
+    int written = snprintf(cgfile, CGFILE_PATH_LENGTH, "/proc/%d/cgroup", pid);
+    if (written >= CGFILE_PATH_LENGTH) {
+        printf("warn: get_proc_cgroup: cg file path truncated!");
+    }
 
     FILE* fd = fopen(cgfile, "r");
 
