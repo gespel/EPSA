@@ -6,6 +6,7 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "")
 set(SLURM_INSTALL_DIR "" CACHE PATH "A directory of slurm installation")
 set(SLURM_SRC_DIR "" CACHE PATH "A directory with slurm source code")
 set(EMA_INSTALL_DIR "" CACHE PATH "A directory of EMA installation")
+set(HWLOC_INSTALL_DIR "" CACHE PATH "A directory of hwloc installation")
 
 if(NOT SLURM_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `SLURM_INSTALL_DIR` path!")
@@ -19,12 +20,18 @@ if(NOT EMA_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `EMA_INSTALL_DIR` path!")
 endif()
 
+if(NOT HWLOC_INSTALL_DIR)
+    message(FATAL_ERROR "You have to set up `HWLOC_INSTALL_DIR` path!")
+endif()
+
+
 
 add_library(eps SHARED)
 target_sources(
     eps
     PRIVATE eps.c
     PRIVATE src/eps_utils.c
+    PRIVATE src/eps_cpuinfo.c
     PRIVATE src/eps_cgroup.c
     PRIVATE src/eps_sem.c
     PRIVATE src/eps_efp.c
@@ -33,7 +40,9 @@ target_sources(
 target_include_directories(eps PRIVATE ./include)
 target_include_directories(eps PRIVATE ${SLURM_INSTALL_DIR}/include)
 target_include_directories(eps PRIVATE ${EMA_INSTALL_DIR}/include)
+target_include_directories(eps PRIVATE ${HWLOC_INSTALL_DIR}/include)
 target_link_libraries(eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
+target_link_libraries(eps ${HWLOC_INSTALL_DIR}/lib/libhwloc.so)
 
 add_library(prep_eps SHARED)
 target_sources(
