@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include <eps_cgroup.h>
+#include <eps_cpuinfo.h>
 #include <eps_sem.h>
 #include <eps_efp.h>
 #include <eps_utils.h>
@@ -13,7 +14,7 @@ typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
 
-void efp_main(int jid) {
+void efp_main(int jid, eps_cpuinfo_t* cpuinfo) {
     char* efp_log_file_path = get_efp_log_file_path(jid);
     FILE* log_fd = get_log_file_fd(efp_log_file_path);
     free(efp_log_file_path);
@@ -21,6 +22,8 @@ void efp_main(int jid) {
     pid_t efp_pid = getpid();
 
     LOG(log_fd, "EFP PID: %d", efp_pid);
+
+    LOG(log_fd, "Cpuinfo.socket_count: %u", cpuinfo->socket_cnt);
 
     LOG(log_fd, "Obtaining semaphores...");
 
