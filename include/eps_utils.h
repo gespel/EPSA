@@ -3,6 +3,8 @@
 
 #include <stdio.h>
 
+int file_exist(const char* path);
+
 char* get_suffixed_name(const char* base, int jid);
 char* get_efp_log_file_path(int jid);
 char* get_init_log_file_path(int jid);

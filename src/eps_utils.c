@@ -19,6 +19,11 @@
 #define TINIT_LOG_PATH_BASE LOG_DIR_PATH "/task_init_"
 #define TEXIT_LOG_PATH_BASE LOG_DIR_PATH "/task_exit_"
 
+int file_exist(const char* path) {
+    // CONSIDER: Using access() instead of stat()...
+    struct stat st = {0};
+    return (stat(path, &st) == 0);
+}
 
 char* get_suffixed_name(const char* base, int jid) {
     size_t size = strlen(base) + SUFFIX_MAX_LENGTH;
@@ -40,8 +45,7 @@ char* get_exit_log_file_path(int jid) {
 }
 
 FILE* get_log_file_fd(const char* filename) {
-    struct stat st = {0};
-    if (stat(LOG_DIR_PATH, &st) == -1) {
+    if (!file_exist(LOG_DIR_PATH)) {
         mkdir(LOG_DIR_PATH, LOG_MODE);
     }
     unlink(filename);
