@@ -18,7 +18,7 @@ char* get_proc_cgroup(pid_t pid) {
         return NULL;
     }
 
-    size_t n = 1;
+    size_t n = 0;
     char* cgroup = malloc(n);
 
     ssize_t ret = getline(&cgroup, &n, fd);
