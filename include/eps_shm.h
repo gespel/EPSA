@@ -2,6 +2,7 @@
 #define _EPS_SHM_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #define EPS_MMODE 0640
 
@@ -15,6 +16,6 @@ int unlink_shared_memory_region(const char* name);
 void* get_shared_memory_addr(const char* name, size_t size, int* fd);
 int discard_shared_memory_addr(void* addr, size_t size, int* fd);
 
-char* get_shared_memory_region_name(int jid);
+char* get_shared_memory_region_name(uint32_t jid);
 
 #endif
