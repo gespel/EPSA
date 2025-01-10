@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <hwloc.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -10,6 +11,7 @@
 
 #include <slurm/spank.h>
 
+#include <eps_cpuinfo.h>
 #include <eps_utils.h>
 #include <eps_sem.h>
 #include <eps_efp.h>
@@ -17,6 +19,8 @@
 
 #define PLUGIN_NAME "Spank/Eps"
 #define EFP_WAIT_TIMEOUT 10 /* in seconds */
+
+#define CPUINFO_REGION_NAME "/epscpuinfo"
 
 
 SPANK_PLUGIN(eps, 1)
@@ -26,7 +30,55 @@ SPANK_PLUGIN(eps, 1)
  * Spank functions
  *
  ********************************/
+int slurm_spank_init(spank_t sp, int ac, char **av) {
+    if (spank_context() == S_CTX_SLURMD) {
+        slurm_info("Initializing shared memory...");
+        int shmfd;
+
+        unlink_shared_memory_region(CPUINFO_REGION_NAME);
+        eps_cpuinfo_t* info = (eps_cpuinfo_t*)get_shared_memory_addr(
+            CPUINFO_REGION_NAME,
+            sizeof(eps_cpuinfo_t),
+            &shmfd
+        );
+        if (!info) {
+            slurm_info("error: get_shared_memory_addr: %s", strerror(errno));
+            return 1;
+        }
+
+        unsigned cps[1] = {4};
+        unsigned sidx[4] = {0,0,0,0};
+
+        //TODO: Populate cpuinfo vial hwloc...
+        info->socket_cnt= 1;
+        info->cores_per_socket = cps;
+        info->socket_idx = sidx;
+
+        slurm_info("info.socket_cnt: %d", info->socket_cnt);
+
+        //slurm_info("Cleaning up shared memory...");
+        //unmap_shared_memory_region((void*)info, sizeof(eps_cpuinfo_t));
+        //close_shared_memory_region(shmfd);
+
+        int err =  discard_shared_memory_addr((void*)info, sizeof(eps_cpuinfo_t), &shmfd);
+        if (err) {
+            slurm_info("error: discard_shared_memory_addr: %s", strerror(errno));
+        }
+    }
+    return 0;
+}
+
+int slurm_spank_slurmd_exit(spank_t sp, int ac, char **av) {
+    return 0;
+}
+
 int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
+    hwloc_topology_t topology;
+    hwloc_topology_init(&topology);
+    hwloc_topology_load(topology);
+
+    hwloc_topology_destroy(topology);
+
     uint32_t jid;
 
     spank_err_t err = spank_get_item(sp, S_JOB_ID, &jid);
@@ -43,13 +95,24 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     LOG(log_fd, "Hook PID: %d", hook_pid);
 
     LOG(log_fd, "Initializing shared memory...");
-    int shmfd;
+    int shmfd, shmfd_cpuinfo;
     char* shm_name = get_shared_memory_region_name(jid);
 
     unlink_shared_memory_region(shm_name);
     pid_t* efp_pid = (pid_t*)get_shared_memory_addr(shm_name, sizeof(pid_t*), &shmfd);
     free(shm_name);
     if (!efp_pid) {
+        LOG(log_fd, "error: get_shared_memory_addr: %s", strerror(errno));
+        fclose(log_fd);
+        return 1;
+    }
+
+    eps_cpuinfo_t* cpuinfo = (eps_cpuinfo_t*)get_shared_memory_addr(
+        CPUINFO_REGION_NAME,
+        sizeof(eps_cpuinfo_t),
+        &shmfd_cpuinfo
+    );
+    if (!cpuinfo) {
         LOG(log_fd, "error: get_shared_memory_addr: %s", strerror(errno));
         fclose(log_fd);
         return 1;
@@ -72,7 +135,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             fclose(log_fd);
             return 1;
         case 0:
-            efp_main(jid);
+            efp_main(jid, cpuinfo);
         default:
             LOG(log_fd, "Waiting for EFP initialization...");
             sem_wait(proceed_init);
