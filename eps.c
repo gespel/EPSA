@@ -114,6 +114,9 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             }
             close_shared_memory_region(shmfd);
 
+            LOG(log_fd, "Closing semaphore...");
+            sem_close(proceed_init);
+
             LOG(log_fd, "Init hook exits...");
             fclose(log_fd);
             return 0;
