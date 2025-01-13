@@ -1,19 +1,21 @@
 #include <errno.h>
-#include <eps_shm.h>
 #include <fcntl.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
 
+#include <eps_shm.h>
+
 #define SHM_REGION_NAME_BASE "/epsshm_"
 
 
-char* get_shared_memory_region_name(int jid) {
+char* get_shared_memory_region_name(uint32_t jid) {
     size_t size = strlen(SHM_REGION_NAME_BASE) + 15;
     char* path = calloc(size, sizeof(char));
-    snprintf(path, size, "%s%d.log", SHM_REGION_NAME_BASE, jid);
+    snprintf(path, size, "%s%d", SHM_REGION_NAME_BASE, jid);
     return path;
 }
 

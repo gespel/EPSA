@@ -10,8 +10,11 @@ DB. \*
 
 ### Prerequisites
 
-1. `Slurm` installed and configured on the cluster.
-2. `Slurm` source code present on the system used for the build.
+1. [CMake](https://cmake.org/)
+1. [Slurm](https://www.schedmd.com/slurm/) installed and configured on the
+   cluster.
+2. [Slurm source code](https://github.com/SchedMD/slurm) present on the
+   system used for the build.
 
    **IMPORTANT:** The source code version should match exactly (up to minor number)
    the version of `Slurm` installed on your cluster. Othervise plugin compatability
