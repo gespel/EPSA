@@ -60,7 +60,6 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
 
     char* sem_name = get_sem_init_name(jid);
     sem_t* proceed_init = get_efp_sem(sem_name, 1);
-    free(sem_name);
     if (!proceed_init) {
         int err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
         if (err) {
@@ -80,6 +79,11 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
                 LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
             }
             close_shared_memory_region(shmfd);
+            sem_close(proceed_init);
+            sem_unlink(sem_name);
+            free(sem_name);
+
+
             LOG(log_fd, "error: fork: %s", strerror(errno));
             fclose(log_fd);
             return 1;
@@ -91,6 +95,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             }
             close_shared_memory_region(shmfd);
             sem_close(proceed_init);
+            free(sem_name);
             fclose(log_fd);
 
             // INFO: Run EFP process...
@@ -116,6 +121,8 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
 
             LOG(log_fd, "Closing semaphore...");
             sem_close(proceed_init);
+            sem_unlink(sem_name);
+            free(sem_name);
 
             LOG(log_fd, "Init hook exits...");
             fclose(log_fd);
@@ -158,6 +165,7 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
 
     pid_t* efp_pid = (pid_t*)map_shared_memory_region(shmfd, sizeof(pid_t*));
     if (!efp_pid) {
+        close_shared_memory_region(shmfd);
         LOG(log_fd, "error: map_shared_memory_region: %s", strerror(errno));
         fclose(log_fd);
         return 1;
