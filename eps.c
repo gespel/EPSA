@@ -181,6 +181,8 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
         unlink_shared_memory_region(shm_name);
         free(shm_name);
 
+        free(sem_efp_name);
+
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         fclose(log_fd);
         return 1;
@@ -193,6 +195,9 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
         close_shared_memory_region(shmfd);
         unlink_shared_memory_region(shm_name);
         free(shm_name);
+
+        free(sem_efp_name);
+        free(sem_exit_name);
 
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         fclose(log_fd);
