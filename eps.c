@@ -75,7 +75,6 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
         if (err) {
             LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
         }
-        close_shared_memory_region(shmfd);
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         fclose(log_fd);
         return 1;
@@ -100,7 +99,6 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             if (err) {
                 LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
             }
-            close_shared_memory_region(shmfd);
             sem_close(proceed_init);
             sem_unlink(sem_name);
             free(sem_name);
@@ -115,7 +113,6 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             if (err) {
                 LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
             }
-            close_shared_memory_region(shmfd);
             sem_close(proceed_init);
             free(sem_name);
             fclose(log_fd);
@@ -139,7 +136,6 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             if (err) {
                 LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
             }
-            close_shared_memory_region(shmfd);
 
             LOG(log_fd, "Closing semaphore...");
             sem_close(proceed_init);
