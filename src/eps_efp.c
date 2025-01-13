@@ -28,6 +28,10 @@ void efp_main(int jid) {
     char* efp_log_file_path = get_efp_log_file_path(jid);
     FILE* log_fd = get_log_file_fd(efp_log_file_path);
     free(efp_log_file_path);
+    if (!log_fd) {
+        status = EXIT_FAILURE;
+        goto exit;
+    }
 
     pid_t efp_pid = getpid();
 
