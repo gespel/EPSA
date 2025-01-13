@@ -210,6 +210,15 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
         unlink_shared_memory_region(shm_name);
         free(shm_name);
 
+        sem_close(resume_efp);
+        sem_close(efp_finalize);
+
+        sem_unlink(sem_efp_name);
+        sem_unlink(sem_exit_name);
+
+        free(sem_efp_name);
+        free(sem_exit_name);
+
         LOG(log_fd, "error: clock_gettime: %s", strerror(errno));
         fclose(log_fd);
         // Should we retrun here or use sem_trywait ?
