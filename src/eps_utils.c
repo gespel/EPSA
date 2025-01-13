@@ -8,8 +8,7 @@
 
 #include <eps_utils.h>
 
-// TODO: Restrict reading for others, currently allowed for testing/debugging
-#define LOG_MODE 0644
+#define LOG_MODE 0640
 
 #define SUFFIX_MAX_LENGTH 15
 
