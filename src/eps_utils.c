@@ -44,6 +44,5 @@ FILE* get_log_file_fd(const char* filename) {
     if (stat(LOG_DIR_PATH, &st) == -1) {
         mkdir(LOG_DIR_PATH, LOG_MODE);
     }
-    unlink(filename);
     return fopen(filename, "w");
 }
