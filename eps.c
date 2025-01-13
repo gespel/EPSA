@@ -110,7 +110,6 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             fclose(log_fd);
             return 1;
         case 0:
-            efp_main(jid, nodeid, tstart);
             // Free copied resources after fork...
             err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
             if (err) {
@@ -122,7 +121,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             fclose(log_fd);
 
             // INFO: Run EFP process...
-            efp_main(jid);
+            efp_main(jid, nodeid, tstart);
         default:
             pid_t hook_pid = getpid();
 
