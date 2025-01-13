@@ -62,6 +62,11 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     sem_t* proceed_init = get_efp_sem(sem_name, 1);
     free(sem_name);
     if (!proceed_init) {
+        int err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
+        if (err) {
+            LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
+        }
+        close_shared_memory_region(shmfd);
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         fclose(log_fd);
         return 1;
@@ -70,7 +75,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     pid_t pid = fork();
     switch(pid) {
         case -1:
-            int err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
+            err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
             if (err) {
                 LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
             }
