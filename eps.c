@@ -70,18 +70,25 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     pid_t pid = fork();
     switch(pid) {
         case -1:
+            int err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
+            if (err) {
+                LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
+            }
+            close_shared_memory_region(shmfd);
             LOG(log_fd, "error: fork: %s", strerror(errno));
             fclose(log_fd);
             return 1;
         case 0:
             // Free copied resources after fork...
-            int err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
+            err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
             if (err) {
                 LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
             }
             close_shared_memory_region(shmfd);
             sem_close(proceed_init);
             fclose(log_fd);
+
+            // INFO: Run EFP process...
             efp_main(jid);
         default:
             pid_t hook_pid = getpid();
@@ -96,7 +103,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             LOG(log_fd, "Writing EFP's PID to shared memory...");
             *efp_pid = pid;
 
-            int err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
+            err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
             if (err) {
                 LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
             }
