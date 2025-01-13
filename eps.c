@@ -38,7 +38,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     FILE* log_fd = get_log_file_fd(log_file_path);
     free(log_file_path);
     if (!log_fd) {
-        // TODO: Find a way to provide some error output ?
+        fprintf(stderr, "error: eps: init hook failed to open log file");
         return 1;
     }
 
@@ -145,9 +145,9 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     FILE* log_fd = get_log_file_fd(log_file_path);
     free(log_file_path);
     if (!log_fd) {
-        // TODO: Find a way to provide some error output ?
         unlink_shared_memory_region(shm_name);
         free(shm_name);
+        fprintf(stderr, "error: eps: exit hook failed to open log file");
         return 1;
     }
 

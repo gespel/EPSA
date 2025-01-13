@@ -29,6 +29,7 @@ void efp_main(int jid) {
     FILE* log_fd = get_log_file_fd(efp_log_file_path);
     free(efp_log_file_path);
     if (!log_fd) {
+        fprintf(stderr, "error: eps: EFP process failed to open log file");
         status = EXIT_FAILURE;
         goto exit;
     }
