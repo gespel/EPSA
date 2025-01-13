@@ -123,12 +123,16 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     if (err) {
         return 1;
     }
+
+    char* shm_name = get_shared_memory_region_name(jid);
     
     char* log_file_path = get_exit_log_file_path(jid);
     FILE* log_fd = get_log_file_fd(log_file_path);
     free(log_file_path);
     if (!log_fd) {
         // TODO: Find a way to provide some error output ?
+        unlink_shared_memory_region(shm_name);
+        free(shm_name);
         return 1;
     }
 
@@ -137,8 +141,6 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     LOG(log_fd, "Hook PID: %d", hook_pid);
 
     LOG(log_fd, "Obtaining shared memory address...");
-    char* shm_name = get_shared_memory_region_name(jid);
-
     int shmfd = open_shared_memory_region(shm_name);
     if (shmfd == -1) {
         LOG(log_fd, "error: open_shared_memory_region: %s", strerror(errno));
@@ -158,6 +160,11 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     char* sem_efp_name = get_sem_efp_name(jid);
     sem_t* resume_efp = get_efp_sem(sem_efp_name, 0);
     if (!resume_efp) {
+        unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));
+        close_shared_memory_region(shmfd);
+        unlink_shared_memory_region(shm_name);
+        free(shm_name);
+
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         fclose(log_fd);
         return 1;
@@ -166,6 +173,11 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     char* sem_exit_name = get_sem_exit_name(jid);
     sem_t* efp_finalize = get_efp_sem(sem_exit_name, 0);
     if (!efp_finalize) {
+        unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));
+        close_shared_memory_region(shmfd);
+        unlink_shared_memory_region(shm_name);
+        free(shm_name);
+
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         fclose(log_fd);
         return 1;
@@ -177,6 +189,11 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     LOG(log_fd, "Waiting for EFP to finish or fail...");
     struct timespec ts;
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
+        unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));
+        close_shared_memory_region(shmfd);
+        unlink_shared_memory_region(shm_name);
+        free(shm_name);
+
         LOG(log_fd, "error: clock_gettime: %s", strerror(errno));
         fclose(log_fd);
         // Should we retrun here or use sem_trywait ?
