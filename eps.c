@@ -37,10 +37,11 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     char* log_file_path = get_init_log_file_path(jid);
     FILE* log_fd = get_log_file_fd(log_file_path);
     free(log_file_path);
+    if (!log_fd) {
+        // TODO: Find a way to provide some error output ?
+        return 1;
+    }
 
-    pid_t hook_pid = getpid();
-
-    LOG(log_fd, "Hook PID: %d", hook_pid);
 
     LOG(log_fd, "Initializing shared memory...");
     int shmfd;
@@ -59,6 +60,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
 
     char* sem_name = get_sem_init_name(jid);
     sem_t* proceed_init = get_efp_sem(sem_name, 1);
+    free(sem_name);
     if (!proceed_init) {
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         fclose(log_fd);
@@ -72,8 +74,20 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             fclose(log_fd);
             return 1;
         case 0:
+            // Free copied resources after fork...
+            int err =  discard_shared_memory_addr((void*)efp_pid, sizeof(pid_t*), &shmfd);
+            if (err) {
+                LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
+            }
+            close_shared_memory_region(shmfd);
+            sem_close(proceed_init);
+            fclose(log_fd);
             efp_main(jid);
         default:
+            pid_t hook_pid = getpid();
+
+            LOG(log_fd, "Hook PID: %d", hook_pid);
+
             LOG(log_fd, "Waiting for EFP initialization...");
             sem_wait(proceed_init);
 
@@ -86,13 +100,12 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             if (err) {
                 LOG(log_fd, "error: discard_shared_memory_addr: %s", strerror(errno));
             }
+            close_shared_memory_region(shmfd);
 
             LOG(log_fd, "Init hook exits...");
             fclose(log_fd);
             return 0;
     }
-
-    fclose(log_fd);
     return 0;
 }
 
@@ -107,6 +120,10 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     char* log_file_path = get_exit_log_file_path(jid);
     FILE* log_fd = get_log_file_fd(log_file_path);
     free(log_file_path);
+    if (!log_fd) {
+        // TODO: Find a way to provide some error output ?
+        return 1;
+    }
 
     pid_t hook_pid = getpid();
 
@@ -116,7 +133,6 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     char* shm_name = get_shared_memory_region_name(jid);
 
     int shmfd = open_shared_memory_region(shm_name);
-    free(shm_name);
     if (shmfd == -1) {
         LOG(log_fd, "error: open_shared_memory_region: %s", strerror(errno));
         fclose(log_fd);
@@ -180,6 +196,8 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
     LOG(log_fd, "Cleaning up shared memory...");
     unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));
     close_shared_memory_region(shmfd);
+    unlink_shared_memory_region(shm_name);
+    free(shm_name);
 
     fclose(log_fd);
 
