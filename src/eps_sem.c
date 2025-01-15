@@ -27,12 +27,12 @@ sem_t* get_efp_sem(const char* name, int new) {
     sem_t* sem;
     if (new) {
         sem_unlink(name);
-        if ((sem = sem_open(name ,O_CREAT,S_IRWXU,0)) == SEM_FAILED) {
+        if ((sem = sem_open(name, O_CREAT, S_IRUSR | S_IWUSR, 0)) == SEM_FAILED) {
             perror("sem_open");
             return NULL;
         }
     } else {
-        if ((sem = sem_open(name ,O_RDWR)) == SEM_FAILED) {
+        if ((sem = sem_open(name, O_RDWR)) == SEM_FAILED) {
             perror("sem_open");
             return NULL;
         }

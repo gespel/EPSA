@@ -1,6 +1,8 @@
 project(EPS)
 cmake_minimum_required(VERSION 3.17)
 
+# INFO: This is to prevent `libeps.so` and `libprep_eps.so` as
+#       filenames for built deliverables.
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 set(SLURM_INSTALL_DIR "" CACHE PATH "A directory of slurm installation")
