@@ -12,4 +12,8 @@ typedef struct {
 int get_sockets_count(hwloc_topology_t topology);
 int get_cores_count(hwloc_topology_t topology);
 
+int populate_cpuinfo(hwloc_topology_t topology, eps_cpuinfo_t* info);
+
+void free_cpuinfo(eps_cpuinfo_t* info);
+
 #endif

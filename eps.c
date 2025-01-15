@@ -50,20 +50,27 @@ int slurm_spank_init(spank_t sp, int ac, char **av) {
         hwloc_topology_init(&topology);
         hwloc_topology_load(topology);
 
-        unsigned cps[1] = {4};
-        unsigned sidx[4] = {0,0,0,0};
+        int core_cnt = get_cores_count(topology);
 
-        //TODO: Populate cpuinfo via hwloc...
-        info->socket_cnt= 1;
-        info->cores_per_socket = cps;
-        info->socket_idx = sidx;
+        int err = populate_cpuinfo(topology, info);
+        if (err) {
+            discard_shared_memory_addr((void*)info, sizeof(eps_cpuinfo_t), &shmfd);
+            hwloc_topology_destroy(topology);
+            return 1;
+        }
 
-        slurm_info("Socket count: %d", get_sockets_count(topology));
-        slurm_info("Cores count: %d", get_cores_count(topology));
+        slurm_info("Socket count: %u", info->socket_cnt);
+        for(int i = 0; i < info->socket_cnt; i++) {
+            slurm_info("Cores per socket [%d]: %u", i, info->cores_per_socket[i]);
+        }
+
+        for(int i = 0; i < core_cnt; i++) {
+            slurm_info("Core [%d] -> Socket [%u]", i, info->socket_idx[i]);
+        }
 
         hwloc_topology_destroy(topology);
 
-        int err =  discard_shared_memory_addr((void*)info, sizeof(eps_cpuinfo_t), &shmfd);
+        err =  discard_shared_memory_addr((void*)info, sizeof(eps_cpuinfo_t), &shmfd);
         if (err) {
             slurm_info("error: discard_shared_memory_addr: %s", strerror(errno));
         }
