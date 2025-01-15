@@ -46,19 +46,22 @@ int slurm_spank_init(spank_t sp, int ac, char **av) {
             return 1;
         }
 
+        hwloc_topology_t topology;
+        hwloc_topology_init(&topology);
+        hwloc_topology_load(topology);
+
         unsigned cps[1] = {4};
         unsigned sidx[4] = {0,0,0,0};
 
-        //TODO: Populate cpuinfo vial hwloc...
+        //TODO: Populate cpuinfo via hwloc...
         info->socket_cnt= 1;
         info->cores_per_socket = cps;
         info->socket_idx = sidx;
 
-        slurm_info("info.socket_cnt: %d", info->socket_cnt);
+        slurm_info("Socket count: %d", get_sockets_count(topology));
+        slurm_info("Cores count: %d", get_cores_count(topology));
 
-        //slurm_info("Cleaning up shared memory...");
-        //unmap_shared_memory_region((void*)info, sizeof(eps_cpuinfo_t));
-        //close_shared_memory_region(shmfd);
+        hwloc_topology_destroy(topology);
 
         int err =  discard_shared_memory_addr((void*)info, sizeof(eps_cpuinfo_t), &shmfd);
         if (err) {
@@ -69,16 +72,11 @@ int slurm_spank_init(spank_t sp, int ac, char **av) {
 }
 
 int slurm_spank_slurmd_exit(spank_t sp, int ac, char **av) {
+    unlink_shared_memory_region(CPUINFO_REGION_NAME);
     return 0;
 }
 
 int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
-    hwloc_topology_t topology;
-    hwloc_topology_init(&topology);
-    hwloc_topology_load(topology);
-
-    hwloc_topology_destroy(topology);
-
     uint32_t jid;
 
     spank_err_t err = spank_get_item(sp, S_JOB_ID, &jid);
