@@ -182,7 +182,7 @@ void efp_main(int jid, int nodeid, time_t tstart) {
         measurement.device_name = EMA_get_device_name(devices.array[i]);
         // TODO: This is temporary, replace with real device uid once implemented
         //       on EMA side...
-        measurement.device_uid = "42";
+        measurement.device_uid = "0";
         measurement.e0 = e0[i];
         measurement.e1 = e1[i];
         measurement.t0 = t0[i];
