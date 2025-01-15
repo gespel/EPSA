@@ -6,10 +6,6 @@
 
 int file_exist(const char* path);
 
-char* get_suffixed_name(const char* base, int jid);
-char* get_efp_log_file_path(int jid);
-char* get_init_log_file_path(int jid);
-char* get_exit_log_file_path(int jid);
 char* get_suffixed_name(const char* base, uint32_t jid);
 char* get_efp_log_file_path(uint32_t jid);
 char* get_init_log_file_path(uint32_t jid);

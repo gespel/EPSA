@@ -15,7 +15,6 @@ typedef unsigned long long Time;
 
 
 void efp_main(int jid, eps_cpuinfo_t* cpuinfo) {
-void efp_main(int jid) {
     int status = EXIT_SUCCESS;
 
     Measurement* e0 = NULL;
