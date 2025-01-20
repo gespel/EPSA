@@ -58,6 +58,7 @@ int populate_cpuinfo(hwloc_topology_t topology, eps_cpuinfo_t* info) {
     }
 
     info->socket_cnt = socket_cnt;
+    info->core_cnt = core_cnt;
     info->cores_per_socket = cores_per_socket;
     info->socket_idx = socket_idx;
 

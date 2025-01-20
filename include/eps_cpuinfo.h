@@ -4,6 +4,7 @@
 #include <hwloc.h>
 
 typedef struct {
+    unsigned core_cnt;
     unsigned socket_cnt;
     unsigned* cores_per_socket;
     unsigned* socket_idx;
