@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <eps_utils.h>
 #include <eps_cgroup.h>
 
 #define CGROUP_DIR "/sys/fs/cgroup"
@@ -91,6 +92,87 @@ char* get_cpuset_restriction(pid_t pid) {
 
     return restriction;
 }
+
+static int* parse_core_token(const char* token, size_t* size) {
+    int* range_cand = parse_range(token, size);
+    if (range_cand) {
+        return range_cand;
+    } else {
+        int core;
+        int err = eps_parse_int(token, &core);
+        if (err) return NULL;
+
+        *size = 1;
+        int* parsed = calloc(*size, sizeof(int));
+        parsed[0] = core;
+        return parsed;
+    }
+}
+
+int* parse_cpuset_restriction(const char* restriction, size_t* size) {
+    const char delim = ',';
+    int len = strlen(restriction);
+    if (!len) return NULL;
+
+    char restr_c[len];
+    strcpy(restr_c, restriction);
+
+    int num_tokens = 1;
+
+    char* c = strchr(restr_c, delim);
+
+    while (c != NULL) {
+        num_tokens++;
+        c = strchr(c+1, delim);
+    }
+
+    char* tokens[num_tokens];
+
+    if (num_tokens == 1) {
+        return parse_core_token(restr_c, size);
+    }
+
+    int i = 0;
+    char* token = strtok(restr_c, ",");
+    do {
+        tokens[i] = token;
+        i++;
+        token = strtok(NULL, ",");
+    } while (token != NULL);
+
+    size_t total_size = 0;
+    size_t s;
+
+    int* parsed[num_tokens];
+    int sizes[num_tokens];
+
+    for (i = 0; i < num_tokens; i++) {
+        parsed[i] = parse_core_token(tokens[i], &s);
+        total_size = total_size + s;
+        sizes[i] = s;
+    }
+
+    int* cores = calloc(total_size, sizeof(int));
+
+    int j = 0;
+    int k = 0;
+
+    int* current = parsed[j];
+    for (i = 0; i < total_size; i++) {
+        cores[i] = current[k];
+        if (k == sizes[j] - 1) {
+            k = 0;
+            current = parsed[++j];
+        } else {
+            k++;
+        }
+    }
+
+    *size = total_size;
+
+    return cores;
+}
+
 
 int move_pid_to_cg(const char* path, pid_t pid)
 {
