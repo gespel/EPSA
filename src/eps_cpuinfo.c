@@ -1,5 +1,6 @@
 #include <stdio.h>
 
+#include <eps_shm.h>
 #include <eps_cpuinfo.h>
 
 int get_sockets_count(hwloc_topology_t topology){
@@ -16,8 +17,8 @@ int populate_cpuinfo(hwloc_topology_t topology, eps_cpuinfo_t* info) {
     int socket_cnt = get_sockets_count(topology);
     int core_cnt = get_cores_count(topology);
 
-    unsigned* cores_per_socket = calloc(socket_cnt, sizeof(unsigned));
-    unsigned* socket_idx = calloc(core_cnt, sizeof(unsigned));
+    int* cores_per_socket = calloc(socket_cnt, sizeof(int));
+    int* socket_idx = calloc(core_cnt, sizeof(int));
 
     for (int core_idx = 0; core_idx < core_cnt; ++core_idx) {
         hwloc_obj_t core_obj = hwloc_get_obj_by_type(
@@ -65,8 +66,46 @@ int populate_cpuinfo(hwloc_topology_t topology, eps_cpuinfo_t* info) {
     return 0;
 }
 
-// CONSIDER: Removing, since cpuinfo struct will always 
-//           be in shared memory (at least for now)...
+int map_cpuinfo(eps_cpuinfo_t* info, int fd) {
+    int* pccnt = map_shared_memory_region(fd, sizeof(int));
+    if (!pccnt) {
+        return 1;
+    }
+    int count = *pccnt;
+    info->core_cnt = count;
+
+    int size = sizeof(int) * (count + 1);
+    int* mem = map_shared_memory_region(fd, size);
+    if (!mem) {
+        return 1;
+    }
+
+    int sock_cnt = mem[count+1];
+    info->socket_cnt = sock_cnt;
+
+    int* socket_idx = calloc(info->core_cnt, sizeof(int));
+    int* cores_per_socket = calloc(info->socket_cnt, sizeof(int));
+
+    int* si = mem + 1;
+    int* cps = mem + 2 + count;
+
+    for (int i = 0; i < info->core_cnt; i++) {
+        socket_idx[i] = si[i];
+    }
+
+    for (int i = 0; i < info->socket_cnt; i++) {
+        cores_per_socket[i] = cps[i];
+    }
+
+    info->socket_idx = socket_idx;
+    info->cores_per_socket = cores_per_socket;
+
+    unmap_shared_memory_region((void*)pccnt, sizeof(int));
+    unmap_shared_memory_region((void*)mem, size);
+
+    return 0;
+}
+
 void free_cpuinfo(eps_cpuinfo_t* info) {
     free(info->cores_per_socket);
     free(info->socket_idx);
