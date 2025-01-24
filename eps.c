@@ -120,7 +120,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
 
 
     LOG(log_fd, "Initializing shared memory...");
-    int shmfd, shmfd_cpuinfo;
+    int shmfd;
     char* shm_name = get_shared_memory_region_name(jid);
 
     unlink_shared_memory_region(shm_name);
@@ -132,16 +132,34 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
         return 1;
     }
 
-    eps_cpuinfo_t* cpuinfo = (eps_cpuinfo_t*)get_shared_memory_addr(
-        CPUINFO_REGION_NAME,
-        sizeof(eps_cpuinfo_t),
-        &shmfd_cpuinfo
-    );
-    if (!cpuinfo) {
-        LOG(log_fd, "error: get_shared_memory_addr: %s", strerror(errno));
+    int shmfd_cpuinfo = open_shared_memory_region(CPUINFO_REGION_NAME);
+    if (shmfd_cpuinfo == -1) {
+        LOG(log_fd, "error: open_shared_memory_region: %s", strerror(errno));
+        close(shmfd);
         fclose(log_fd);
         return 1;
     }
+
+    eps_cpuinfo_t* cpuinfo = malloc(sizeof(eps_cpuinfo_t));
+    if (!cpuinfo) {
+        LOG(log_fd, "error: malloc: %s", strerror(errno));
+        close(shmfd_cpuinfo);
+        close(shmfd);
+        fclose(log_fd);
+        return 1;
+
+    }
+
+    int map_err = map_cpuinfo(cpuinfo, shmfd_cpuinfo);
+    if (map_err) {
+        LOG(log_fd, "error: map_cpuinfo: %s", strerror(errno));
+        close(shmfd_cpuinfo);
+        close(shmfd);
+        fclose(log_fd);
+        return 1;
+    }
+
+    close_shared_memory_region(shmfd_cpuinfo);
 
     LOG(log_fd, "Obtaining semaphores...");
 
