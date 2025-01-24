@@ -32,48 +32,67 @@ SPANK_PLUGIN(eps, 1)
  ********************************/
 int slurm_spank_init(spank_t sp, int ac, char **av) {
     if (spank_context() == S_CTX_SLURMD) {
-        slurm_info("Initializing shared memory...");
-        int shmfd;
-
-        unlink_shared_memory_region(CPUINFO_REGION_NAME);
-        eps_cpuinfo_t* info = (eps_cpuinfo_t*)get_shared_memory_addr(
-            CPUINFO_REGION_NAME,
-            sizeof(eps_cpuinfo_t),
-            &shmfd
-        );
-        if (!info) {
-            slurm_info("error: get_shared_memory_addr: %s", strerror(errno));
-            return 1;
-        }
-
         hwloc_topology_t topology;
         hwloc_topology_init(&topology);
         hwloc_topology_load(topology);
 
         int core_cnt = get_cores_count(topology);
+        int sock_cnt = get_sockets_count(topology);
 
-        int err = populate_cpuinfo(topology, info);
+        size_t shm_size = sizeof(int) * (core_cnt + sock_cnt + 2);
+
+        slurm_info("Initializing shared memory...");
+        unlink_shared_memory_region(CPUINFO_REGION_NAME);
+        int fd = create_shared_memory_region(
+            CPUINFO_REGION_NAME,
+            shm_size
+        );
+        if (fd == -1) {
+            slurm_info(
+                "error: create_shared_memory_region: %s",
+                strerror(errno)
+            );
+            return 1;
+        }
+
+        int* mem = map_shared_memory_region(fd, shm_size);
+
+        eps_cpuinfo_t* data = malloc(sizeof(eps_cpuinfo_t));
+
+        int err = populate_cpuinfo(topology, data);
         if (err) {
-            discard_shared_memory_addr((void*)info, sizeof(eps_cpuinfo_t), &shmfd);
             hwloc_topology_destroy(topology);
             return 1;
         }
 
-        slurm_info("Socket count: %u", info->socket_cnt);
-        for(int i = 0; i < info->socket_cnt; i++) {
-            slurm_info("Cores per socket [%d]: %u", i, info->cores_per_socket[i]);
+        mem[0] = core_cnt;
+        mem[core_cnt + 1] = sock_cnt;
+
+        int* sidx = mem + 1;
+        int* cps = mem + core_cnt + 2;
+
+        for(int i = 0; i < data->socket_cnt; i++) {
+            cps[i] = data->cores_per_socket[i];
         }
 
         for(int i = 0; i < core_cnt; i++) {
-            slurm_info("Core [%d] -> Socket [%u]", i, info->socket_idx[i]);
+            sidx[i] = data->socket_idx[i];
+        }
+
+        slurm_info("Socket count: %u", mem[core_cnt + 1]);
+        for(int i = 0; i < mem[core_cnt + 1]; i++) {
+            slurm_info("Cores per socket [%d]: %u", i, cps[i]);
+        }
+
+        slurm_info("Cores count: %u", mem[0]);
+        for(int i = 0; i < mem[0]; i++) {
+            slurm_info("Core [%d] -> Socket [%u]", i, sidx[i]);
         }
 
         hwloc_topology_destroy(topology);
 
-        err =  discard_shared_memory_addr((void*)info, sizeof(eps_cpuinfo_t), &shmfd);
-        if (err) {
-            slurm_info("error: discard_shared_memory_addr: %s", strerror(errno));
-        }
+        unmap_shared_memory_region((void*)mem, shm_size);
+        close_shared_memory_region(fd);
     }
     return 0;
 }
