@@ -5,10 +5,10 @@
 #include <time.h>
 
 #include <eps_cgroup.h>
-#include <eps_db.h>
 #include <eps_cpuinfo.h>
-#include <eps_sem.h>
+#include <eps_db.h>
 #include <eps_efp.h>
+#include <eps_sem.h>
 #include <eps_sem.h>
 #include <eps_utils.h>
 
@@ -18,8 +18,7 @@ typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
 
-void efp_main(int jid, int nodeid, time_t tstart) {
-void efp_main(int jid, eps_cpuinfo_t* cpuinfo) {
+void efp_main(int jid, int nodeid, time_t tstart, eps_cpuinfo_t* cpuinfo) {
     int status = EXIT_SUCCESS;
 
     Measurement* e0 = NULL;

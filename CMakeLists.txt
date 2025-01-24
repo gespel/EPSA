@@ -51,10 +51,10 @@ target_include_directories(eps PRIVATE ${SLURM_SRC_DIR})
 target_include_directories(eps PRIVATE ${SLURM_INSTALL_DIR}/include)
 target_include_directories(eps PRIVATE ${EMA_INSTALL_DIR}/include)
 target_include_directories(eps PRIVATE ${PQ_INSTALL_DIR}/include)
+target_include_directories(eps PRIVATE ${HWLOC_INSTALL_DIR}/include)
 target_link_libraries(eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
 # TODO: Fix this `s` ending in `lib` subdir.
 target_link_libraries(eps ${PQ_INSTALL_DIR}/libs/libpq.so)
-target_include_directories(eps PRIVATE ${HWLOC_INSTALL_DIR}/include)
 target_link_libraries(eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
 target_link_libraries(eps ${HWLOC_INSTALL_DIR}/lib/libhwloc.so)
 

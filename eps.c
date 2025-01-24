@@ -225,8 +225,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
             fclose(log_fd);
 
             // INFO: Run EFP process...
-            efp_main(jid, nodeid, tstart);
-            efp_main(jid, cpuinfo);
+            efp_main(jid, nodeid, tstart, cpuinfo);
         default:
             pid_t hook_pid = getpid();
 
