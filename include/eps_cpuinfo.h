@@ -4,10 +4,10 @@
 #include <hwloc.h>
 
 typedef struct {
-    unsigned core_cnt;
-    unsigned socket_cnt;
-    unsigned* cores_per_socket;
-    unsigned* socket_idx;
+    int core_cnt;
+    int socket_cnt;
+    int* cores_per_socket;
+    int* socket_idx;
 } eps_cpuinfo_t;
 
 int get_sockets_count(hwloc_topology_t topology);
