@@ -9,6 +9,7 @@ set(SLURM_INSTALL_DIR "" CACHE PATH "A directory of slurm installation")
 set(SLURM_SRC_DIR "" CACHE PATH "A directory with slurm source code")
 set(EMA_INSTALL_DIR "" CACHE PATH "A directory of EMA installation")
 set(PQ_INSTALL_DIR "" CACHE PATH "A directory with PostgresQL installation")
+set(HWLOC_INSTALL_DIR "" CACHE PATH "A directory of hwloc installation")
 
 if(NOT SLURM_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `SLURM_INSTALL_DIR` path!")
@@ -26,12 +27,18 @@ if(NOT PQ_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `PQ_INSTALL_DIR` path!")
 endif()
 
+if(NOT HWLOC_INSTALL_DIR)
+    message(FATAL_ERROR "You have to set up `HWLOC_INSTALL_DIR` path!")
+endif()
+
+
 
 add_library(eps SHARED)
 target_sources(
     eps
     PRIVATE eps.c
     PRIVATE src/eps_utils.c
+    PRIVATE src/eps_cpuinfo.c
     PRIVATE src/eps_cgroup.c
     PRIVATE src/eps_sem.c
     PRIVATE src/eps_efp.c
@@ -47,6 +54,9 @@ target_include_directories(eps PRIVATE ${PQ_INSTALL_DIR}/include)
 target_link_libraries(eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
 # TODO: Fix this `s` ending in `lib` subdir.
 target_link_libraries(eps ${PQ_INSTALL_DIR}/libs/libpq.so)
+target_include_directories(eps PRIVATE ${HWLOC_INSTALL_DIR}/include)
+target_link_libraries(eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
+target_link_libraries(eps ${HWLOC_INSTALL_DIR}/lib/libhwloc.so)
 
 add_library(prep_eps SHARED)
 target_sources(

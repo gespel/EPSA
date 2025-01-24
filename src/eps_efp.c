@@ -6,6 +6,8 @@
 
 #include <eps_cgroup.h>
 #include <eps_db.h>
+#include <eps_cpuinfo.h>
+#include <eps_sem.h>
 #include <eps_efp.h>
 #include <eps_sem.h>
 #include <eps_utils.h>
@@ -17,6 +19,7 @@ typedef unsigned long long Time;
 
 
 void efp_main(int jid, int nodeid, time_t tstart) {
+void efp_main(int jid, eps_cpuinfo_t* cpuinfo) {
     int status = EXIT_SUCCESS;
 
     Measurement* e0 = NULL;
@@ -68,6 +71,42 @@ void efp_main(int jid, int nodeid, time_t tstart) {
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         status = EXIT_FAILURE;
         goto exit;
+    }
+
+    char* rest = get_cpuset_restriction(efp_pid);
+    if (!rest) {
+        LOG(log_fd, "Failed to get cpuset restriction!");
+        status = EXIT_FAILURE;
+        goto exit;
+    }
+
+    size_t size;
+    int* cores = parse_cpuset_restriction(rest, &size);
+    if (!cores) {
+        LOG(log_fd, "Failed to parse cpuset restriction!");
+        status = EXIT_FAILURE;
+        goto exit;
+    }
+
+    int* utilized = calloc(cpuinfo->socket_cnt, sizeof(int));
+
+    for (int i = 0; i < size; i++) {
+        int cidx = cores[i];
+        int sidx = cpuinfo->socket_idx[cidx];
+        utilized[sidx]++;
+    }
+
+    for (int i = 0; i < cpuinfo->socket_cnt; i++) {
+        LOG(log_fd, "Utilized on socket %d: %d", i, utilized[i]);
+        LOG(
+            log_fd,
+            "Cores per socket %d: %d",
+            i,
+            cpuinfo->cores_per_socket[i]
+        );
+        double utilization =
+            (double)utilized[i] / (double)cpuinfo->cores_per_socket[i];
+        LOG(log_fd, "Utilization on socket %d: %f", i, utilization);
     }
 
     LOG(log_fd, "Initializig EMA...");
@@ -223,6 +262,9 @@ exit:
     free(e1);
     free(t0);
     free(t1);
+
+    free(utilized);
+    free_cpuinfo(cpuinfo);
 
     LOG(log_fd, "Closing semaphores...");
     if (proceed_init) sem_close(proceed_init);

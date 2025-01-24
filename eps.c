@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <hwloc.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -10,6 +11,9 @@
 
 #include <slurm/spank.h>
 
+#include <eps_cpuinfo.h>
+#include <eps_utils.h>
+#include <eps_sem.h>
 #include <eps_efp.h>
 #include <eps_sem.h>
 #include <eps_shm.h>
@@ -17,6 +21,8 @@
 
 #define PLUGIN_NAME "Spank/Eps"
 #define EFP_WAIT_TIMEOUT 10 /* in seconds */
+
+#define CPUINFO_REGION_NAME "/epscpuinfo"
 
 
 SPANK_PLUGIN(eps, 1)
@@ -26,6 +32,78 @@ SPANK_PLUGIN(eps, 1)
  * Spank functions
  *
  ********************************/
+int slurm_spank_init(spank_t sp, int ac, char **av) {
+    if (spank_context() == S_CTX_SLURMD) {
+        hwloc_topology_t topology;
+        hwloc_topology_init(&topology);
+        hwloc_topology_load(topology);
+
+        int core_cnt = get_cores_count(topology);
+        int sock_cnt = get_sockets_count(topology);
+
+        size_t shm_size = sizeof(int) * (core_cnt + sock_cnt + 2);
+
+        slurm_info("Initializing shared memory...");
+        unlink_shared_memory_region(CPUINFO_REGION_NAME);
+        int fd = create_shared_memory_region(
+            CPUINFO_REGION_NAME,
+            shm_size
+        );
+        if (fd == -1) {
+            slurm_info(
+                "error: create_shared_memory_region: %s",
+                strerror(errno)
+            );
+            return 1;
+        }
+
+        int* mem = map_shared_memory_region(fd, shm_size);
+
+        eps_cpuinfo_t* data = malloc(sizeof(eps_cpuinfo_t));
+
+        int err = populate_cpuinfo(topology, data);
+        if (err) {
+            hwloc_topology_destroy(topology);
+            return 1;
+        }
+
+        mem[0] = core_cnt;
+        mem[core_cnt + 1] = sock_cnt;
+
+        int* sidx = mem + 1;
+        int* cps = mem + core_cnt + 2;
+
+        for(int i = 0; i < data->socket_cnt; i++) {
+            cps[i] = data->cores_per_socket[i];
+        }
+
+        for(int i = 0; i < core_cnt; i++) {
+            sidx[i] = data->socket_idx[i];
+        }
+
+        slurm_info("Socket count: %u", mem[core_cnt + 1]);
+        for(int i = 0; i < mem[core_cnt + 1]; i++) {
+            slurm_info("Cores per socket [%d]: %u", i, cps[i]);
+        }
+
+        slurm_info("Cores count: %u", mem[0]);
+        for(int i = 0; i < mem[0]; i++) {
+            slurm_info("Core [%d] -> Socket [%u]", i, sidx[i]);
+        }
+
+        hwloc_topology_destroy(topology);
+
+        unmap_shared_memory_region((void*)mem, shm_size);
+        close_shared_memory_region(fd);
+    }
+    return 0;
+}
+
+int slurm_spank_slurmd_exit(spank_t sp, int ac, char **av) {
+    unlink_shared_memory_region(CPUINFO_REGION_NAME);
+    return 0;
+}
+
 int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
     time_t tstart;
     uint32_t jid;
@@ -65,6 +143,35 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
         fclose(log_fd);
         return 1;
     }
+
+    int shmfd_cpuinfo = open_shared_memory_region(CPUINFO_REGION_NAME);
+    if (shmfd_cpuinfo == -1) {
+        LOG(log_fd, "error: open_shared_memory_region: %s", strerror(errno));
+        close(shmfd);
+        fclose(log_fd);
+        return 1;
+    }
+
+    eps_cpuinfo_t* cpuinfo = malloc(sizeof(eps_cpuinfo_t));
+    if (!cpuinfo) {
+        LOG(log_fd, "error: malloc: %s", strerror(errno));
+        close(shmfd_cpuinfo);
+        close(shmfd);
+        fclose(log_fd);
+        return 1;
+
+    }
+
+    int map_err = map_cpuinfo(cpuinfo, shmfd_cpuinfo);
+    if (map_err) {
+        LOG(log_fd, "error: map_cpuinfo: %s", strerror(errno));
+        close(shmfd_cpuinfo);
+        close(shmfd);
+        fclose(log_fd);
+        return 1;
+    }
+
+    close_shared_memory_region(shmfd_cpuinfo);
 
     LOG(log_fd, "Obtaining semaphores...");
 
@@ -119,6 +226,7 @@ int slurm_spank_task_init_privileged(spank_t sp, int ac, char **av) {
 
             // INFO: Run EFP process...
             efp_main(jid, nodeid, tstart);
+            efp_main(jid, cpuinfo);
         default:
             pid_t hook_pid = getpid();
 
