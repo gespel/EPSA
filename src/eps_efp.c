@@ -214,17 +214,39 @@ void efp_main(int jid, int nodeid, time_t tstart, eps_cpuinfo_t* cpuinfo) {
     }
 
     for (int i = 0; i < devices.size; i++) {
+        const char* device_name = EMA_get_device_name(devices.array[i]);
+        char* device_uid = (char*)EMA_get_device_uid(devices.array[i]);
+
         eps_measurement_data_t measurement;
 
+        double utilization;
+        if (!strstr(device_uid, "CPU-")) {
+            utilization = 100;
+        } else {
+            char* socket_idx = device_uid + 4;
+            int parsed_idx;
+            err = eps_parse_int(socket_idx, &parsed_idx);
+            if (err) {
+                // TODO: Decide what to do here...
+            }
+
+            utilization =
+                (double)utilized[parsed_idx] /
+                (double)cpuinfo->cores_per_socket[parsed_idx];
+            utilization = utilization * (double)100;
+        }
+
         measurement.execution_id = execution_id;
-        measurement.device_name = EMA_get_device_name(devices.array[i]);
+        measurement.device_name = device_name;
         // TODO: This is temporary, replace with real device uid once implemented
         //       on EMA side...
-        measurement.device_uid = "0";
+        measurement.device_uid = device_uid;
         measurement.e0 = e0[i];
         measurement.e1 = e1[i];
         measurement.t0 = t0[i];
         measurement.t1 = t1[i];
+        // TODO: Realize real utilization calculation...
+        measurement.utilization = utilization;
 
         err = insert_measurement_data(db_connection, &measurement);
         if (err) {
