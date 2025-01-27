@@ -103,7 +103,8 @@ After successfull completion of the above steps you should have two plugin files
        e0 BIGINT,
        e1 BIGINT,
        t0 BIGINT,
-       t1 BIGINT
+       t1 BIGINT,
+       utilization REAL default 100
    );
 
    ```
