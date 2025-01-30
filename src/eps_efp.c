@@ -238,14 +238,11 @@ void efp_main(int jid, int nodeid, time_t tstart, eps_cpuinfo_t* cpuinfo) {
 
         measurement.execution_id = execution_id;
         measurement.device_name = device_name;
-        // TODO: This is temporary, replace with real device uid once implemented
-        //       on EMA side...
         measurement.device_uid = device_uid;
         measurement.e0 = e0[i];
         measurement.e1 = e1[i];
         measurement.t0 = t0[i];
         measurement.t1 = t1[i];
-        // TODO: Realize real utilization calculation...
         measurement.utilization = utilization;
 
         err = insert_measurement_data(db_connection, &measurement);
