@@ -219,21 +219,24 @@ void efp_main(int jid, int nodeid, time_t tstart, eps_cpuinfo_t* cpuinfo) {
 
         eps_measurement_data_t measurement;
 
-        double utilization;
-        if (!strstr(device_uid, "CPU-")) {
-            utilization = 100;
-        } else {
+        double utilization = 100;
+        if (strstr(device_uid, "CPU-")) {
             char* socket_idx = device_uid + 4;
             int parsed_idx;
             err = eps_parse_int(socket_idx, &parsed_idx);
             if (err) {
+                LOG(
+                    log_fd,
+                    "error: failed to parse socket index: %s",
+                    socket_idx
+                );
                 // TODO: Decide what to do here...
+            } else {
+                utilization =
+                    (double)utilized[parsed_idx] /
+                    (double)cpuinfo->cores_per_socket[parsed_idx];
+                utilization = utilization * (double)100;
             }
-
-            utilization =
-                (double)utilized[parsed_idx] /
-                (double)cpuinfo->cores_per_socket[parsed_idx];
-            utilization = utilization * (double)100;
         }
 
         measurement.execution_id = execution_id;
