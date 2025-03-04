@@ -8,6 +8,7 @@
 typedef struct eps_allocation_data
 {
     int jobid;
+    char* jobname;
     int userid;
     int nnodes;
     // TODO: Adjust type here...

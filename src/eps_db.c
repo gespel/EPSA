@@ -23,6 +23,9 @@ For further details check:
 #define ALLOC_COLS "jobid,  nnodes, userid, ts"
 #define EXEC_COLS "jobid,  node_name, node_id, ts_start, ts_end"
 #define MES_COLS "exec_id,  device_name, device_uid, e0, e1, t0, t1, utilization"
+#define ALLOC_COLS "jobid, job_name, nnodes, userid, ts"
+#define EXEC_COLS "jobid, node_name, node_id, ts_start, ts_end"
+#define MES_COLS "exec_id, device_name, device_uid, e0, e1, t0, t1"
 
 PGconn* connect_db()
 {
@@ -59,15 +62,17 @@ int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
     char ts[12];
     snprintf(ts, 12, "%ld", data->ts);
 
-    int paramFormats[4] = {1, 1, 1, 0};
-    const char* paramValues[4] = {
+    int paramFormats[5] = {1, 0, 1, 1, 0};
+    const char* paramValues[5] = {
         (char*) &bin_jobid,
+        data->jobname,
         (char*) &bin_nnodes,
         (char*) &bin_userid,
         ts
     };
-    int paramLengths[4] = {
+    int paramLengths[5] = {
         sizeof(bin_jobid),
+        sizeof(data->jobname),
         sizeof(bin_nnodes),
         sizeof(bin_userid),
         sizeof(ts)
@@ -75,8 +80,9 @@ int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
 
     PGresult* res = PQexecParams(
         connection,
-        "INSERT INTO allocations ("ALLOC_COLS") VALUES($1, $2, $3, to_timestamp($4));",
-        4,
+        "INSERT INTO allocations ("ALLOC_COLS") "
+        "VALUES($1, $2, $3, $4, to_timestamp($5));",
+        5,
         NULL,
         paramValues,
         paramLengths,
