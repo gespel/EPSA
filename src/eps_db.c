@@ -20,12 +20,9 @@ For further details check:
 
 #include <eps_db.h>
 
-#define ALLOC_COLS "jobid,  nnodes, userid, ts"
-#define EXEC_COLS "jobid,  node_name, node_id, ts_start, ts_end"
-#define MES_COLS "exec_id,  device_name, device_uid, e0, e1, t0, t1, utilization"
 #define ALLOC_COLS "jobid, job_name, nnodes, userid, ts"
 #define EXEC_COLS "jobid, node_name, node_id, ts_start, ts_end"
-#define MES_COLS "exec_id, device_name, device_uid, e0, e1, t0, t1"
+#define MES_COLS "exec_id, device_name, device_uid, e0, e1, t0, t1, utilization"
 
 PGconn* connect_db()
 {
