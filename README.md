@@ -81,6 +81,7 @@ After successfull completion of the above steps you should have two plugin files
    CREATE TABLE allocations (
        id SERIAL PRIMARY KEY,
        jobid INT NOT NULL,
+       job_name VARCHAR(255) NOT NULL,
        nnodes INT NOT NULL,
        userid INT NOT NULL,
        ts TIMESTAMPTZ
