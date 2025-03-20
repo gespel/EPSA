@@ -381,3 +381,8 @@ int slurm_spank_task_exit(spank_t sp, int ac, char **av) {
 
     return 0;
 }
+
+int slurm_spank_job_epilog(spank_t sp, int ac, char **av) {
+    slurm_info("Spank Epilog");
+    return 0;
+}
