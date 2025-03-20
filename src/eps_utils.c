@@ -15,6 +15,7 @@
 
 #define SUFFIX_MAX_LENGTH 15
 
+// TODO: Change to the proper /var/log locations
 #define LOG_DIR_PATH "/tmp"
 
 #define EFP_LOG_PATH_BASE LOG_DIR_PATH "/efp_"
