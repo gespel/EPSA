@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <eps_cgroup.h>
 #include <eps_sem.h>
 #include <eps_efp.h>
 #include <eps_utils.h>
@@ -11,7 +10,6 @@
 
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
-
 
 void efp_main(int jid) {
     int status = EXIT_SUCCESS;
@@ -77,16 +75,6 @@ void efp_main(int jid) {
     }
 
     DevicePtrArray devices = EMA_get_devices();
-
-    //INFO: This is important cause slurm will destroy the initial task/step
-    //      cgroups at some point and the process will get killed if not moved
-    //      from it's initial slurm-created cgroup at this point.
-    err = move_pid_to_cg("/sys/fs/cgroup/cgroup.procs", efp_pid);
-    if (err) {
-        LOG(log_fd, "error: move_pid_to_cg:%s", strerror(errno));
-        status = EXIT_FAILURE;
-        goto exit;
-    }
 
     // INFO: Release the task_init hook waiting...
     sem_post(proceed_init);

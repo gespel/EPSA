@@ -1,69 +1,29 @@
+#include <errno.h>
 #include <limits.h>
+#include <signal.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
 
 #include <slurm/slurm.h>
 #include <slurm/slurm_errno.h>
-
 #include <src/common/bitstring.h>
-#include <src/common/xstring.h>
 #include <src/interfaces/prep.h>
+
+#include <eps_efp.h>
+#include <eps_sem.h>
+#include <eps_shm.h>
+#include <eps_utils.h>
+
+#define EFP_WAIT_TIMEOUT 10 /* in seconds */
 
 const char plugin_name[] = "EPS";
 const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
-
-static int
-_load_nodes(node_info_msg_t** node_buffer_pptr, uint16_t show_flags)
-{
-    int err;
-    node_info_msg_t* node_info_ptr = NULL;
-    show_flags |= SHOW_MIXED;
-    err = slurm_load_node ((time_t) NULL, &node_info_ptr, show_flags);
-    if (err == SLURM_SUCCESS)
-    {
-        *node_buffer_pptr = node_info_ptr;
-    }
-    return err;
-}
-
-static node_info_msg_t* _get_node_info_for_jobs(void)
-{
-	int err;
-	node_info_msg_t *node_info_msg = NULL;
-	uint16_t show_flags = 0;
-	/* Must load all nodes including hidden for cross-index
-	 * from job's node_inx to node table to work */
-
-	/* Always set this flag */
-	show_flags |= SHOW_ALL;
-
-	err = _load_nodes(&node_info_msg, show_flags);
-	if (err) {
-            slurm_info("error: load_nodes: %d", err);
-            return NULL;
-	}
-	return node_info_msg;
-}
-
-/* This set of functions loads/free node information so that we can map a job's
- * core bitmap to it's CPU IDs based upon the thread count on each node. */
-static uint32_t _threads_per_core(char* host)
-{
-    node_info_msg_t *node_info_msg = NULL;
-    uint32_t i, threads = 1;
-
-    if (!host) return threads;
-    if (!(node_info_msg = _get_node_info_for_jobs())) return threads;
-    for (i = 0; i < node_info_msg->record_count; i++) {
-        if (
-            node_info_msg->node_array[i].name &&
-            !xstrcmp(host, node_info_msg->node_array[i].name)
-        ) {
-                threads = node_info_msg->node_array[i].threads;
-                break;
-        }
-    }
-    return threads;
-}
 
 /********************************
  *
@@ -154,6 +114,102 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         }
     }
 
+    slurm_info("Initializing shared memory...");
+    int shmfd;
+    char* shm_name = get_shared_memory_region_name(job_env->jobid);
+
+    unlink_shared_memory_region(shm_name);
+    pid_t* efp_pid = (pid_t*)get_shared_memory_addr(
+        shm_name, sizeof(pid_t*), &shmfd
+    );
+    free(shm_name);
+    if (!efp_pid)
+    {
+        slurm_info("error: get_shared_memory_addr: %s", strerror(errno));
+        return SLURM_ERROR;
+    }
+
+    slurm_info("Obtaining semaphores...");
+    char* sem_name = get_sem_init_name(job_env->jobid);
+    sem_t* proceed_init = get_efp_sem(sem_name, 1);
+    if (!proceed_init)
+    {
+        err = discard_shared_memory_addr(
+            (void*)efp_pid, sizeof(pid_t*), &shmfd
+        );
+        if (err)
+        {
+            slurm_info(
+                "error: discard_shared_memory_addr: %s", strerror(errno)
+            );
+        }
+        free(sem_name);
+        slurm_info("error: get_efp_sem: %s", strerror(errno));
+        return SLURM_ERROR;
+    }
+
+    pid_t pid = fork();
+    switch(pid) {
+        case -1:
+            err = discard_shared_memory_addr(
+                (void*)efp_pid, sizeof(pid_t*), &shmfd
+            );
+            if (err) {
+                slurm_info(
+                    "error: discard_shared_memory_addr: %s", strerror(errno)
+                );
+            }
+            sem_close(proceed_init);
+            sem_unlink(sem_name);
+            free(sem_name);
+
+            slurm_info("error: fork: %s", strerror(errno));
+            return SLURM_ERROR;
+        case 0:
+            // Free copied resources after fork...
+            err = discard_shared_memory_addr(
+                (void*)efp_pid, sizeof(pid_t*), &shmfd
+            );
+            if (err) {
+                slurm_info(
+                    "error: discard_shared_memory_addr: %s", strerror(errno)
+                );
+            }
+            sem_close(proceed_init);
+            free(sem_name);
+
+            // INFO: Run EFP process...
+            efp_main(job_env->jobid);
+        default:
+            pid_t hook_pid = getpid();
+
+            slurm_info("Hook PID: %d", hook_pid);
+
+            slurm_info("Waiting for EFP initialization...");
+            sem_wait(proceed_init);
+
+            slurm_info("Child PID: %d", pid);
+
+            slurm_info("Writing EFP's PID to shared memory...");
+            *efp_pid = pid;
+
+            err = discard_shared_memory_addr(
+                (void*)efp_pid, sizeof(pid_t*), &shmfd
+            );
+            if (err) {
+                slurm_info(
+                    "error: discard_shared_memory_addr: %s", strerror(errno)
+                );
+            }
+
+            slurm_info("Closing semaphore...");
+            sem_close(proceed_init);
+            sem_unlink(sem_name);
+            free(sem_name);
+
+            slurm_info("Init hook exits...");
+    }
+
     return SLURM_SUCCESS;
 }
 
@@ -163,6 +219,98 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 
     slurm_info("Epilog: %s", plugin_name);
     slurm_info("Job Id: %u", job_env->jobid);
+
+    pid_t hook_pid = getpid();
+    slurm_info("Hook PID: %d", hook_pid);
+
+    char* shm_name = get_shared_memory_region_name(job_env->jobid);
+
+    slurm_info("Obtaining shared memory address...");
+    int shmfd = open_shared_memory_region(shm_name);
+    if (shmfd == -1) {
+        slurm_info("error: open_shared_memory_region: %s", strerror(errno));
+        return SLURM_ERROR;
+    }
+
+    pid_t* efp_pid = (pid_t*)map_shared_memory_region(shmfd, sizeof(pid_t*));
+    if (!efp_pid) {
+        close_shared_memory_region(shmfd);
+        slurm_info("error: map_shared_memory_region: %s", strerror(errno));
+        return SLURM_ERROR;
+    }
+
+    slurm_info("Obtaining semaphores...");
+    char* sem_efp_name = get_sem_efp_name(job_env->jobid);
+    sem_t* resume_efp = get_efp_sem(sem_efp_name, 0);
+    if (!resume_efp) {
+        unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));
+        close_shared_memory_region(shmfd);
+        unlink_shared_memory_region(shm_name);
+        free(shm_name);
+        free(sem_efp_name);
+        slurm_info("error: get_efp_sem: %s", strerror(errno));
+        return SLURM_ERROR;
+    }
+
+    char* sem_exit_name = get_sem_exit_name(job_env->jobid);
+    sem_t* efp_finalize = get_efp_sem(sem_exit_name, 0);
+    if (!efp_finalize) {
+        unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));
+        close_shared_memory_region(shmfd);
+        unlink_shared_memory_region(shm_name);
+        free(shm_name);
+        free(sem_efp_name);
+        free(sem_exit_name);
+
+        slurm_info("error: get_efp_sem: %s", strerror(errno));
+        return SLURM_ERROR;
+    }
+
+    slurm_info("Unlocking semaphore (resuming EFP)...");
+    sem_post(resume_efp);
+
+    slurm_info("Waiting for EFP to finish or fail...");
+    struct timespec ts;
+    if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
+        unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));
+        close_shared_memory_region(shmfd);
+        unlink_shared_memory_region(shm_name);
+        free(shm_name);
+
+        sem_close(resume_efp);
+        sem_close(efp_finalize);
+
+        sem_unlink(sem_efp_name);
+        sem_unlink(sem_exit_name);
+
+        free(sem_efp_name);
+        free(sem_exit_name);
+
+        slurm_info("error: clock_gettime: %s", strerror(errno));
+        // Should we retrun here or use sem_trywait ?
+        return SLURM_ERROR;
+    }
+
+    ts.tv_sec += EFP_WAIT_TIMEOUT;
+    int ret = sem_timedwait(efp_finalize, &ts);
+    if (ret == -1 && errno == ETIMEDOUT) {
+        slurm_info("error: efp timed out!");
+        kill(*efp_pid, 9);
+    }
+
+    slurm_info("Closing semaphores...");
+    sem_close(resume_efp);
+    sem_close(efp_finalize);
+    sem_unlink(sem_efp_name);
+    sem_unlink(sem_exit_name);
+    free(sem_efp_name);
+    free(sem_exit_name);
+
+    slurm_info("Cleaning up shared memory...");
+    unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));
+    close_shared_memory_region(shmfd);
+    unlink_shared_memory_region(shm_name);
+    free(shm_name);
 
     return SLURM_SUCCESS;
 }
@@ -183,7 +331,6 @@ extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
 
     slurm_info("Ctld_epilog: %s", plugin_name);
     slurm_info("Job Id: %u", job_ptr->job_id);
-
 
     return SLURM_SUCCESS;
 }
