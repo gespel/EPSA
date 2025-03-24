@@ -15,8 +15,8 @@
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
-
-void efp_main(int jid, int nodeid, time_t tstart) {
+void efp_main(int jid, int nodeid, time_t tstart)
+{
     int status = EXIT_SUCCESS;
 
     Measurement* e0 = NULL;
@@ -31,7 +31,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     char* efp_log_file_path = get_efp_log_file_path(jid);
     FILE* log_fd = get_log_file_fd(efp_log_file_path);
     free(efp_log_file_path);
-    if (!log_fd) {
+    if (!log_fd)
+    {
         fprintf(stderr, "error: eps: EFP process failed to open log file");
         status = EXIT_FAILURE;
         goto exit;
@@ -46,7 +47,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     char* sem_init_name = get_sem_init_name(jid);
     proceed_init = get_efp_sem(sem_init_name, 0);
     free(sem_init_name);
-    if (!proceed_init) {
+    if (!proceed_init)
+    {
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         status = EXIT_FAILURE;
         goto exit;
@@ -55,7 +57,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     char* sem_efp_name = get_sem_efp_name(jid);
     proceed_efp = get_efp_sem(sem_efp_name, 1);
     free(sem_efp_name);
-    if (!proceed_efp) {
+    if (!proceed_efp)
+    {
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         status = EXIT_FAILURE;
         goto exit;
@@ -64,7 +67,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     char* sem_exit_name = get_sem_exit_name(jid);
     proceed_exit = get_efp_sem(sem_exit_name, 1);
     free(sem_exit_name);
-    if (!proceed_exit) {
+    if (!proceed_exit)
+    {
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         status = EXIT_FAILURE;
         goto exit;
@@ -73,7 +77,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     LOG(log_fd, "Initializig EMA...");
     int err = EMA_init(NULL);
 
-    if (err) {
+    if (err)
+    {
         LOG(log_fd, "Failed to initialize EMA: %d", err);
         status = EXIT_FAILURE;
         goto exit;
@@ -84,7 +89,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     // INFO: Release the task_init hook waiting...
     sem_post(proceed_init);
 
-    if (!devices.size) {
+    if (!devices.size)
+    {
         LOG(log_fd, "Error: No EMA devices detected!");
         status = EXIT_FAILURE;
         goto exit;
@@ -95,7 +101,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     t0 = malloc(devices.size * sizeof(Time));
     t1 = malloc(devices.size * sizeof(Time));
 
-    for (int i = 0; i < devices.size; i++) {
+    for (int i = 0; i < devices.size; i++)
+    {
         e0[i] = EMA_get_energy_uj(devices.array[i]);
         t0[i] = EMA_get_time_in_us();
     }
@@ -104,7 +111,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
 
     sem_wait(proceed_efp);
 
-    for (int i = 0; i < devices.size; i++) {
+    for (int i = 0; i < devices.size; i++)
+    {
         e1[i] = EMA_get_energy_uj(devices.array[i]);
         t1[i] = EMA_get_time_in_us();
     }
@@ -112,7 +120,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     LOG(log_fd, "Connecting to db...");
     PGconn* db_connection = connect_db();
     int connection_is_not_ok = check_connection(db_connection);
-    if (connection_is_not_ok) {
+    if (connection_is_not_ok)
+    {
         LOG(
             log_fd,
             "error: problems with db connection: %s",
@@ -128,14 +137,15 @@ void efp_main(int jid, int nodeid, time_t tstart) {
 
     char nodename[HOST_NAME_MAX];
     err = gethostname(nodename, HOST_NAME_MAX);
-    if (err) {
+    if (err)
+    {
         LOG(log_fd, "error: gethostname: %s", strerror(errno));
         snprintf(nodename, HOST_NAME_MAX, "Undefined");
     }
 
     PGresult* res = PQexec(db_connection, "BEGIN");
-
-    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+    if (PQresultStatus(res) != PGRES_COMMAND_OK)
+    {
         LOG(
             log_fd,
             "error: failed to BEGIN transation:%s",
@@ -158,28 +168,29 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     int execution_id;
 
     err = insert_execution_data(db_connection, &execution, &execution_id);
-    if (err) {
+    if (err)
+    {
         LOG(log_fd, "error: failed execution data insertion!");
         fclose(log_fd);
         status = EXIT_FAILURE;
         goto exit;
     }
 
-    for (int i = 0; i < devices.size; i++) {
+    for (int i = 0; i < devices.size; i++)
+    {
         eps_measurement_data_t measurement;
 
         measurement.execution_id = execution_id;
         measurement.device_name = EMA_get_device_name(devices.array[i]);
-        // TODO: This is temporary, replace with real device uid once implemented
-        //       on EMA side...
-        measurement.device_uid = "0";
+        measurement.device_uid = EMA_get_device_uid(devices.array[i]);
         measurement.e0 = e0[i];
         measurement.e1 = e1[i];
         measurement.t0 = t0[i];
         measurement.t1 = t1[i];
 
         err = insert_measurement_data(db_connection, &measurement);
-        if (err) {
+        if (err)
+        {
             LOG(log_fd, "error: failed measurement data insertion!");
             status = EXIT_FAILURE;
             goto exit;
@@ -187,8 +198,8 @@ void efp_main(int jid, int nodeid, time_t tstart) {
     }
 
     res = PQexec(db_connection, "COMMIT");
-
-    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+    if (PQresultStatus(res) != PGRES_COMMAND_OK)
+    {
         LOG(
             log_fd,
             "error: failed to COMMIT transation:%s",
@@ -202,10 +213,10 @@ void efp_main(int jid, int nodeid, time_t tstart) {
 
     LOG(log_fd, "Finalizing EMA...");
     err = EMA_finalize(NULL);
-    if (err) {
+    if (err)
+    {
         LOG(log_fd, "Failed to finalize EMA: %d", err);
     }
-
     sem_post(proceed_exit);
 
 exit:

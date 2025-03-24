@@ -14,16 +14,12 @@
 #include <src/common/bitstring.h>
 #include <src/interfaces/prep.h>
 
+#include <eps_data.h>
+#include <eps_db.h>
 #include <eps_efp.h>
 #include <eps_sem.h>
 #include <eps_shm.h>
 #include <eps_utils.h>
-
-#include <eps_data.h>
-#include <eps_db.h>
-
-#include <src/interfaces/prep.h>
-
 
 #define EFP_WAIT_TIMEOUT 10 /* in seconds */
 
@@ -60,6 +56,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     slurm_info("Prolog: %s", plugin_name);
     slurm_info("Job Id: %u", job_env->jobid);
 
+    int nodeid;
     char hostname[HOST_NAME_MAX];
     hostname[0] = '\0';
 
@@ -98,9 +95,23 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
                 bit_fls(job_resrcs->core_bitmap) == -1
             )
             {
-                /* Shoud we return an error here ? */
-                continue;
+                slurm_info("error: invalid job_resrcs");
+                return SLURM_ERROR;
             }
+
+            hostlist_t* hostlist = slurm_hostlist_create(job_resrcs->nodes);
+            if (!hostlist) {
+                slurm_info("error: hostlist_create");
+                return SLURM_ERROR;
+            }
+
+            nodeid = slurm_hostlist_find(hostlist, hostname);
+            if (nodeid == -1)
+            {
+                slurm_info("error: hostlist_find");
+                return SLURM_ERROR;
+            }
+            slurm_hostlist_destroy(hostlist);
 
             int bit_reps = *job_resrcs->sockets_per_node *
                            *job_resrcs->cores_per_socket;
@@ -187,8 +198,14 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             sem_close(proceed_init);
             free(sem_name);
 
+            time_t tstart;
+            time(&tstart);
+            if (tstart == -1) {
+                slurm_info("error: time: %s", strerror(errno));
+                return SLURM_ERROR;
+            }
             // INFO: Run EFP process...
-            efp_main(job_env->jobid);
+            efp_main(job_env->jobid, nodeid, tstart);
         default:
             pid_t hook_pid = getpid();
 
@@ -330,6 +347,32 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 
     slurm_info("Ctld_prolog: %s", plugin_name);
     slurm_info("Job Id: %u", job_ptr->job_id);
+
+    slurm_info("Collecting job allocation data...");
+    eps_allocation_data_t* data = get_allocation_data(job_ptr);
+
+    PGconn* db_connection = connect_db();
+
+    int connection_is_not_ok = check_connection(db_connection);
+
+    if (connection_is_not_ok) {
+        slurm_info(
+            "error: problems with db connection: %s",
+            PQerrorMessage(db_connection)
+        );
+        PQfinish(db_connection);
+        return SLURM_ERROR;
+    }
+    int err = insert_allocation_data(db_connection, data);
+    free_allocation_data(data);
+
+    if (err) {
+        slurm_info("error: failed to write data to db");
+        return SLURM_ERROR;
+    }
+
+    slurm_info("Closing DB connection...");
+    PQfinish(db_connection);
 
     return SLURM_SUCCESS;
 }

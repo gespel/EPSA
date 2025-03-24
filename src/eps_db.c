@@ -39,7 +39,8 @@ int check_query_result(PGresult* result, PGconn* connection)
 {
     ExecStatusType status = PQresultStatus(result);
     int status_ok = status == PGRES_COMMAND_OK || status == PGRES_TUPLES_OK;
-    if (!status_ok) {
+    if (!status_ok)
+    {
         printf(
             "eps-db: failed to execute query[%s]: %s\n",
             PQresStatus(PQresultStatus(result)),
@@ -74,7 +75,6 @@ int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
         sizeof(bin_userid),
         sizeof(ts)
     };
-
     PGresult* res = PQexecParams(
         connection,
         "INSERT INTO allocations ("ALLOC_COLS") "
@@ -87,13 +87,12 @@ int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
         0
     );
     int err = check_query_result(res, connection);
-
     PQclear(res);
-
     return err;
 }
 
-int insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* id)
+int
+insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* id)
 {
     uint32_t bin_jobid = htobe32((uint32_t) data->jobid);
     uint32_t bin_nodeid = htobe32((uint32_t) data->nodeid);
@@ -119,10 +118,10 @@ int insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* i
         sizeof(tstart),
         sizeof(tend)
     };
-
     PGresult* res = PQexecParams(
         connection,
-        "INSERT INTO executions ("EXEC_COLS") VALUES($1, $2, $3, to_timestamp($4), to_timestamp($5)) RETURNING id;",
+        "INSERT INTO executions ("EXEC_COLS")"
+        " VALUES($1, $2, $3, to_timestamp($4), to_timestamp($5)) RETURNING id;",
         5,
         NULL,
         paramValues,
@@ -133,14 +132,14 @@ int insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* i
     int err = check_query_result(res, connection);
     if (err) return err;
 
-    for (int i = 0; i < PQntuples(res); i++) {
-      for (int j = 0; j < PQnfields(res); j++) {
+    for (int i = 0; i < PQntuples(res); i++)
+    {
+      for (int j = 0; j < PQnfields(res); j++)
+      {
         *id = strtol(PQgetvalue(res, i, j), NULL, 10);
       }
     }
-
     PQclear(res);
-
     return 0;
 }
 
@@ -175,7 +174,6 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
         sizeof(t0),
         sizeof(t1)
     };
-
     PGresult* res = PQexecParams(
         connection,
         "INSERT INTO measurements ("MES_COLS") VALUES($1, $2, $3, $4, $5, $6, $7);",
@@ -187,8 +185,6 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
         0
     );
     int err = check_query_result(res, connection);
-
     PQclear(res);
-
     return err;
 }
