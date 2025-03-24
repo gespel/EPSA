@@ -4,6 +4,7 @@
 #include <slurm/slurm_errno.h>
 
 #include <src/common/bitstring.h>
+#include <src/common/xstring.h>
 #include <src/interfaces/prep.h>
 
 #define P_NAME "PrEp-EPS: "
@@ -11,6 +12,57 @@
 const char plugin_name[] = "EPS PrEp plugin";
 const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
+
+static int
+_load_nodes(node_info_msg_t** node_buffer_pptr, uint16_t show_flags)
+{
+    int error_code;
+    node_info_msg_t* node_info_ptr = NULL;
+    show_flags |= SHOW_MIXED;
+    error_code = slurm_load_node ((time_t) NULL, &node_info_ptr, show_flags);
+    if (error_code == SLURM_SUCCESS) {
+        *node_buffer_pptr = node_info_ptr;
+    }
+    return error_code;
+}
+
+static node_info_msg_t* _get_node_info_for_jobs(void)
+{
+	int error_code;
+	node_info_msg_t *node_info_msg = NULL;
+	uint16_t show_flags = 0;
+	/* Must load all nodes including hidden for cross-index
+	 * from job's node_inx to node table to work */
+	/*if (all_flag)		Always set this flag */
+	show_flags |= SHOW_ALL;
+	error_code = _load_nodes(&node_info_msg, show_flags);
+	if (error_code) {
+            slurm_info("error: load_nodes: %d", error_code);
+            return NULL;
+	}
+	return node_info_msg;
+}
+
+/* This set of functions loads/free node information so that we can map a job's
+ * core bitmap to it's CPU IDs based upon the thread count on each node. */
+static uint32_t _threads_per_core(char* host)
+{
+    node_info_msg_t *node_info_msg = NULL;
+    uint32_t i, threads = 1;
+
+    if (!host) return threads;
+    if (!(node_info_msg = _get_node_info_for_jobs())) return threads;
+    for (i = 0; i < node_info_msg->record_count; i++) {
+        if (
+            node_info_msg->node_array[i].name &&
+            !xstrcmp(host, node_info_msg->node_array[i].name)
+        ) {
+                threads = node_info_msg->node_array[i].threads;
+                break;
+        }
+    }
+    return threads;
+}
 
 /********************************
  *
@@ -113,17 +165,20 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
                     ) {
                         slurm_info("rel_node_inx: %d", rel_node_inx);
 
-                    //         if (sock_reps >=
-                    //             job_resrcs->sock_core_rep_count[sock_inx]) {
-                    //                 sock_inx++;
-                    //                 sock_reps = 0;
-                    //         }
-                    //         sock_reps++;
+                        if (
+                            sock_reps >=
+                            job_resrcs->sock_core_rep_count[sock_inx]
+                        ) {
+                                sock_inx++;
+                                sock_reps = 0;
+                        }
+                        sock_reps++;
 
-                    //         bit_reps = job_resrcs->sockets_per_node[sock_inx] *
-                    //                    job_resrcs->cores_per_socket[sock_inx];
-                    //         host = hostlist_shift(hl);
-                    //         threads = _threads_per_core(host);
+                        bit_reps = job_resrcs->sockets_per_node[sock_inx] *
+                                   job_resrcs->cores_per_socket[sock_inx];
+                        //host = hostlist_shift(hl);
+                        uint32_t threads = _threads_per_core(hostname);
+                        slurm_info("threads: %u", threads);
                     //         cpu_bitmap = bit_alloc(bit_reps * threads);
                     //         for (j = 0; j < bit_reps; j++) {
                     //                 if (bit_test(job_resrcs->core_bitmap, bit_inx)){
