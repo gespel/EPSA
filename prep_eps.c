@@ -19,11 +19,20 @@
 #include <eps_shm.h>
 #include <eps_utils.h>
 
+#include <eps_data.h>
+#include <eps_db.h>
+
+#include <src/interfaces/prep.h>
+
+
 #define EFP_WAIT_TIMEOUT 10 /* in seconds */
 
 const char plugin_name[] = "EPS";
 const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
+
+unsigned long long tstart, tend;
+time_t timestamp;
 
 /********************************
  *

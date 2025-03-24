@@ -1,9 +1,13 @@
 #include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
-#include <eps_sem.h>
+#include <eps_cgroup.h>
+#include <eps_db.h>
 #include <eps_efp.h>
+#include <eps_sem.h>
 #include <eps_utils.h>
 
 #include <EMA.h>
@@ -11,7 +15,8 @@
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
-void efp_main(int jid) {
+
+void efp_main(int jid, int nodeid, time_t tstart) {
     int status = EXIT_SUCCESS;
 
     Measurement* e0 = NULL;
@@ -84,17 +89,15 @@ void efp_main(int jid) {
         status = EXIT_FAILURE;
         goto exit;
     }
+
     e0 = malloc(devices.size * sizeof(Measurement));
     e1 = malloc(devices.size * sizeof(Measurement));
     t0 = malloc(devices.size * sizeof(Time));
     t1 = malloc(devices.size * sizeof(Time));
 
     for (int i = 0; i < devices.size; i++) {
-        LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
         e0[i] = EMA_get_energy_uj(devices.array[i]);
         t0[i] = EMA_get_time_in_us();
-        LOG(log_fd, "\t e0: %llu", e0[i]);
-        LOG(log_fd, "\t t0: %llu", t0[i]);
     }
 
     LOG(log_fd, "EFP waiting...");
@@ -104,10 +107,98 @@ void efp_main(int jid) {
     for (int i = 0; i < devices.size; i++) {
         e1[i] = EMA_get_energy_uj(devices.array[i]);
         t1[i] = EMA_get_time_in_us();
-        LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
-        LOG(log_fd, "\te1: %llu", e1[i]);
-        LOG(log_fd, "\tt1: %llu", t1[i]);
     }
+
+    LOG(log_fd, "Connecting to db...");
+    PGconn* db_connection = connect_db();
+    int connection_is_not_ok = check_connection(db_connection);
+    if (connection_is_not_ok) {
+        LOG(
+            log_fd,
+            "error: problems with db connection: %s",
+            PQerrorMessage(db_connection)
+        );
+        PQfinish(db_connection);
+        // Clear semaphores here and exit failure ?
+    }
+
+    time_t tend;
+    time(&tend);
+    // Handle potential error here ?
+
+    char nodename[HOST_NAME_MAX];
+    err = gethostname(nodename, HOST_NAME_MAX);
+    if (err) {
+        LOG(log_fd, "error: gethostname: %s", strerror(errno));
+        snprintf(nodename, HOST_NAME_MAX, "Undefined");
+    }
+
+    PGresult* res = PQexec(db_connection, "BEGIN");
+
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+        LOG(
+            log_fd,
+            "error: failed to BEGIN transation:%s",
+            PQerrorMessage(db_connection)
+        );
+        PQclear(res);
+        PQfinish(db_connection);
+        // Clear semaphores here ?
+        status = EXIT_FAILURE;
+        goto exit;
+    }
+
+    eps_execution_data_t execution;
+    execution.jobid = jid;
+    execution.nodename = nodename;
+    execution.nodeid = nodeid;
+    execution.tstart = tstart;
+    execution.tend = tend;
+
+    int execution_id;
+
+    err = insert_execution_data(db_connection, &execution, &execution_id);
+    if (err) {
+        LOG(log_fd, "error: failed execution data insertion!");
+        fclose(log_fd);
+        status = EXIT_FAILURE;
+        goto exit;
+    }
+
+    for (int i = 0; i < devices.size; i++) {
+        eps_measurement_data_t measurement;
+
+        measurement.execution_id = execution_id;
+        measurement.device_name = EMA_get_device_name(devices.array[i]);
+        // TODO: This is temporary, replace with real device uid once implemented
+        //       on EMA side...
+        measurement.device_uid = "0";
+        measurement.e0 = e0[i];
+        measurement.e1 = e1[i];
+        measurement.t0 = t0[i];
+        measurement.t1 = t1[i];
+
+        err = insert_measurement_data(db_connection, &measurement);
+        if (err) {
+            LOG(log_fd, "error: failed measurement data insertion!");
+            status = EXIT_FAILURE;
+            goto exit;
+        }
+    }
+
+    res = PQexec(db_connection, "COMMIT");
+
+    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+        LOG(
+            log_fd,
+            "error: failed to COMMIT transation:%s",
+            PQerrorMessage(db_connection)
+        );
+        PQclear(res);
+    }
+
+    LOG(log_fd, "Closing db connection...");
+    PQfinish(db_connection);
 
     LOG(log_fd, "Finalizing EMA...");
     err = EMA_finalize(NULL);
