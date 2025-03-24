@@ -7,37 +7,38 @@
 #include <src/common/xstring.h>
 #include <src/interfaces/prep.h>
 
-#define P_NAME "PrEp-EPS: "
-
-const char plugin_name[] = "EPS PrEp plugin";
+const char plugin_name[] = "EPS";
 const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
 
 static int
 _load_nodes(node_info_msg_t** node_buffer_pptr, uint16_t show_flags)
 {
-    int error_code;
+    int err;
     node_info_msg_t* node_info_ptr = NULL;
     show_flags |= SHOW_MIXED;
-    error_code = slurm_load_node ((time_t) NULL, &node_info_ptr, show_flags);
-    if (error_code == SLURM_SUCCESS) {
+    err = slurm_load_node ((time_t) NULL, &node_info_ptr, show_flags);
+    if (err == SLURM_SUCCESS)
+    {
         *node_buffer_pptr = node_info_ptr;
     }
-    return error_code;
+    return err;
 }
 
 static node_info_msg_t* _get_node_info_for_jobs(void)
 {
-	int error_code;
+	int err;
 	node_info_msg_t *node_info_msg = NULL;
 	uint16_t show_flags = 0;
 	/* Must load all nodes including hidden for cross-index
 	 * from job's node_inx to node table to work */
-	/*if (all_flag)		Always set this flag */
+
+	/* Always set this flag */
 	show_flags |= SHOW_ALL;
-	error_code = _load_nodes(&node_info_msg, show_flags);
-	if (error_code) {
-            slurm_info("error: load_nodes: %d", error_code);
+
+	err = _load_nodes(&node_info_msg, show_flags);
+	if (err) {
+            slurm_info("error: load_nodes: %d", err);
             return NULL;
 	}
 	return node_info_msg;
@@ -85,185 +86,71 @@ extern void prep_p_register_callbacks(prep_callbacks_t* callbacks) {}
 
 extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
 {
+    if (!running_in_slurmd()) return SLURM_SUCCESS;
+
     slurm_info("Prolog: %s", plugin_name);
     slurm_info("Job Id: %u", job_env->jobid);
+
+    char hostname[HOST_NAME_MAX];
+    hostname[0] = '\0';
+
+    int err = gethostname(hostname, HOST_NAME_MAX); 
+    if (err)
+    {
+        perror("gethostname: ");
+        slurm_info("error: gethostname");
+        return SLURM_ERROR;
+    }
 
     uint16_t show_flags = 0;
 
     show_flags |= SHOW_ALL;
     show_flags |= SHOW_DETAIL;
-
     job_info_msg_t* job_info_list = NULL;
 
-    int err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
-    if (err != SLURM_SUCCESS) {
+    err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
+    if (err != SLURM_SUCCESS)
+    {
         slurm_info("error: slurm_load_job: %d", err);
-        return SLURM_ERROR; /* Does it make sense to continue ? */
+        return SLURM_ERROR;
     } 
-    if (job_info_list->record_count > 0) {
-        for (int i = 0; i < job_info_list->record_count; i++) {
+    if (job_info_list->record_count > 0)
+    {
+        for (int i = 0; i < job_info_list->record_count; i++)
+        {
             job_info_t job_rec = job_info_list->job_array[i];
+            if (job_rec.job_id != job_env->jobid) continue;
+
             job_resources_t* job_resrcs = job_rec.job_resrcs;
 
-            slurm_info("record[%d]: job_id %u", i, job_rec.job_id);
-            slurm_info("record[%d]: GRES %s", i, job_rec.gres_total);
-
-            int64_t last;
-            hostlist_t* hl;
-            hostlist_t* hl_last;
-        
-            if (job_resrcs && job_resrcs->core_bitmap &&
-                ((last = bit_fls(job_resrcs->core_bitmap)) != -1)) {
-                    hl = slurm_hostlist_create(job_resrcs->nodes);
-                    if (!hl) {
-                        slurm_info(
-                            "error: hostlist_create: %s",
-                            job_resrcs->nodes
-                        );
-                        return SLURM_ERROR; /* Does it make sense to break here instead ?*/
-                    }
-                    hl_last = slurm_hostlist_create(NULL);
-                    if (!hl_last) {
-                        slurm_info("error: hostlist_create: NULL");
-                        slurm_hostlist_destroy(hl);
-                        return SLURM_ERROR;
-                    }
-
-                    char hostname[HOST_NAME_MAX];
-                    hostname[0] = '\0';
-
-                    err = gethostname(hostname, HOST_NAME_MAX); 
-                    if (err) {
-                        perror("gethostname: ");
-                        slurm_info("error: gethostname");
-                        return SLURM_ERROR; /* Or break ? */
-                    }
-
-                    slurm_info("Hostname: %s", hostname);
-
-                    int host_pos = slurm_hostlist_find(hl, hostname);
-                    if (host_pos == -1) {
-                        continue;
-                    }
-
-                    slurm_info("host_pos: %d", host_pos);
-
-                    int bit_inx, bit_reps, i, sock_inx, sock_reps;
-                    bit_inx = i = sock_inx = sock_reps = 0;
-                    int rel_node_inx;
-                    int abs_node_inx = job_rec.node_inx[i];
-                    char tmp1[128], tmp2[128];
-
-                    // gres_last = "";
-                    
-                    tmp1[0] = '\0'; /* tmp1[] stores the current cpu(s) allocated */
-                    tmp2[0] = '\0'; /* stores last cpu(s) allocated */
-                    for (
-                        rel_node_inx=0;
-                        rel_node_inx < job_resrcs->nhosts;
-                        rel_node_inx++
-                    ) {
-                        slurm_info("rel_node_inx: %d", rel_node_inx);
-
-                        if (
-                            sock_reps >=
-                            job_resrcs->sock_core_rep_count[sock_inx]
-                        ) {
-                                sock_inx++;
-                                sock_reps = 0;
-                        }
-                        sock_reps++;
-
-                        bit_reps = job_resrcs->sockets_per_node[sock_inx] *
-                                   job_resrcs->cores_per_socket[sock_inx];
-                        //host = hostlist_shift(hl);
-                        uint32_t threads = _threads_per_core(hostname);
-                        slurm_info("threads: %u", threads);
-                    //         cpu_bitmap = bit_alloc(bit_reps * threads);
-                    //         for (j = 0; j < bit_reps; j++) {
-                    //                 if (bit_test(job_resrcs->core_bitmap, bit_inx)){
-                    //                         for (k = 0; k < threads; k++)
-                    //                                 bit_set(cpu_bitmap,
-                    //                                         (j * threads) + k);
-                    //                 }
-                    //                 bit_inx++;
-                    //         }
-                    //         bit_fmt(tmp1, sizeof(tmp1), cpu_bitmap);
-                    //         FREE_NULL_BITMAP(cpu_bitmap);
-                    //         /*
-                    //          * If the allocation values for this host are not the
-                    //          * same as the last host, print the report of the last
-                    //          * group of hosts that had identical allocation values.
-                    //          */
-                    //         if (xstrcmp(tmp1, tmp2) ||
-                    //             ((rel_node_inx < job_ptr->gres_detail_cnt) &&
-                    //              xstrcmp(job_ptr->gres_detail_str[rel_node_inx],
-                    //                      gres_last)) ||
-                    //             (last_mem_alloc_ptr !=
-                    //              job_resrcs->memory_allocated) ||
-                    //             (job_resrcs->memory_allocated &&
-                    //              (last_mem_alloc !=
-                    //               job_resrcs->memory_allocated[rel_node_inx]))) {
-                    //                 if (hostlist_count(hl_last)) {
-                    //                         last_hosts =
-                    //                                 hostlist_ranged_string_xmalloc(
-                    //                                 hl_last);
-                    //                         xstrfmtcat(out,
-                    //                                    "  Nodes=%s CPU_IDs=%s "
-                    //                                    "Mem=%"PRIu64" GRES=%s",
-                    //                                    last_hosts, tmp2,
-                    //                                    last_mem_alloc_ptr ?
-                    //                                    last_mem_alloc : 0,
-                    //                                    gres_last);
-                    //                         xfree(last_hosts);
-                    //                         xstrcat(out, line_end);
-
-                    //                         hostlist_destroy(hl_last);
-                    //                         hl_last = hostlist_create(NULL);
-                    //                 }
-
-                    //                 strcpy(tmp2, tmp1);
-                    //                 if (rel_node_inx < job_ptr->gres_detail_cnt) {
-                    //                         gres_last = job_ptr->
-                    //                                     gres_detail_str[rel_node_inx];
-                    //                 } else {
-                    //                         gres_last = "";
-                    //                 }
-                    //                 last_mem_alloc_ptr =
-                    //                         job_resrcs->memory_allocated;
-                    //                 if (last_mem_alloc_ptr)
-                    //                         last_mem_alloc = job_resrcs->
-                    //                                 memory_allocated[rel_node_inx];
-                    //                 else
-                    //                         last_mem_alloc = NO_VAL64;
-                    //         }
-                    //         hostlist_push_host(hl_last, host);
-                    //         free(host);
-
-                    //         if (bit_inx > last)
-                    //                 break;
-
-                    //         if (abs_node_inx > job_ptr->node_inx[i+1]) {
-                    //                 i += 2;
-                    //                 abs_node_inx = job_ptr->node_inx[i];
-                    //         } else {
-                    //                 abs_node_inx++;
-                    //         }
-                    }
-
-                    // if (hostlist_count(hl_last)) {
-                    //         last_hosts = hostlist_ranged_string_xmalloc(hl_last);
-                    //         xstrfmtcat(out, "  Nodes=%s CPU_IDs=%s Mem=%"PRIu64" GRES=%s",
-                    //                  last_hosts, tmp2,
-                    //                  last_mem_alloc_ptr ? last_mem_alloc : 0,
-                    //                  gres_last);
-                    //         xfree(last_hosts);
-                    //         xstrcat(out, line_end);
-                    // }
-                    slurm_hostlist_destroy(hl);
-                    slurm_hostlist_destroy(hl_last);
+            if (
+                !job_resrcs ||
+                !job_resrcs->core_bitmap ||
+                bit_fls(job_resrcs->core_bitmap) == -1
+            )
+            {
+                /* Shoud we return an error here ? */
+                continue;
             }
 
+            int bit_reps = *job_resrcs->sockets_per_node *
+                           *job_resrcs->cores_per_socket;
+            uint32_t threads = _threads_per_core(hostname);
+            bitstr_t* cpu_bitmap = bit_alloc(bit_reps * threads);
+            int bit_idx = 0;
+            for (int j = 0; j < bit_reps; j++)
+            {
+                if (bit_test(job_resrcs->core_bitmap, bit_idx))
+                {
+                    for (int k = 0; k < threads; k++)
+                        bit_set(cpu_bitmap, (j * threads) + k);
+                }
+                bit_idx++;
+            }
+            char cpu_ids[128];
+            bit_fmt(cpu_ids, sizeof(cpu_ids), cpu_bitmap);
+            slurm_info("cpu_ids: %s", cpu_ids);
+            FREE_NULL_BITMAP(cpu_bitmap);
         }
     }
 
@@ -272,6 +159,8 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
 
 extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 {
+    if (!running_in_slurmd()) return SLURM_SUCCESS;
+
     slurm_info("Epilog: %s", plugin_name);
     slurm_info("Job Id: %u", job_env->jobid);
 
@@ -280,6 +169,8 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
 
 extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 {
+    if (!running_in_slurmctld()) return SLURM_SUCCESS;
+
     slurm_info("Ctld_prolog: %s", plugin_name);
     slurm_info("Job Id: %u", job_ptr->job_id);
 
@@ -288,6 +179,8 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 
 extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
 {
+    if (!running_in_slurmctld()) return SLURM_SUCCESS;
+
     slurm_info("Ctld_epilog: %s", plugin_name);
     slurm_info("Job Id: %u", job_ptr->job_id);
 
@@ -311,7 +204,7 @@ extern void prep_p_required(prep_call_type_t type, bool* required)
         case PREP_PROLOG:
         case PREP_EPILOG:
             if (running_in_slurmd())
-                *required = false;
+                *required = true;
             break;
         default:
             return;
