@@ -18,7 +18,15 @@ typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
 
-void efp_main(int jid, int nodeid, time_t tstart, eps_cpuinfo_t* cpuinfo) {
+void
+efp_main(
+    int jid,
+    int nodeid,
+    time_t tstart,
+    const char* cpu_ids,
+    eps_cpuinfo_t* cpuinfo
+)
+{
     int status = EXIT_SUCCESS;
 
     Measurement* e0 = NULL;
@@ -76,15 +84,8 @@ void efp_main(int jid, int nodeid, time_t tstart, eps_cpuinfo_t* cpuinfo) {
         goto exit;
     }
 
-    char* rest = get_cpuset_restriction(efp_pid);
-    if (!rest) {
-        LOG(log_fd, "Failed to get cpuset restriction!");
-        status = EXIT_FAILURE;
-        goto exit;
-    }
-
     size_t size;
-    int* cores = parse_cpuset_restriction(rest, &size);
+    int* cores = parse_cpuset_restriction(cpu_ids, &size);
     if (!cores) {
         LOG(log_fd, "Failed to parse cpuset restriction!");
         status = EXIT_FAILURE;
@@ -287,7 +288,6 @@ exit:
     free(t1);
 
     free(utilized);
-    free_cpuinfo(cpuinfo);
 
     LOG(log_fd, "Closing semaphores...");
     if (proceed_init) sem_close(proceed_init);

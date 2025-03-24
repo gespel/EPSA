@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <hwloc.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdint.h>
@@ -14,6 +15,7 @@
 #include <src/common/bitstring.h>
 #include <src/interfaces/prep.h>
 
+#include <eps_cpuinfo.h>
 #include <eps_data.h>
 #include <eps_db.h>
 #include <eps_efp.h>
@@ -29,6 +31,7 @@ const uint32_t plugin_version = SLURM_VERSION_NUMBER;
 
 unsigned long long tstart, tend;
 time_t timestamp;
+eps_cpuinfo_t cpuinfo;
 
 /********************************
  *
@@ -39,6 +42,34 @@ time_t timestamp;
 extern int init(void)
 {
     slurm_info("Init: %s", plugin_name);
+
+    if (!running_in_slurmd()) return SLURM_SUCCESS;
+
+    hwloc_topology_t topology;
+    hwloc_topology_init(&topology);
+    hwloc_topology_load(topology);
+
+    int err = populate_cpuinfo(topology, &cpuinfo);
+    if (err)
+    {
+        hwloc_topology_destroy(topology);
+        return SLURM_ERROR;
+    }
+
+    slurm_info("Socket count: %u", cpuinfo.socket_cnt);
+    for(int i = 0; i < cpuinfo.socket_cnt; i++)
+    {
+        slurm_info("Cores per socket [%d]: %u", i, cpuinfo.cores_per_socket[i]);
+    }
+
+    slurm_info("Cores count: %u", cpuinfo.core_cnt);
+    for(int i = 0; i < cpuinfo.core_cnt; i++)
+    {
+        slurm_info("Core [%d] -> Socket [%u]", i, cpuinfo.socket_idx[i]);
+    }
+
+    hwloc_topology_destroy(topology);
+
     return SLURM_SUCCESS;
 }
 
@@ -57,8 +88,11 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     slurm_info("Job Id: %u", job_env->jobid);
 
     int nodeid;
+    uint16_t show_flags = 0;
     char hostname[HOST_NAME_MAX];
+    char cpu_ids[128];
     hostname[0] = '\0';
+    cpu_ids[0] ='\0';
 
     int err = gethostname(hostname, HOST_NAME_MAX); 
     if (err)
@@ -67,8 +101,6 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         slurm_info("error: gethostname");
         return SLURM_ERROR;
     }
-
-    uint16_t show_flags = 0;
 
     show_flags |= SHOW_ALL;
     show_flags |= SHOW_DETAIL;
@@ -127,7 +159,6 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
                 }
                 bit_idx++;
             }
-            char cpu_ids[128];
             bit_fmt(cpu_ids, sizeof(cpu_ids), cpu_bitmap);
             slurm_info("cpu_ids: %s", cpu_ids);
             FREE_NULL_BITMAP(cpu_bitmap);
@@ -205,7 +236,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
                 return SLURM_ERROR;
             }
             // INFO: Run EFP process...
-            efp_main(job_env->jobid, nodeid, tstart);
+            efp_main(job_env->jobid, nodeid, tstart, cpu_ids, &cpuinfo);
         default:
             pid_t hook_pid = getpid();
 
