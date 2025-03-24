@@ -9,6 +9,7 @@ set(SLURM_INSTALL_DIR "" CACHE PATH "A directory of slurm installation")
 set(SLURM_SRC_DIR "" CACHE PATH "A directory with slurm source code")
 set(EMA_INSTALL_DIR "" CACHE PATH "A directory of EMA installation")
 set(PQ_INSTALL_DIR "" CACHE PATH "A directory with PostgresQL installation")
+set(HWLOC_INSTALL_DIR "" CACHE PATH "A directory of hwloc installation")
 
 if(NOT SLURM_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `SLURM_INSTALL_DIR` path!")
@@ -25,6 +26,11 @@ endif()
 if(NOT PQ_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `PQ_INSTALL_DIR` path!")
 endif()
+
+if(NOT HWLOC_INSTALL_DIR)
+    message(FATAL_ERROR "You have to set up `HWLOC_INSTALL_DIR` path!")
+endif()
+
 
 
 add_library(eps SHARED)

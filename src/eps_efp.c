@@ -5,8 +5,10 @@
 #include <time.h>
 
 #include <eps_cgroup.h>
+#include <eps_cpuinfo.h>
 #include <eps_db.h>
 #include <eps_efp.h>
+#include <eps_sem.h>
 #include <eps_sem.h>
 #include <eps_utils.h>
 
@@ -15,8 +17,8 @@
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
-void efp_main(int jid, int nodeid, time_t tstart)
-{
+
+void efp_main(int jid, int nodeid, time_t tstart, eps_cpuinfo_t* cpuinfo) {
     int status = EXIT_SUCCESS;
 
     Measurement* e0 = NULL;
@@ -72,6 +74,42 @@ void efp_main(int jid, int nodeid, time_t tstart)
         LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
         status = EXIT_FAILURE;
         goto exit;
+    }
+
+    char* rest = get_cpuset_restriction(efp_pid);
+    if (!rest) {
+        LOG(log_fd, "Failed to get cpuset restriction!");
+        status = EXIT_FAILURE;
+        goto exit;
+    }
+
+    size_t size;
+    int* cores = parse_cpuset_restriction(rest, &size);
+    if (!cores) {
+        LOG(log_fd, "Failed to parse cpuset restriction!");
+        status = EXIT_FAILURE;
+        goto exit;
+    }
+
+    int* utilized = calloc(cpuinfo->socket_cnt, sizeof(int));
+
+    for (int i = 0; i < size; i++) {
+        int cidx = cores[i];
+        int sidx = cpuinfo->socket_idx[cidx];
+        utilized[sidx]++;
+    }
+
+    for (int i = 0; i < cpuinfo->socket_cnt; i++) {
+        LOG(log_fd, "Utilized on socket %d: %d", i, utilized[i]);
+        LOG(
+            log_fd,
+            "Cores per socket %d: %d",
+            i,
+            cpuinfo->cores_per_socket[i]
+        );
+        double utilization =
+            (double)utilized[i] / (double)cpuinfo->cores_per_socket[i];
+        LOG(log_fd, "Utilization on socket %d: %f", i, utilization);
     }
 
     LOG(log_fd, "Initializig EMA...");
@@ -176,17 +214,40 @@ void efp_main(int jid, int nodeid, time_t tstart)
         goto exit;
     }
 
-    for (int i = 0; i < devices.size; i++)
-    {
+    for (int i = 0; i < devices.size; i++) {
+        const char* device_name = EMA_get_device_name(devices.array[i]);
+        char* device_uid = (char*)EMA_get_device_uid(devices.array[i]);
+
         eps_measurement_data_t measurement;
 
+        double utilization = 100;
+        if (strstr(device_uid, "CPU-")) {
+            char* socket_idx = device_uid + 4;
+            int parsed_idx;
+            err = eps_parse_int(socket_idx, &parsed_idx);
+            if (err) {
+                LOG(
+                    log_fd,
+                    "error: failed to parse socket index: %s",
+                    socket_idx
+                );
+                // TODO: Decide what to do here...
+            } else {
+                utilization =
+                    (double)utilized[parsed_idx] /
+                    (double)cpuinfo->cores_per_socket[parsed_idx];
+                utilization = utilization * (double)100;
+            }
+        }
+
         measurement.execution_id = execution_id;
-        measurement.device_name = EMA_get_device_name(devices.array[i]);
-        measurement.device_uid = EMA_get_device_uid(devices.array[i]);
+        measurement.device_name = device_name;
+        measurement.device_uid = device_uid;
         measurement.e0 = e0[i];
         measurement.e1 = e1[i];
         measurement.t0 = t0[i];
         measurement.t1 = t1[i];
+        measurement.utilization = utilization;
 
         err = insert_measurement_data(db_connection, &measurement);
         if (err)
@@ -224,6 +285,9 @@ exit:
     free(e1);
     free(t0);
     free(t1);
+
+    free(utilized);
+    free_cpuinfo(cpuinfo);
 
     LOG(log_fd, "Closing semaphores...");
     if (proceed_init) sem_close(proceed_init);

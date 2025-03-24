@@ -22,7 +22,7 @@ For further details check:
 
 #define ALLOC_COLS "jobid, job_name, nnodes, userid, ts"
 #define EXEC_COLS "jobid, node_name, node_id, ts_start, ts_end"
-#define MES_COLS "exec_id, device_name, device_uid, e0, e1, t0, t1"
+#define MES_COLS "exec_id, device_name, device_uid, e0, e1, t0, t1, utilization"
 
 PGconn* connect_db()
 {
@@ -150,34 +150,39 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
 
     char e0[20], e1[20];
     char t0[20], t1[20];
+    char utilization[6];
 
     snprintf(e0, 20, "%llu", data->e0);
     snprintf(e1, 20, "%llu", data->e1);
     snprintf(t0, 20, "%llu", data->t0);
     snprintf(t1, 20, "%llu", data->t1);
+    snprintf(t1, 20, "%llu", data->t1);
+    snprintf(utilization, 6, "%.2f", data->utilization);
 
-    const char* paramValues[7] = {
+    const char* paramValues[8] = {
         exec_id,
         data->device_name,
         data->device_uid,
         e0,
         e1,
         t0,
-        t1
+        t1,
+        utilization
     };
-    int paramLengths[7] = {
+    int paramLengths[8] = {
         sizeof(exec_id),
         sizeof(data->device_name),
         sizeof(data->device_uid),
         sizeof(e0),
         sizeof(e1),
         sizeof(t0),
-        sizeof(t1)
+        sizeof(t1),
+        sizeof(utilization)
     };
     PGresult* res = PQexecParams(
         connection,
-        "INSERT INTO measurements ("MES_COLS") VALUES($1, $2, $3, $4, $5, $6, $7);",
-        7,
+        "INSERT INTO measurements ("MES_COLS") VALUES($1, $2, $3, $4, $5, $6, $7, $8);",
+        8,
         NULL,
         paramValues,
         paramLengths,

@@ -34,6 +34,7 @@ typedef struct eps_measurement_data
     unsigned long long e1;
     unsigned long long t0;
     unsigned long long t1;
+    double utilization;
 } eps_measurement_data_t;
 
 eps_allocation_data_t* get_allocation_data(const job_record_t* job);
