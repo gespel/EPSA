@@ -1,28 +1,53 @@
 # EMA Plugin(s) for Slurm
 
 Uses PreEp (Prolog/Epilog) Plugin API from Slurm to measure energy on compute
-nodes and write them alongside with some additional information to connected
-DB. \*
+nodes and write them alongside with some additional (meta) information to the
+connected database.
 
-\* - Currently work in progress.
+## Table Of Contents
+
+1. [Limitations](#limitations)
+2. [Build](#build)
+   - [Prerequisites](#prerequisites)
+   - [Considerations](#considerations)
+   - [Steps](#steps)
+3. [Installation and Setup](#installation-and-setup)
+   - [Plugin](#plugin)
+   - [Database](#database)
+4. [Database Consistency](#database-consistency)
+
+## Limitations
+
+TODO: Write this section
 
 ## Build
 
 ### Prerequisites
 
 1. [CMake](https://cmake.org/)
-1. [Slurm](https://www.schedmd.com/slurm/) installed and configured on the
+
+2. [Slurm](https://www.schedmd.com/slurm/) installed and configured on the
    cluster.
-2. [Slurm source code](https://github.com/SchedMD/slurm) present on the
+
+3. [Slurm source code](https://github.com/SchedMD/slurm) present on the
    system used for the build.
 
    **IMPORTANT:** The source code version should match exactly (up to minor number)
    the version of `Slurm` installed on your cluster. Otherwise plugin compatibility
    issues may arise.
 
-3. `EMA` library installed on all cluster nodes.
-3. `PostgresQL` installed on all cluster nodes (the full installation is actually
-   required only on a head node, compute nodes only need `pq` library).
+4. [EMA](https://github.com/PERFACCT/EMA) library installed on all cluster nodes.
+
+5. [PostgresQL](https://www.postgresql.org/) installed on all cluster nodes (the
+   full installation is actually required only on the database node, compute nodes
+   only need `pq` library).
+
+6. [hwloc](https://www.open-mpi.org/projects/hwloc/) library installed on all
+   cluster nodes.
+
+### Considerations
+
+
 
 ### Steps
 
@@ -80,10 +105,12 @@ After successful completion of the above steps you should have two plugin files 
 
 ### Database
 
-1. Run `postgresql` server on your cluster's head node. Create a new database
-   (we suggest `eps` as a name).
+1. Run `postgresql` server on your cluster's head node (or on a separate database
+   node).
 
-   Set up (create) following tables:
+2. Create a new database (we suggest `eps` as a name).
+
+3. Set up (create) following tables:
 
    ```sql
    CREATE TABLE allocations (
@@ -118,11 +145,13 @@ After successful completion of the above steps you should have two plugin files 
 
    ```
 
-2. Make connection string available via environment variable on all cluster
+4. Make connection string available via environment variable on all cluster
    nodes.
 
-   Name of the varialble: **`EPS_DB_CONN_STR`**.
+   Name of the variable: **`EPS_DB_CONN_STR`**.
    Connection string example: `postgresql://user:password@10.0.0.42/eps`
 
    **Important**: As the connection string most probably will contain sensitive
    info, make sure to restrict it's availability accordingly.
+
+## Database Consistency
