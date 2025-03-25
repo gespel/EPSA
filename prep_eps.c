@@ -171,9 +171,6 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         free(gres_idxs);
     }
 
-    for (int i = 0; i < gres_uuid_count; i++)
-        slurm_info("gres_uuid[%d]: %s", i, gres_uuid_list[i]); 
-
     err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
     if (err != SLURM_SUCCESS)
     {
@@ -271,6 +268,8 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             sem_close(proceed_init);
             sem_unlink(sem_name);
             free(sem_name);
+            
+            if (gres_uuid_list) free(gres_uuid_list);
 
             slurm_info("error: fork: %s", strerror(errno));
             return SLURM_ERROR;
@@ -288,7 +287,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             free(sem_name);
 
             // INFO: Run EFP process...
-            efp_main(job_env->jobid);
+            efp_main(job_env->jobid, gres_uuid_count, gres_uuid_list);
         default:
             pid_t hook_pid = getpid();
 
@@ -315,6 +314,8 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             sem_close(proceed_init);
             sem_unlink(sem_name);
             free(sem_name);
+
+            if (gres_uuid_list) free(gres_uuid_list);
 
             slurm_info("Init hook exits...");
     }

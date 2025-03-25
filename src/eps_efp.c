@@ -11,7 +11,7 @@
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
-void efp_main(int jid) {
+void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     int status = EXIT_SUCCESS;
 
     Measurement* e0 = NULL;
@@ -84,14 +84,47 @@ void efp_main(int jid) {
         status = EXIT_FAILURE;
         goto exit;
     }
-    e0 = malloc(devices.size * sizeof(Measurement));
-    e1 = malloc(devices.size * sizeof(Measurement));
-    t0 = malloc(devices.size * sizeof(Time));
-    t1 = malloc(devices.size * sizeof(Time));
 
-    for (int i = 0; i < devices.size; i++) {
-        LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
-        e0[i] = EMA_get_energy_uj(devices.array[i]);
+    size_t filtered_size = 0;
+    // TODO: Impove with realloc ?
+    Device** filtered_devices = malloc(devices.size * sizeof(Device*));
+
+    for (int i = 0; i < devices.size; i++)
+    {
+        Device* dev = devices.array[i];
+        const char* name = EMA_get_device_name(dev);
+        const char* uuid = EMA_get_device_uid(dev);
+        char* _name = strdup(name);
+        _name[3] = '\0';
+
+        if (!gres_uuid_count)
+        {
+            if (strcmp(_name, "CPU") == 0)
+            {
+                filtered_devices[filtered_size] = dev;
+                filtered_size++;
+            }
+            continue;
+        }
+        int match = 0;
+        for (int j = 0; j < gres_uuid_count; j++)
+        {
+            if (strcmp(uuid, gres_uuid_list[j]) == 0) match = 1;
+        }
+        if (match || (strcmp(_name, "CPU") == 0))
+        {
+            filtered_devices[filtered_size] = dev;
+            filtered_size++;
+        }
+    }
+    e0 = malloc(filtered_size * sizeof(Measurement));
+    e1 = malloc(filtered_size * sizeof(Measurement));
+    t0 = malloc(filtered_size * sizeof(Time));
+    t1 = malloc(filtered_size * sizeof(Time));
+
+    for (int i = 0; i < filtered_size; i++) {
+        LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(filtered_devices[i]));
+        e0[i] = EMA_get_energy_uj(filtered_devices[i]);
         t0[i] = EMA_get_time_in_us();
         LOG(log_fd, "\t e0: %llu", e0[i]);
         LOG(log_fd, "\t t0: %llu", t0[i]);
@@ -101,10 +134,10 @@ void efp_main(int jid) {
 
     sem_wait(proceed_efp);
 
-    for (int i = 0; i < devices.size; i++) {
-        e1[i] = EMA_get_energy_uj(devices.array[i]);
+    for (int i = 0; i < filtered_size; i++) {
+        e1[i] = EMA_get_energy_uj(filtered_devices[i]);
         t1[i] = EMA_get_time_in_us();
-        LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(devices.array[i]));
+        LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(filtered_devices[i]));
         LOG(log_fd, "\te1: %llu", e1[i]);
         LOG(log_fd, "\tt1: %llu", t1[i]);
     }
