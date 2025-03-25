@@ -14,6 +14,10 @@
 #include <src/common/bitstring.h>
 #include <src/interfaces/prep.h>
 
+#ifdef HAS_NVML
+#include <nvml.h>
+#endif
+
 #include <eps_efp.h>
 #include <eps_sem.h>
 #include <eps_shm.h>
@@ -67,6 +71,39 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     show_flags |= SHOW_ALL;
     show_flags |= SHOW_DETAIL;
     job_info_msg_t* job_info_list = NULL;
+    node_info_msg_t* node_info_list = NULL;
+
+    err = slurm_load_node_single(&node_info_list, hostname, show_flags);
+    if (err != SLURM_SUCCESS)
+    {
+        slurm_info("error: slurm_load_node_single: %d", err);
+        return SLURM_ERROR;
+    } 
+
+    int gres_uuid_count = 0;
+    char** gres_uuid_list = NULL;
+
+    if (node_info_list->record_count > 0)
+    {
+        node_info_t node_rec = node_info_list->node_array[0];
+        slurm_info("node_rec->gres: %s", node_rec.gres);
+        slurm_info("node_rec->gres_used: %s", node_rec.gres_used);
+
+        // TODO: Parse the gres_used string for device minor numbers
+
+        #ifdef HAS_NVML
+        nvmlReturn_t ret = nvmlInitWithFlags(NVML_INIT_FLAG_NO_GPUS);
+        if (ret != NVML_SUCCESS)
+        {
+            slurm_info("error: nvmlInitWithFlags: %s", nvmlErrorString(ret));
+        }
+        else
+        {
+            slurm_info("NVML Initialized!");
+            // TODO: Lookup the devices by minor numbers, compose gres_uuid_list
+        }
+        #endif
+    }
 
     err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
     if (err != SLURM_SUCCESS)
@@ -147,6 +184,18 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         slurm_info("error: get_efp_sem: %s", strerror(errno));
         return SLURM_ERROR;
     }
+
+    #ifdef HAS_NVML
+    nvmlReturn_t ret = nvmlShutdown();
+    if (ret != NVML_SUCCESS)
+    {
+        slurm_info("error: nvmlShutdown: %s", nvmlErrorString(ret));
+    }
+    else
+    {
+        slurm_info("NVML shutdown!");
+    }
+    #endif
 
     pid_t pid = fork();
     switch(pid) {
