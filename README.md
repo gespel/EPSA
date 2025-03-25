@@ -70,5 +70,5 @@ After successful completion of the above steps you should have two plugin files 
    - `slurmd` on compute nodes;
    - `slurmctld` on the head (controller) node.
 
-   *NOTE: On this step potentially some issue may arise (see `step 3` `**IMPORTANT**`
-   note.* 
+   *NOTE: On this step potentially some issue may arise (see `step 3` **IMPORTANT**
+   note).*
