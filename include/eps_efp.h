@@ -8,5 +8,6 @@ void efp_main(
     const char* cpu_ids,
     eps_cpuinfo_t* cpuinfo
 );
+void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list);
 
 #endif

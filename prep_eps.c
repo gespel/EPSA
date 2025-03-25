@@ -18,6 +18,10 @@
 #include <eps_cpuinfo.h>
 #include <eps_data.h>
 #include <eps_db.h>
+#ifdef HAS_NVML
+#include <nvml.h>
+#endif
+
 #include <eps_efp.h>
 #include <eps_sem.h>
 #include <eps_shm.h>
@@ -105,6 +109,105 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     show_flags |= SHOW_ALL;
     show_flags |= SHOW_DETAIL;
     job_info_msg_t* job_info_list = NULL;
+    node_info_msg_t* node_info_list = NULL;
+
+    err = slurm_load_node_single(&node_info_list, hostname, show_flags);
+    if (err != SLURM_SUCCESS)
+    {
+        slurm_info("error: slurm_load_node_single: %d", err);
+        return SLURM_ERROR;
+    } 
+
+    int gres_uuid_count = 0;
+    char** gres_uuid_list = NULL;
+
+    if (node_info_list->record_count > 0)
+    {
+        node_info_t node_rec = node_info_list->node_array[0];
+        slurm_info("node_rec->gres: %s", node_rec.gres);
+        slurm_info("node_rec->gres_used: %s", node_rec.gres_used);
+
+        size_t gres_count = 0;
+        int* gres_idxs = NULL;
+
+        char* idx = NULL;
+
+        int ret = parse_gres(node_rec.gres_used, &idx);
+        if (ret < 0)
+        {
+            slurm_info("Failed to parse gres_used!");
+            return SLURM_ERROR;
+        }
+        if (ret > 0)
+        {
+            gres_idxs = parse_cpuset_restriction(idx, &gres_count);
+            if (gres_count && !gres_idxs)
+            {
+                slurm_info("Failed to parse gres indexes substring!");
+                return SLURM_ERROR;
+            }
+            
+        }
+
+        if (gres_count > 0)
+        {
+            #ifdef HAS_NVML
+
+            gres_uuid_list = (char **)malloc(gres_count * sizeof(char*));
+
+            nvmlReturn_t ret = nvmlInitWithFlags(NVML_INIT_FLAG_NO_GPUS);
+            NVML_HANDLE_RET(ret, "nvmlInitWithFlags");
+
+            slurm_info("NVML Initialized!");
+
+            unsigned int device_count;
+            ret = nvmlDeviceGetCount_v2(&device_count);
+            NVML_HANDLE_RET(ret, "nvmlDeviceGetCount_v2");
+
+            for (unsigned int i = 0; i < device_count; i++)
+            {
+                nvmlDevice_t handle;
+                ret = nvmlDeviceGetHandleByIndex_v2(i, &handle);
+                NVML_HANDLE_RET(ret, "nvmlDeviceGetHandleByIndex_v2");
+
+                unsigned int minor;
+                ret = nvmlDeviceGetMinorNumber(handle, &minor);
+                NVML_HANDLE_RET(ret, "nvmlDeviceGetMinorNumber");
+
+                int match = 0;
+                for (int i = 0; i < gres_count; i++)
+                {
+                    unsigned int idx = gres_idxs[i];
+                    if (minor == idx) match = 1;
+                }
+
+                if (!match) continue;
+
+                char uuid[NVML_DEVICE_UUID_BUFFER_SIZE];
+                ret = nvmlDeviceGetUUID(
+                    handle,
+                    uuid,
+                    NVML_DEVICE_UUID_BUFFER_SIZE
+                );
+                NVML_HANDLE_RET(ret, "nvmlDeviceGetUUID");
+
+                gres_uuid_list[gres_uuid_count] = strdup(uuid);
+                gres_uuid_count++;
+            }
+
+            ret = nvmlShutdown();
+            if (ret != NVML_SUCCESS)
+            {
+                slurm_info("error: nvmlShutdown: %s", nvmlErrorString(ret));
+            }
+            else
+            {
+                slurm_info("NVML shutdown!");
+            }
+            #endif
+        }
+        free(gres_idxs);
+    }
 
     err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
     if (err != SLURM_SUCCESS)
@@ -199,6 +302,9 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         return SLURM_ERROR;
     }
 
+    #ifdef HAS_NVML
+    #endif
+
     pid_t pid = fork();
     switch(pid) {
         case -1:
@@ -213,6 +319,8 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             sem_close(proceed_init);
             sem_unlink(sem_name);
             free(sem_name);
+            
+            if (gres_uuid_list) free(gres_uuid_list);
 
             slurm_info("error: fork: %s", strerror(errno));
             return SLURM_ERROR;
@@ -237,6 +345,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             }
             // INFO: Run EFP process...
             efp_main(job_env->jobid, nodeid, tstart, cpu_ids, &cpuinfo);
+            efp_main(job_env->jobid, gres_uuid_count, gres_uuid_list);
         default:
             pid_t hook_pid = getpid();
 
@@ -263,6 +372,8 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             sem_close(proceed_init);
             sem_unlink(sem_name);
             free(sem_name);
+
+            if (gres_uuid_list) free(gres_uuid_list);
 
             slurm_info("Init hook exits...");
     }

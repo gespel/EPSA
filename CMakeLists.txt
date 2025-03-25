@@ -32,6 +32,22 @@ if(NOT HWLOC_INSTALL_DIR)
 endif()
 
 
+option(USE_NVML "Enable NVML support if available" ON)
+
+if (USE_NVML)
+    find_package(CUDAToolkit)
+
+    if (CUDAToolkit_FOUND)
+        set(HAS_NVML TRUE)
+        message(STATUS "NVML support enabled.")
+    else()
+        set(HAS_NVML FALSE)
+        message(STATUS "NVML library not found, disabling NVML support.")
+    endif()
+else()
+    set(HAS_NVML FALSE)
+    message(STATUS "NVML support explicitly disabled.")
+endif()
 
 add_library(eps SHARED)
 target_sources(
@@ -61,3 +77,8 @@ target_link_libraries(prep_eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
 target_link_libraries(prep_eps ${HWLOC_INSTALL_DIR}/lib/libhwloc.so)
 # TODO: Fix this `s` ending in `lib` subdir.
 target_link_libraries(prep_eps ${PQ_INSTALL_DIR}/libs/libpq.so)
+
+if(USE_NVML AND CUDAToolkit_FOUND)
+    target_compile_definitions(prep_eps PRIVATE HAS_NVML)
+    target_link_libraries(prep_eps CUDA::nvml)
+endif()

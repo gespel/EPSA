@@ -17,7 +17,7 @@ DB. \*
    system used for the build.
 
    **IMPORTANT:** The source code version should match exactly (up to minor number)
-   the version of `Slurm` installed on your cluster. Othervise plugin compatability
+   the version of `Slurm` installed on your cluster. Otherwise plugin compatibility
    issues may arise.
 
 3. `EMA` library installed on all cluster nodes.
@@ -51,9 +51,14 @@ DB. \*
       -DPQ_INSTALL_DIR=/path/to/your/postgresql/installation/directory
       ```
 
+    **IMPORTANT:** You should probably build and update plugins on the target system.
+    The plugin uses `NVML` library for filtering GPU devices measurements, carefully
+    check `USE_NVML` option from CMake, disable it for systems where no `NVML`
+    installation is available.
+
 4. Build the plugins by running `make` inside `build` directory.
 
-After successfull completion of the above steps you should have two plugin files inside
+After successful completion of the above steps you should have two plugin files inside
 `build` directory:
 
 - `eps.so` (SPANK plugin)
@@ -118,3 +123,5 @@ After successfull completion of the above steps you should have two plugin files
 
    **Important**: As the connection string most probably will contain sensitive
    info, make sure to restrict it's availability accordingly.
+   *NOTE: On this step potentially some issue may arise (see `step 3` **IMPORTANT**
+   note).*

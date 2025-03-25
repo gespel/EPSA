@@ -9,6 +9,18 @@
 #include <src/common/xstring.h>
 int file_exist(const char* path);
 
+#ifdef HAS_NVML
+#define NVML_HANDLE_RET(RET, FN) do { \
+    if (RET != NVML_SUCCESS) \
+    { \
+        slurm_info("error: " FN ": %s", nvmlErrorString(RET)); \
+        free(gres_uuid_list); \
+        free(gres_idxs); \
+        return SLURM_ERROR; \
+    } \
+} while(0)
+#endif
+
 char* get_suffixed_name(const char* base, uint32_t jid);
 char* get_efp_log_file_path(uint32_t jid);
 char* get_init_log_file_path(uint32_t jid);
@@ -23,6 +35,9 @@ FILE* get_log_file_fd(const char* filename);
 int eps_parse_int(const char* str, int* val);
 int is_range(const char* value, int* o_start, int* o_end);
 int* parse_range(const char* range, size_t* size);
+int parse_gres(const char* gres, char** idx);
+int eps_parse_int(const char* str, int* val);
+int* parse_cpuset_restriction(const char* restriction, size_t* size);
 
 #define LOG(FD, MSG, ...) do { \
         fprintf(FD, MSG "\n", ##__VA_ARGS__); \

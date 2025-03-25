@@ -27,6 +27,7 @@ efp_main(
     eps_cpuinfo_t* cpuinfo
 )
 {
+void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     int status = EXIT_SUCCESS;
 
     Measurement* e0 = NULL;
@@ -143,6 +144,47 @@ efp_main(
     for (int i = 0; i < devices.size; i++)
     {
         e0[i] = EMA_get_energy_uj(devices.array[i]);
+
+    size_t filtered_size = 0;
+    // TODO: Impove with realloc ?
+    Device** filtered_devices = malloc(devices.size * sizeof(Device*));
+
+    for (int i = 0; i < devices.size; i++)
+    {
+        Device* dev = devices.array[i];
+        const char* name = EMA_get_device_name(dev);
+        const char* uuid = EMA_get_device_uid(dev);
+        char* _name = strdup(name);
+        _name[3] = '\0';
+
+        if (!gres_uuid_count)
+        {
+            if (strcmp(_name, "CPU") == 0)
+            {
+                filtered_devices[filtered_size] = dev;
+                filtered_size++;
+            }
+            continue;
+        }
+        int match = 0;
+        for (int j = 0; j < gres_uuid_count; j++)
+        {
+            if (strcmp(uuid, gres_uuid_list[j]) == 0) match = 1;
+        }
+        if (match || (strcmp(_name, "CPU") == 0))
+        {
+            filtered_devices[filtered_size] = dev;
+            filtered_size++;
+        }
+    }
+    e0 = malloc(filtered_size * sizeof(Measurement));
+    e1 = malloc(filtered_size * sizeof(Measurement));
+    t0 = malloc(filtered_size * sizeof(Time));
+    t1 = malloc(filtered_size * sizeof(Time));
+
+    for (int i = 0; i < filtered_size; i++) {
+        LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(filtered_devices[i]));
+        e0[i] = EMA_get_energy_uj(filtered_devices[i]);
         t0[i] = EMA_get_time_in_us();
     }
 
@@ -150,10 +192,12 @@ efp_main(
 
     sem_wait(proceed_efp);
 
-    for (int i = 0; i < devices.size; i++)
-    {
-        e1[i] = EMA_get_energy_uj(devices.array[i]);
+    for (int i = 0; i < filtered_size; i++) {
+        e1[i] = EMA_get_energy_uj(filtered_devices[i]);
         t1[i] = EMA_get_time_in_us();
+        LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(filtered_devices[i]));
+        LOG(log_fd, "\te1: %llu", e1[i]);
+        LOG(log_fd, "\tt1: %llu", t1[i]);
     }
 
     LOG(log_fd, "Connecting to db...");
@@ -288,6 +332,7 @@ exit:
     free(t1);
 
     free(utilized);
+    if (filtered_devices) free(filtered_devices);
 
     LOG(log_fd, "Closing semaphores...");
     if (proceed_init) sem_close(proceed_init);
