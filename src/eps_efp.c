@@ -156,6 +156,8 @@ exit:
     free(t0);
     free(t1);
 
+    if (filtered_devices) free(filtered_devices);
+
     LOG(log_fd, "Closing semaphores...");
     if (proceed_init) sem_close(proceed_init);
     if (proceed_efp) sem_close(proceed_efp);
