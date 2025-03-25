@@ -4,6 +4,9 @@ Uses PreEp (Prolog/Epilog) Plugin API from Slurm to measure energy on compute
 nodes and write them alongside with some additional (meta) information to the
 connected database.
 
+The database server can be set up on the dedicated node or the head (controller)
+node of the cluster.
+
 ## Table Of Contents
 
 1. [Limitations](#limitations)
@@ -18,7 +21,19 @@ connected database.
 
 ## Limitations
 
-TODO: Write this section
+Currently the underlying measurements tool (EMA) is not capable of measuring separate
+CPU cores. That makes it impossible to distinguish with 100% accuracy the energy
+consumptions of two jobs that share the same socket on the same node.
+
+We introduce the `utilization` column in our `measurements` SQL table (in EPS
+database) that aim to provide an estimation for every job, based on the node's
+topology (obtained via `hwloc`) and allocated cores information (derived from
+`Slurm`). For example: if 2 cores from 4 available on the socket were allocated
+the utilization value will be 50%.
+
+We suggest/recommend to setup the cluster with EPS plugin in the way that all
+allocations are exclusive (reserving the whole node/socket). This will allow
+for higher energy consumption measurements accuracy.
 
 ## Build
 
@@ -47,7 +62,16 @@ TODO: Write this section
 
 ### Considerations
 
+The plugin uses `NVML` internally for those nodes that have NVIDIA GPUs
+configured as generic resources. The build system has a configurable
+option `USE_NVML`. You can use this option to disable the `NVML` on build time
+for systems without GPUs, or without `NVML` library installed, but keep in mind
+that for latter case the plugin then would not be able to measure GPU devices
+if they are present and configured on the node.
 
+We recommend to execute the build steps from the following section on the target
+systems. However it is possible to build plugins once and distribute
+across nodes if you have homogeneous cluster/partition setup.
 
 ### Steps
 
@@ -65,7 +89,7 @@ TODO: Write this section
       ```bash
       ccmake ..
       ```
-      Then use tui to provide required pathes.
+      Then use tui to provide required pathes and toggle options.
 
    - via `cmake` command:
       ```bash
@@ -73,21 +97,17 @@ TODO: Write this section
       -DSLURM_INSTALL_DIR=/path/to/your/slurm/installation/directory \
       -DSLURM_SRC_DIR=/path/to/slurm/sources/directory \
       -DEMA_INSTALL_DIR=/path/to/your/EMA/installation/directory \
-      -DPQ_INSTALL_DIR=/path/to/your/postgresql/installation/directory
+      -DPQ_INSTALL_DIR=/path/to/your/postgresql/installation/directory \
+      -DHWLOC_INSTALL_DIR=/path/to/your/hwloc/installation/directory
       ```
 
-    **IMPORTANT:** You should probably build and update plugins on the target system.
-    The plugin uses `NVML` library for filtering GPU devices measurements, carefully
-    check `USE_NVML` option from CMake, disable it for systems where no `NVML`
-    installation is available.
+    **IMPORTANT:** Check [considerations](#considerations) section if you
+    haven't done that.
 
 4. Build the plugins by running `make` inside `build` directory.
 
-After successful completion of the above steps you should have two plugin files inside
-`build` directory:
-
-- `eps.so` (SPANK plugin)
-- `prep_eps.so` (PREP plugin)
+After successful completion of the above steps you should a plugin file inside
+`build` directory called `eps.so`.
 
 ## Installation and Setup
 
@@ -100,8 +120,8 @@ After successful completion of the above steps you should have two plugin files 
    - `slurmd` on compute nodes;
    - `slurmctld` on the head (controller) node.
 
-   *NOTE: On this step potentially some issue may arise (see `step 3` **IMPORTANT**
-   note).*
+   *NOTE: On this step potentially some issue may arise (see
+   [Considerations](#considerations)).*
 
 ### Database
 
@@ -155,3 +175,5 @@ After successful completion of the above steps you should have two plugin files 
    info, make sure to restrict it's availability accordingly.
 
 ## Database Consistency
+
+TODO: Write this section
