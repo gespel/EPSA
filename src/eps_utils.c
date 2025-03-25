@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -99,4 +100,180 @@ uint32_t _threads_per_core(char* host)
         }
     }
     return threads;
+}
+
+int parse_gres(const char* gres, char** idx)
+{
+    char* _gres = strdup(gres);
+    char idx_str[30] = "";
+    char* token = strtok(_gres, ":");
+    while (token != NULL)
+    {
+        for (int i = 0; token[i] != '\0'; ++i)
+        {
+            if (token[i] == ')' || token[i] == '(')
+                strcat(idx_str, token);
+        }
+        token = strtok(NULL, ":");
+    }
+    if (!strlen(idx_str)) return -1;
+    if (idx_str[0] == '0')
+    {
+        return 0;
+    }
+    char* gres_idxs = idx_str + 5;
+    gres_idxs[strlen(gres_idxs)-1] = '\0';
+    *idx = strdup(gres_idxs);
+    return 1;
+}
+
+int eps_parse_int(const char* str, int* val)
+{
+    char* endptr;
+    int base = 10;
+    errno = 0;
+    int ret = strtol(str, &endptr, base);
+    if (
+        (errno == ERANGE && (ret == LONG_MAX || ret == LONG_MIN)) ||
+        (errno != 0 && ret == 0)
+       )
+    {
+        perror("strtol");
+        return 1;
+    }
+    if (endptr == str)
+    {
+        fprintf(stderr, "error: strtol: no digits were found\n");
+        return 1;
+    }
+    *val = ret;
+    return 0;
+}
+
+static int is_range(const char* value, int* o_start, int* o_end)
+{
+    const char dash = '-';
+    int dash_found = 0;
+    int len = strlen(value);
+    if (len < 3) return 0;
+    char* c = strchr(value, dash);
+    while(c != NULL)
+    {
+        dash_found++;
+        c = strchr(c+1, dash);
+    }
+    if (dash_found != 1)
+    {
+        return 0;
+    }
+    char dup[len];
+    strcpy(dup, value);
+    const char* s = strtok(dup, "-");
+    if (!s) return 0;
+    const char* e = strtok(NULL, "-");
+    if (!e) return 0;
+    int start = 0;
+    int end = 0;
+    int err = eps_parse_int(s, &start);
+    if (err) return 0;
+    err = eps_parse_int(e, &end);
+    if (err) return 0;
+    if (end <= start) return 0;
+    *o_start = start;
+    *o_end = end;
+    return 1;
+}
+
+static int* parse_range(const char* range, size_t* size)
+{
+    int start, end;
+    if (!is_range(range,&start,&end)) return NULL;
+    int len = (end - start) + 1;
+    int* parsed = calloc(len, sizeof(int));
+    for (int i = 0; i < len; i++)
+    {
+        parsed[i] = start+i;
+    }
+    *(size) = len;
+    return parsed;
+}
+
+static int* parse_core_token(const char* token, size_t* size)
+{
+    int* range_cand = parse_range(token, size);
+    if (range_cand)
+    {
+        return range_cand;
+    }
+    else
+    {
+        int core;
+        int err = eps_parse_int(token, &core);
+        if (err) return NULL;
+        *size = 1;
+        int* parsed = calloc(*size, sizeof(int));
+        parsed[0] = core;
+        return parsed;
+    }
+}
+
+int* parse_cpuset_restriction(const char* restriction, size_t* size)
+{
+    const char delim = ',';
+    int len = strlen(restriction);
+    if (!len) return NULL;
+    char restr_c[len];
+    strcpy(restr_c, restriction);
+    int num_tokens = 1;
+    char* c = strchr(restr_c, delim);
+    while (c != NULL)
+    {
+        num_tokens++;
+        c = strchr(c+1, delim);
+    }
+    char* tokens[num_tokens];
+    if (num_tokens == 1) {
+        return parse_core_token(restr_c, size);
+    }
+    int i = 0;
+    char* token = strtok(restr_c, ",");
+    do
+    {
+        tokens[i] = token;
+        i++;
+        token = strtok(NULL, ",");
+    }
+    while (token != NULL);
+
+    size_t total_size = 0;
+    size_t s;
+    int* parsed[num_tokens];
+    int sizes[num_tokens];
+
+    for (i = 0; i < num_tokens; i++)
+    {
+        parsed[i] = parse_core_token(tokens[i], &s);
+        total_size = total_size + s;
+        sizes[i] = s;
+    }
+
+    int* cores = calloc(total_size, sizeof(int));
+    int j = 0;
+    int k = 0;
+    int* current = parsed[j];
+    for (i = 0; i < total_size; i++)
+    {
+        cores[i] = current[k];
+        if (k == sizes[j] - 1)
+        {
+            k = 0;
+            current = parsed[++j];
+        }
+        else
+        {
+            k++;
+        }
+    }
+    *size = total_size;
+    return cores;
 }
