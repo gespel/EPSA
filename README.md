@@ -75,6 +75,9 @@ After successful completion of the above steps you should have two plugin files 
    - `slurmd` on compute nodes;
    - `slurmctld` on the head (controller) node.
 
+   *NOTE: On this step potentially some issue may arise (see `step 3` **IMPORTANT**
+   note).*
+
 ### Database
 
 1. Run `postgresql` server on your cluster's head node. Create a new database
@@ -123,5 +126,3 @@ After successful completion of the above steps you should have two plugin files 
 
    **Important**: As the connection string most probably will contain sensitive
    info, make sure to restrict it's availability accordingly.
-   *NOTE: On this step potentially some issue may arise (see `step 3` **IMPORTANT**
-   note).*

@@ -31,12 +31,10 @@ if(NOT HWLOC_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `HWLOC_INSTALL_DIR` path!")
 endif()
 
-
 option(USE_NVML "Enable NVML support if available" ON)
 
 if (USE_NVML)
     find_package(CUDAToolkit)
-
     if (CUDAToolkit_FOUND)
         set(HAS_NVML TRUE)
         message(STATUS "NVML support enabled.")
@@ -49,6 +47,7 @@ else()
     message(STATUS "NVML support explicitly disabled.")
 endif()
 
+# TODO: Remove this completely...
 add_library(eps SHARED)
 target_sources(
     eps
@@ -59,7 +58,6 @@ add_library(prep_eps SHARED)
 target_sources(
     prep_eps
     PRIVATE prep_eps.c
-    PRIVATE src/eps_cgroup.c
     PRIVATE src/eps_cpuinfo.c
     PRIVATE src/eps_data.c
     PRIVATE src/eps_db.c

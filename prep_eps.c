@@ -10,6 +10,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#ifdef HAS_NVML
+#include <nvml.h>
+#endif
+
 #include <slurm/slurm.h>
 #include <slurm/slurm_errno.h>
 #include <src/common/bitstring.h>
@@ -18,10 +22,6 @@
 #include <eps_cpuinfo.h>
 #include <eps_data.h>
 #include <eps_db.h>
-#ifdef HAS_NVML
-#include <nvml.h>
-#endif
-
 #include <eps_efp.h>
 #include <eps_sem.h>
 #include <eps_shm.h>
@@ -124,8 +124,6 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     if (node_info_list->record_count > 0)
     {
         node_info_t node_rec = node_info_list->node_array[0];
-        slurm_info("node_rec->gres: %s", node_rec.gres);
-        slurm_info("node_rec->gres_used: %s", node_rec.gres_used);
 
         size_t gres_count = 0;
         int* gres_idxs = NULL;
@@ -140,7 +138,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         }
         if (ret > 0)
         {
-            gres_idxs = parse_cpuset_restriction(idx, &gres_count);
+            gres_idxs = parse_indexes(idx, &gres_count);
             if (gres_count && !gres_idxs)
             {
                 slurm_info("Failed to parse gres indexes substring!");
@@ -250,7 +248,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
 
             int bit_reps = *job_resrcs->sockets_per_node *
                            *job_resrcs->cores_per_socket;
-            uint32_t threads = _threads_per_core(hostname);
+            uint32_t threads = threads_per_core(hostname);
             bitstr_t* cpu_bitmap = bit_alloc(bit_reps * threads);
             int bit_idx = 0;
             for (int j = 0; j < bit_reps; j++)
@@ -263,7 +261,6 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
                 bit_idx++;
             }
             bit_fmt(cpu_ids, sizeof(cpu_ids), cpu_bitmap);
-            slurm_info("cpu_ids: %s", cpu_ids);
             FREE_NULL_BITMAP(cpu_bitmap);
         }
     }
@@ -301,9 +298,6 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         slurm_info("error: get_efp_sem: %s", strerror(errno));
         return SLURM_ERROR;
     }
-
-    #ifdef HAS_NVML
-    #endif
 
     pid_t pid = fork();
     switch(pid) {
@@ -344,8 +338,15 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
                 return SLURM_ERROR;
             }
             // INFO: Run EFP process...
-            efp_main(job_env->jobid, nodeid, tstart, cpu_ids, &cpuinfo);
-            efp_main(job_env->jobid, gres_uuid_count, gres_uuid_list);
+            efp_main(
+                job_env->jobid,
+                nodeid,
+                gres_uuid_count,
+                gres_uuid_list,
+                tstart,
+                cpu_ids,
+                &cpuinfo
+            );
         default:
             pid_t hook_pid = getpid();
 

@@ -18,8 +18,6 @@
 #define LOG_DIR_PATH "/tmp"
 
 #define EFP_LOG_PATH_BASE LOG_DIR_PATH "/efp_"
-#define TINIT_LOG_PATH_BASE LOG_DIR_PATH "/task_init_"
-#define TEXIT_LOG_PATH_BASE LOG_DIR_PATH "/task_exit_"
 
 int file_exist(const char* path) {
     // CONSIDER: Using access() instead of stat()...
@@ -40,16 +38,6 @@ char* get_efp_log_file_path(uint32_t jid)
     return get_suffixed_name(EFP_LOG_PATH_BASE, jid);
 }
 
-char* get_init_log_file_path(uint32_t jid)
-{
-    return get_suffixed_name(TINIT_LOG_PATH_BASE, jid);
-}
-
-char* get_exit_log_file_path(uint32_t jid)
-{
-    return get_suffixed_name(TEXIT_LOG_PATH_BASE, jid);
-}
-
 FILE* get_log_file_fd(const char* filename) {
     if (!file_exist(LOG_DIR_PATH))
     {
@@ -58,8 +46,7 @@ FILE* get_log_file_fd(const char* filename) {
     return fopen(filename, "w");
 }
 
-int
-_load_nodes(node_info_msg_t** node_buffer_pptr, uint16_t show_flags)
+static int _load_nodes(node_info_msg_t** node_buffer_pptr, uint16_t show_flags)
 {
     int err;
     node_info_msg_t* node_info_ptr = NULL;
@@ -72,7 +59,7 @@ _load_nodes(node_info_msg_t** node_buffer_pptr, uint16_t show_flags)
     return err;
 }
 
-node_info_msg_t* _get_node_info_for_jobs(void)
+static node_info_msg_t* _get_node_info_for_jobs(void)
 {
 	int err;
 	node_info_msg_t *node_info_msg = NULL;
@@ -94,7 +81,7 @@ node_info_msg_t* _get_node_info_for_jobs(void)
 
 /* This set of functions loads/free node information so that we can map a job's
  * core bitmap to it's CPU IDs based upon the thread count on each node. */
-uint32_t _threads_per_core(char* host)
+uint32_t threads_per_core(char* host)
 {
     node_info_msg_t *node_info_msg = NULL;
     uint32_t i, threads = 1;
@@ -115,7 +102,6 @@ uint32_t _threads_per_core(char* host)
     return threads;
 }
 
-int eps_parse_int(const char* str, int* val) {
 int parse_gres(const char* gres, char** idx)
 {
     char* _gres = strdup(gres);
@@ -164,7 +150,6 @@ int eps_parse_int(const char* str, int* val)
     return 0;
 }
 
-int is_range(const char* value, int* o_start, int* o_end)
 static int is_range(const char* value, int* o_start, int* o_end)
 {
     const char dash = '-';
@@ -199,7 +184,6 @@ static int is_range(const char* value, int* o_start, int* o_end)
     return 1;
 }
 
-int* parse_range(const char* range, size_t* size)
 static int* parse_range(const char* range, size_t* size)
 {
     int start, end;
@@ -233,7 +217,7 @@ static int* parse_core_token(const char* token, size_t* size)
     }
 }
 
-int* parse_cpuset_restriction(const char* restriction, size_t* size)
+int* parse_indexes(const char* restriction, size_t* size)
 {
     const char delim = ',';
     int len = strlen(restriction);

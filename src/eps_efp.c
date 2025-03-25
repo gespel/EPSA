@@ -4,7 +4,6 @@
 #include <string.h>
 #include <time.h>
 
-#include <eps_cgroup.h>
 #include <eps_cpuinfo.h>
 #include <eps_db.h>
 #include <eps_efp.h>
@@ -17,17 +16,17 @@
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
-
 void
 efp_main(
     int jid,
     int nodeid,
+    unsigned int gres_uuid_count,
+    char** gres_uuid_list,
     time_t tstart,
     const char* cpu_ids,
     eps_cpuinfo_t* cpuinfo
 )
 {
-void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     int status = EXIT_SUCCESS;
 
     Measurement* e0 = NULL;
@@ -86,7 +85,7 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     }
 
     size_t size;
-    int* cores = parse_cpuset_restriction(cpu_ids, &size);
+    int* cores = parse_indexes(cpu_ids, &size);
     if (!cores) {
         LOG(log_fd, "Failed to parse cpuset restriction!");
         status = EXIT_FAILURE;
@@ -126,7 +125,7 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
 
     DevicePtrArray devices = EMA_get_devices();
 
-    // INFO: Release the task_init hook waiting...
+    // INFO: Release the prolog hook waiting...
     sem_post(proceed_init);
 
     if (!devices.size)
@@ -135,15 +134,6 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
         status = EXIT_FAILURE;
         goto exit;
     }
-
-    e0 = malloc(devices.size * sizeof(Measurement));
-    e1 = malloc(devices.size * sizeof(Measurement));
-    t0 = malloc(devices.size * sizeof(Time));
-    t1 = malloc(devices.size * sizeof(Time));
-
-    for (int i = 0; i < devices.size; i++)
-    {
-        e0[i] = EMA_get_energy_uj(devices.array[i]);
 
     size_t filtered_size = 0;
     // TODO: Impove with realloc ?
@@ -177,6 +167,7 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
             filtered_size++;
         }
     }
+
     e0 = malloc(filtered_size * sizeof(Measurement));
     e1 = malloc(filtered_size * sizeof(Measurement));
     t0 = malloc(filtered_size * sizeof(Time));
@@ -259,9 +250,9 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
         goto exit;
     }
 
-    for (int i = 0; i < devices.size; i++) {
-        const char* device_name = EMA_get_device_name(devices.array[i]);
-        char* device_uid = (char*)EMA_get_device_uid(devices.array[i]);
+    for (int i = 0; i < filtered_size; i++) {
+        const char* device_name = EMA_get_device_name(filtered_devices[i]);
+        char* device_uid = (char*)EMA_get_device_uid(filtered_devices[i]);
 
         eps_measurement_data_t measurement;
 
@@ -330,8 +321,8 @@ exit:
     free(e1);
     free(t0);
     free(t1);
-
     free(utilized);
+
     if (filtered_devices) free(filtered_devices);
 
     LOG(log_fd, "Closing semaphores...");
