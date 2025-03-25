@@ -21,6 +21,22 @@ if(NOT EMA_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `EMA_INSTALL_DIR` path!")
 endif()
 
+option(USE_NVML "Enable NVML support if available" ON)
+
+if (USE_NVML)
+    find_package(CUDAToolkit)
+
+    if (CUDAToolkit_FOUND)
+        set(HAS_NVML TRUE)
+        message(STATUS "NVML support enabled.")
+    else()
+        set(HAS_NVML FALSE)
+        message(STATUS "NVML library not found, disabling NVML support.")
+    endif()
+else()
+    set(HAS_NVML FALSE)
+    message(STATUS "NVML support explicitly disabled.")
+endif()
 
 add_library(eps SHARED)
 target_sources(
@@ -41,3 +57,8 @@ target_include_directories(prep_eps PRIVATE include)
 target_include_directories(prep_eps PRIVATE ${SLURM_SRC_DIR})
 target_include_directories(prep_eps PRIVATE ${SLURM_INSTALL_DIR}/include)
 target_link_libraries(prep_eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
+
+if(USE_NVML AND CUDAToolkit_FOUND)
+    target_compile_definitions(prep_eps PRIVATE HAS_NVML)
+    target_link_libraries(prep_eps CUDA::nvml)
+endif()
