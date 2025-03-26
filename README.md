@@ -177,3 +177,13 @@ After successful completion of the above steps you should a plugin file inside
 ## Database Consistency
 
 TODO: Write this section
+
+Query inconsistencies:
+
+```sql
+SELECT a.jobid, a.nnodes AS nodes_allocated, COUNT(e.id) AS executions
+FROM allocations a LEFT JOIN executions e ON jobid
+GROUP BY a.jobid, a.nnodes
+HAVING a.nnodes <> COUNT(e.id);
+```
+
