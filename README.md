@@ -176,14 +176,22 @@ After successful completion of the above steps you should a plugin file inside
 
 ## Database Consistency
 
-TODO: Write this section
+As can be seen in previous section `allocations` table does not have any
+explicit (foreign key) relations with `executions` table, however it is
+assumed that column `nnodes` value from `allocations` should always equal to
+the count of `executions` rows (with unique `node_name` and `node_id` column
+values) for the same job (`jobid`). If it is not so it can be a sign of some
+failures or unexpected behaviour from either `Slurm` or `EPS` plugin that
+require inspection and addressing.
 
-Query inconsistencies:
+To identify such inconsistencies in the database use the following query:
 
 ```sql
 SELECT a.jobid, a.nnodes AS nodes_allocated, COUNT(e.id) AS executions
-FROM allocations a LEFT JOIN executions e ON jobid
+FROM allocations a LEFT JOIN executions e ON a.jobid = e.jobid
 GROUP BY a.jobid, a.nnodes
 HAVING a.nnodes <> COUNT(e.id);
 ```
 
+*NOTE: It is planned for the future to provide convenient tooling allowing to 
+simplify and/or automate those consistency checks.*
