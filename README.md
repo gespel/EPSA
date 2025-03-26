@@ -187,10 +187,26 @@ require inspection and addressing.
 To identify such inconsistencies in the database use the following query:
 
 ```sql
-SELECT a.jobid, a.nnodes AS nodes_allocated, COUNT(e.id) AS executions
-FROM allocations a LEFT JOIN executions e ON a.jobid = e.jobid
+WITH distinct_executions AS (
+    SELECT DISTINCT e1.jobid, e1.node_name, e1.node_id
+    FROM executions e1
+    WHERE NOT EXISTS (
+        SELECT 1 
+        FROM executions e2
+        WHERE e1.jobid = e2.jobid
+        AND e1.node_name = e2.node_name
+        AND e1.node_id = e2.node_id
+        AND e1.id > e2.id
+    )
+)
+SELECT 
+    a.jobid, 
+    a.nnodes AS nodes_allocated, 
+    COUNT(de.jobid) AS executions
+FROM allocations a
+LEFT JOIN distinct_executions de ON a.jobid = de.jobid
 GROUP BY a.jobid, a.nnodes
-HAVING a.nnodes <> COUNT(e.id);
+HAVING a.nnodes <> COUNT(de.jobid);
 ```
 
 *NOTE: It is planned for the future to provide convenient tooling allowing to 
