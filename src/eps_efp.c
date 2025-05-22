@@ -252,6 +252,7 @@ efp_main(
 
     for (int i = 0; i < filtered_size; i++) {
         const char* device_name = EMA_get_device_name(filtered_devices[i]);
+        const char* device_type = EMA_get_device_type(filtered_devices[i]);
         char* device_uid = (char*)EMA_get_device_uid(filtered_devices[i]);
 
         eps_measurement_data_t measurement;
@@ -282,6 +283,7 @@ efp_main(
         measurement.execution_id = execution_id;
         measurement.device_name = device_name;
         measurement.device_uid = device_uid;
+        measurement.device_type = device_type;
         measurement.e0 = e0[i];
         measurement.e1 = e1[i];
         measurement.t0 = t0[i];

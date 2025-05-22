@@ -30,6 +30,7 @@ typedef struct eps_measurement_data
     int execution_id;
     const char* device_name;
     const char* device_uid;
+    const char* device_type;
     unsigned long long e0;
     unsigned long long e1;
     unsigned long long t0;
