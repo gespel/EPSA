@@ -288,6 +288,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
 
             // INFO: Run EFP process...
             efp_main(job_env->jobid, gres_uuid_count, gres_uuid_list);
+            break;
         default:
             pid_t hook_pid = getpid();
 
