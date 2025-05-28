@@ -1,6 +1,9 @@
 #include <errno.h>
+#include <execinfo.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <eps_sem.h>
 #include <eps_efp.h>
@@ -11,8 +14,31 @@
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
+void crash_handler(int sig) {
+    void *buffer[30];
+    int nptrs = backtrace(buffer, 30);
+
+    fprintf(stderr, "Caught signal %d (%s)\n", sig, strsignal(sig));
+    backtrace_symbols_fd(buffer, nptrs, STDERR_FILENO);
+
+    _exit(128 + sig);
+}
+
+void install_signal_handlers() {
+    struct sigaction sa;
+    sa.sa_handler = crash_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESETHAND; // Reset to default after first signal
+
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGBUS,  &sa, NULL);
+    sigaction(SIGILL,  &sa, NULL);
+}
+
 void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     int status = EXIT_SUCCESS;
+    install_signal_handlers();
 
     Measurement* e0 = NULL;
     Measurement* e1 = NULL;
