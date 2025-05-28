@@ -347,6 +347,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
                 cpu_ids,
                 &cpuinfo
             );
+            break;
         default:
             pid_t hook_pid = getpid();
 
