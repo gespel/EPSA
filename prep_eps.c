@@ -347,6 +347,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
                 cpu_ids,
                 &cpuinfo
             );
+            break;
         default:
             pid_t hook_pid = getpid();
 
@@ -464,7 +465,7 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
     int ret = sem_timedwait(efp_finalize, &ts);
     if (ret == -1 && errno == ETIMEDOUT) {
         slurm_info("error: efp timed out!");
-        kill(*efp_pid, 9);
+        kill(*efp_pid, SIGKILL);
     }
 
     slurm_info("Closing semaphores...");
