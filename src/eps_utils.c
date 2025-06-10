@@ -15,7 +15,7 @@
 
 #define SUFFIX_MAX_LENGTH 15
 
-#define LOG_DIR_PATH "/tmp"
+#define LOG_DIR_PATH "/var/log/eps"
 
 #define EFP_LOG_PATH_BASE LOG_DIR_PATH "/efp_"
 
