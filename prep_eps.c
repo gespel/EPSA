@@ -414,7 +414,7 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
     int err = timedwaitpid(*efp_pid, &status, EFP_WAIT_TIMEOUT);
     if (err) {
       slurm_info(
-        "error: waitpid timedout for EFP process: "
+        "error: waitpid timed out for EFP process: "
         "it may have become a zombie"
       );
     }
