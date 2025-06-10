@@ -51,6 +51,7 @@ target_sources(
     PRIVATE src/eps_efp.c
     PRIVATE src/eps_sem.c
     PRIVATE src/eps_shm.c
+    PRIVATE src/eps_wait.c
     PRIVATE src/eps_utils.c
 )
 target_include_directories(prep_eps PRIVATE include)
