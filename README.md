@@ -14,7 +14,7 @@ DB. \*
 2. `Slurm` source code present on the system used for the build.
 
    **IMPORTANT:** The source code version should match exactly (up to minor number)
-   the version of `Slurm` installed on your cluster. Othervise plugin compatability
+   the version of `Slurm` installed on your cluster. Otherwise plugin compatability
    issues may arise.
 
 ### Steps
@@ -66,7 +66,7 @@ alias remake="make clean && make && make test"
 
 alias screstart="sudo systemctl restart slurmctld.service"
 alias scstatus="sudo systemctl status slurmctld.service"
-alias sclog="sudo journalctl -xefu slurmctld.service"k
+alias sclog="sudo journalctl -xefu slurmctld.service"
 
 alias sdrestart="sudo systemctl restart slurmd.service"
 alias sdstatus="sudo systemctl status slurmd.service"
