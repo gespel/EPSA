@@ -196,6 +196,12 @@ exit:
 
     free(filtered_devices);
 
+    for (int i = 0; i < gres_uuid_count; i++)
+    {
+      free(gres_uuid_list[i]);
+    }
+    free(gres_uuid_list);
+
     printf("Closing semaphores...\n");
     if (proceed_init) sem_close(proceed_init);
     if (proceed_efp) sem_close(proceed_efp);
