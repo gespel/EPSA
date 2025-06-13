@@ -116,6 +116,7 @@ int parse_gres(const char* gres, char** idx)
         }
         token = strtok(NULL, ":");
     }
+    free(_gres);
     if (!strlen(idx_str)) return -1;
     if (idx_str[0] == '0')
     {
@@ -166,12 +167,21 @@ static int is_range(const char* value, int* o_start, int* o_end)
     {
         return 0;
     }
-    char dup[len];
+    char* dup = malloc(len + 1);
     strcpy(dup, value);
     const char* s = strtok(dup, "-");
-    if (!s) return 0;
+    if (!s)
+    {
+      free(dup);
+      return 0;
+    }
     const char* e = strtok(NULL, "-");
-    if (!e) return 0;
+    if (!e)
+    {
+      free(dup);
+      return 0;
+    }
+    free(dup);
     int start = 0;
     int end = 0;
     int err = eps_parse_int(s, &start);
@@ -222,7 +232,7 @@ int* parse_cpuset_restriction(const char* restriction, size_t* size)
     const char delim = ',';
     int len = strlen(restriction);
     if (!len) return NULL;
-    char restr_c[len];
+    char* restr_c = malloc(len + 1);
     strcpy(restr_c, restriction);
     int num_tokens = 1;
     char* c = strchr(restr_c, delim);
@@ -231,9 +241,12 @@ int* parse_cpuset_restriction(const char* restriction, size_t* size)
         num_tokens++;
         c = strchr(c+1, delim);
     }
-    char* tokens[num_tokens];
+    char** tokens = malloc(num_tokens * sizeof(char*));
     if (num_tokens == 1) {
-        return parse_core_token(restr_c, size);
+        int* parsed = parse_core_token(restr_c, size);
+        free(restr_c);
+        free(tokens);
+        return parsed;
     }
     int i = 0;
     char* token = strtok(restr_c, ",");
@@ -244,11 +257,12 @@ int* parse_cpuset_restriction(const char* restriction, size_t* size)
         token = strtok(NULL, ",");
     }
     while (token != NULL);
+    free(restr_c);
 
     size_t total_size = 0;
     size_t s;
-    int* parsed[num_tokens];
-    int sizes[num_tokens];
+    int** parsed = malloc(num_tokens * sizeof(int*));
+    int* sizes = malloc(num_tokens * sizeof(int));
 
     for (i = 0; i < num_tokens; i++)
     {
@@ -256,6 +270,7 @@ int* parse_cpuset_restriction(const char* restriction, size_t* size)
         total_size = total_size + s;
         sizes[i] = s;
     }
+    free(tokens);
 
     int* cores = calloc(total_size, sizeof(int));
     int j = 0;
@@ -275,5 +290,7 @@ int* parse_cpuset_restriction(const char* restriction, size_t* size)
         }
     }
     *size = total_size;
+    free(parsed);
+    free(sizes);
     return cores;
 }
