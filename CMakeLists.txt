@@ -38,12 +38,6 @@ else()
     message(STATUS "NVML support explicitly disabled.")
 endif()
 
-add_library(eps SHARED)
-target_sources(
-    eps
-    PRIVATE eps.c
-)
-
 add_library(prep_eps SHARED)
 target_sources(
     prep_eps
