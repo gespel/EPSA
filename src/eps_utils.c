@@ -227,7 +227,7 @@ static unsigned int* parse_index_token(const char* token, size_t* size)
     }
 }
 
-int* parse_index_range(const char* range, size_t* size)
+unsigned int* parse_index_range(const char* range, size_t* size)
 {
     const char delim = ',';
     int len = strlen(range);
@@ -243,7 +243,7 @@ int* parse_index_range(const char* range, size_t* size)
     }
     char** tokens = malloc(num_tokens * sizeof(char*));
     if (num_tokens == 1) {
-        int* parsed = parse_index_token(range_c, size);
+        unsigned int* parsed = parse_index_token(range_c, size);
         free(range_c);
         free(tokens);
         return parsed;
@@ -272,13 +272,13 @@ int* parse_index_range(const char* range, size_t* size)
     }
     free(tokens);
 
-    unsigned int* cores = calloc(total_size, sizeof(unsigned int));
+    unsigned int* indexes = calloc(total_size, sizeof(unsigned int));
     int j = 0;
     int k = 0;
     int* current = parsed[j];
     for (i = 0; i < total_size; i++)
     {
-        cores[i] = current[k];
+        indexes[i] = current[k];
         if (k == sizes[j] - 1)
         {
             k = 0;
@@ -296,5 +296,5 @@ int* parse_index_range(const char* range, size_t* size)
     }
     free(parsed);
     free(sizes);
-    return cores;
+    return indexes;
 }

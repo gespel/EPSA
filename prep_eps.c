@@ -126,7 +126,6 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
                 gres_count
             );
             if (err) slurm_info("error: process_gres");
-            slurm_info("gres_uuid_count: %d", gres_uuid_count);
             #endif
         }
         free(gres_idxs);

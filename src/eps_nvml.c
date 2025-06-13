@@ -57,7 +57,6 @@ int nvml_process_gres(
             NVML_DEVICE_UUID_BUFFER_SIZE
         );
         NVML_HANDLE_RET(ret, "nvmlDeviceGetUUID");
-        slurm_info("device uuid: %s", uuid);
 
         gres_uuid_list[*gres_uuid_count] = strdup(uuid);
         *gres_uuid_count = *gres_uuid_count + 1;
