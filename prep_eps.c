@@ -38,6 +38,13 @@
 } while(0)
 #endif
 
+#define FREE_GRES_UUIDS do { \
+  for (int i = 0; i < gres_uuid_count; i++) { \
+    free(gres_uuid_list[i]); \
+  } \
+  free(gres_uuid_list); \
+} while(0)
+
 const char plugin_name[] = "EPS";
 const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
@@ -121,7 +128,6 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
                 slurm_info("Failed to parse gres indexes substring!");
                 return SLURM_ERROR;
             }
-            
         }
 
         if (gres_count > 0)
@@ -188,6 +194,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     if (err != SLURM_SUCCESS)
     {
         slurm_info("error: slurm_load_job: %d", err);
+        FREE_GRES_UUIDS;
         return SLURM_ERROR;
     } 
     if (job_info_list->record_count > 0)
@@ -242,6 +249,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     if (!efp_pid)
     {
         slurm_info("error: get_shared_memory_addr: %s", strerror(errno));
+        FREE_GRES_UUIDS;
         return SLURM_ERROR;
     }
 
@@ -261,11 +269,9 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         }
         free(sem_name);
         slurm_info("error: get_efp_sem: %s", strerror(errno));
+        FREE_GRES_UUIDS;
         return SLURM_ERROR;
     }
-
-    #ifdef HAS_NVML
-    #endif
 
     pid_t pid = fork();
     switch(pid) {
@@ -281,8 +287,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             sem_close(proceed_init);
             sem_unlink(sem_name);
             free(sem_name);
-            
-            if (gres_uuid_list) free(gres_uuid_list);
+            FREE_GRES_UUIDS;
 
             slurm_info("error: fork: %s", strerror(errno));
             return SLURM_ERROR;
@@ -328,8 +333,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             sem_close(proceed_init);
             sem_unlink(sem_name);
             free(sem_name);
-
-            if (gres_uuid_list) free(gres_uuid_list);
+            FREE_GRES_UUIDS;
 
             slurm_info("Init hook exits...");
     }
