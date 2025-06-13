@@ -49,6 +49,8 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     sem_t* proceed_efp = NULL;
     sem_t* proceed_exit = NULL;
 
+    Device** filtered_devices = NULL;
+
     char* efp_log_file_path = get_efp_log_file_path(jid);
     FILE* log_fd = get_log_file_fd(efp_log_file_path);
     free(efp_log_file_path);
@@ -122,7 +124,7 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
 
     size_t filtered_size = 0;
     // TODO: Impove with realloc ?
-    Device** filtered_devices = malloc(devices.size * sizeof(Device*));
+    filtered_devices = malloc(devices.size * sizeof(Device*));
 
     for (int i = 0; i < devices.size; i++)
     {
@@ -192,7 +194,7 @@ exit:
     free(t0);
     free(t1);
 
-    if (filtered_devices) free(filtered_devices);
+    free(filtered_devices);
 
     printf("Closing semaphores...\n");
     if (proceed_init) sem_close(proceed_init);
