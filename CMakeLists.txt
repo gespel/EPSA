@@ -42,6 +42,7 @@ add_library(prep_eps SHARED)
 target_sources(
     prep_eps
     PRIVATE prep_eps.c
+    PRIVATE src/eps_cpu.c
     PRIVATE src/eps_efp.c
     PRIVATE src/eps_sem.c
     PRIVATE src/eps_shm.c

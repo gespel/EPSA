@@ -22,7 +22,7 @@ FILE* get_log_file_fd(const char* filename);
 
 int parse_gres(const char* gres, char** idx);
 int eps_parse_int(const char* str, int* val);
-int* parse_cpuset_restriction(const char* restriction, size_t* size);
+int* parse_index_range(const char* range, size_t* size);
 
 #define LOG(FD, MSG, ...) do { \
         fprintf(FD, MSG "\n", ##__VA_ARGS__); \

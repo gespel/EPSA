@@ -14,7 +14,7 @@
 
 #define SUFFIX_MAX_LENGTH 15
 
-#define LOG_DIR_PATH "/var/log/eps"
+#define LOG_DIR_PATH "/tmp"
 
 #define EFP_LOG_PATH_BASE LOG_DIR_PATH "/efp_"
 #define TINIT_LOG_PATH_BASE LOG_DIR_PATH "/task_init_"
@@ -208,7 +208,7 @@ static int* parse_range(const char* range, size_t* size)
     return parsed;
 }
 
-static unsigned int* parse_core_token(const char* token, size_t* size)
+static unsigned int* parse_index_token(const char* token, size_t* size)
 {
     int* range_cand = parse_range(token, size);
     if (range_cand)
@@ -217,25 +217,25 @@ static unsigned int* parse_core_token(const char* token, size_t* size)
     }
     else
     {
-        int core;
-        int err = eps_parse_int(token, &core);
+        int _parsed;
+        int err = eps_parse_int(token, &_parsed);
         if (err) return NULL;
         *size = 1;
         unsigned int* parsed = calloc(*size, sizeof(unsigned int));
-        parsed[0] = core;
+        parsed[0] = _parsed;
         return parsed;
     }
 }
 
-int* parse_cpuset_restriction(const char* restriction, size_t* size)
+int* parse_index_range(const char* range, size_t* size)
 {
     const char delim = ',';
-    int len = strlen(restriction);
+    int len = strlen(range);
     if (!len) return NULL;
-    char* restr_c = malloc(len + 1);
-    strcpy(restr_c, restriction);
+    char* range_c = malloc(len + 1);
+    strcpy(range_c, range);
     int num_tokens = 1;
-    char* c = strchr(restr_c, delim);
+    char* c = strchr(range_c, delim);
     while (c != NULL)
     {
         num_tokens++;
@@ -243,13 +243,13 @@ int* parse_cpuset_restriction(const char* restriction, size_t* size)
     }
     char** tokens = malloc(num_tokens * sizeof(char*));
     if (num_tokens == 1) {
-        int* parsed = parse_core_token(restr_c, size);
-        free(restr_c);
+        int* parsed = parse_index_token(range_c, size);
+        free(range_c);
         free(tokens);
         return parsed;
     }
     int i = 0;
-    char* token = strtok(restr_c, ",");
+    char* token = strtok(range_c, ",");
     do
     {
         tokens[i] = token;
@@ -257,7 +257,7 @@ int* parse_cpuset_restriction(const char* restriction, size_t* size)
         token = strtok(NULL, ",");
     }
     while (token != NULL);
-    free(restr_c);
+    free(range_c);
 
     size_t total_size = 0;
     size_t s;
@@ -266,7 +266,7 @@ int* parse_cpuset_restriction(const char* restriction, size_t* size)
 
     for (i = 0; i < num_tokens; i++)
     {
-        parsed[i] = parse_core_token(tokens[i], &s);
+        parsed[i] = parse_index_token(tokens[i], &s);
         total_size = total_size + s;
         sizes[i] = s;
     }

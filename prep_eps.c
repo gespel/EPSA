@@ -11,7 +11,6 @@
 
 #include <slurm/slurm.h>
 #include <slurm/slurm_errno.h>
-#include <src/common/bitstring.h>
 #include <src/interfaces/prep.h>
 
 #ifdef HAS_NVML
@@ -19,6 +18,7 @@
 #include <eps_nvml.h>
 #endif
 
+#include <eps_cpu.h>
 #include <eps_efp.h>
 #include <eps_sem.h>
 #include <eps_shm.h>
@@ -76,12 +76,10 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     }
 
     uint16_t show_flags = 0;
-
     show_flags |= SHOW_ALL;
     show_flags |= SHOW_DETAIL;
-    job_info_msg_t* job_info_list = NULL;
-    node_info_msg_t* node_info_list = NULL;
 
+    node_info_msg_t* node_info_list = NULL;
     err = slurm_load_node_single(&node_info_list, hostname, show_flags);
     if (err != SLURM_SUCCESS)
     {
@@ -95,12 +93,9 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     if (node_info_list->record_count > 0)
     {
         node_info_t node_rec = node_info_list->node_array[0];
-        slurm_info("node_rec->gres: %s", node_rec.gres);
-        slurm_info("node_rec->gres_used: %s", node_rec.gres_used);
 
         size_t gres_count = 0;
         unsigned int* gres_idxs = NULL;
-
         char* idx = NULL;
 
         int ret = parse_gres(node_rec.gres_used, &idx);
@@ -111,7 +106,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         }
         if (ret > 0)
         {
-            gres_idxs = parse_cpuset_restriction(idx, &gres_count);
+            gres_idxs = parse_index_range(idx, &gres_count);
             free(idx);
             if (gres_count && !gres_idxs)
             {
@@ -123,22 +118,21 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         if (gres_count > 0)
         {
             #ifdef HAS_NVML
-
             gres_uuid_list = (char **)malloc(gres_count * sizeof(char*));
             int err = nvml_process_gres(
-              gres_idxs,
-              gres_uuid_list,
-              &gres_uuid_count,
-              gres_count
+                gres_idxs,
+                gres_uuid_list,
+                &gres_uuid_count,
+                gres_count
             );
             if (err) slurm_info("error: process_gres");
             slurm_info("gres_uuid_count: %d", gres_uuid_count);
-
             #endif
         }
         free(gres_idxs);
     }
 
+    job_info_msg_t* job_info_list = NULL;
     err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
     if (err != SLURM_SUCCESS)
     {
@@ -146,44 +140,11 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         FREE_GRES_UUIDS;
         return SLURM_ERROR;
     } 
+
     if (job_info_list->record_count > 0)
     {
-        for (int i = 0; i < job_info_list->record_count; i++)
-        {
-            job_info_t job_rec = job_info_list->job_array[i];
-            if (job_rec.job_id != job_env->jobid) continue;
-
-            job_resources_t* job_resrcs = job_rec.job_resrcs;
-
-            if (
-                !job_resrcs ||
-                !job_resrcs->core_bitmap ||
-                bit_fls(job_resrcs->core_bitmap) == -1
-            )
-            {
-                /* Shoud we return an error here ? */
-                continue;
-            }
-
-            int bit_reps = *job_resrcs->sockets_per_node *
-                           *job_resrcs->cores_per_socket;
-            uint32_t threads = _threads_per_core(hostname);
-            bitstr_t* cpu_bitmap = bit_alloc(bit_reps * threads);
-            int bit_idx = 0;
-            for (int j = 0; j < bit_reps; j++)
-            {
-                if (bit_test(job_resrcs->core_bitmap, bit_idx))
-                {
-                    for (int k = 0; k < threads; k++)
-                        bit_set(cpu_bitmap, (j * threads) + k);
-                }
-                bit_idx++;
-            }
-            char cpu_ids[128];
-            bit_fmt(cpu_ids, sizeof(cpu_ids), cpu_bitmap);
-            slurm_info("cpu_ids: %s", cpu_ids);
-            FREE_NULL_BITMAP(cpu_bitmap);
-        }
+      err = process_cpus(job_info_list, job_env, hostname);
+      if (err) slurm_info("error: process_cpus");
     }
 
     slurm_info("Initializing shared memory...");
