@@ -1,6 +1,9 @@
 #include <errno.h>
+#include <execinfo.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <eps_sem.h>
 #include <eps_efp.h>
@@ -11,8 +14,31 @@
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
+void crash_handler(int sig) {
+    void *buffer[30];
+    int nptrs = backtrace(buffer, 30);
+
+    fprintf(stderr, "Caught signal %d (%s)\n", sig, strsignal(sig));
+    backtrace_symbols_fd(buffer, nptrs, STDERR_FILENO);
+
+    _exit(128 + sig);
+}
+
+void install_signal_handlers() {
+    struct sigaction sa;
+    sa.sa_handler = crash_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = SA_RESETHAND; // Reset to default after first signal
+
+    sigaction(SIGSEGV, &sa, NULL);
+    sigaction(SIGABRT, &sa, NULL);
+    sigaction(SIGBUS,  &sa, NULL);
+    sigaction(SIGILL,  &sa, NULL);
+}
+
 void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     int status = EXIT_SUCCESS;
+    install_signal_handlers();
 
     Measurement* e0 = NULL;
     Measurement* e1 = NULL;
@@ -32,17 +58,26 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
         goto exit;
     }
 
+    if (dup2(fileno(log_fd), STDOUT_FILENO) < 0) {
+        perror("dup2 stdout");
+    }
+    if (dup2(fileno(log_fd), STDERR_FILENO) < 0) {
+        perror("dup2 stderr");
+    }
+
+    setvbuf(stdout, NULL, _IOLBF, 0);  // Line-buffered
+    setvbuf(stderr, NULL, _IONBF, 0);  // Unbuffered
+
     pid_t efp_pid = getpid();
 
-    LOG(log_fd, "EFP PID: %d", efp_pid);
-
-    LOG(log_fd, "Obtaining semaphores...");
+    printf("EFP PID: %d\n", efp_pid);
+    printf("Obtaining semaphores...\n");
 
     char* sem_init_name = get_sem_init_name(jid);
     proceed_init = get_efp_sem(sem_init_name, 0);
     free(sem_init_name);
     if (!proceed_init) {
-        LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
+        printf("error: get_efp_sem: %s\n", strerror(errno));
         status = EXIT_FAILURE;
         goto exit;
     }
@@ -51,7 +86,7 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     proceed_efp = get_efp_sem(sem_efp_name, 1);
     free(sem_efp_name);
     if (!proceed_efp) {
-        LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
+        printf("error: get_efp_sem: %s\n", strerror(errno));
         status = EXIT_FAILURE;
         goto exit;
     }
@@ -60,16 +95,16 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     proceed_exit = get_efp_sem(sem_exit_name, 1);
     free(sem_exit_name);
     if (!proceed_exit) {
-        LOG(log_fd, "error: get_efp_sem: %s", strerror(errno));
+        printf("error: get_efp_sem: %s\n", strerror(errno));
         status = EXIT_FAILURE;
         goto exit;
     }
 
-    LOG(log_fd, "Initializig EMA...");
+    printf("Initializig EMA...\n");
     int err = EMA_init(NULL);
 
     if (err) {
-        LOG(log_fd, "Failed to initialize EMA: %d", err);
+        printf("Failed to initialize EMA: %d\n", err);
         status = EXIT_FAILURE;
         goto exit;
     }
@@ -80,7 +115,7 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     sem_post(proceed_init);
 
     if (!devices.size) {
-        LOG(log_fd, "Error: No EMA devices detected!");
+        printf("Error: No EMA devices detected!\n");
         status = EXIT_FAILURE;
         goto exit;
     }
@@ -123,29 +158,30 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     t1 = malloc(filtered_size * sizeof(Time));
 
     for (int i = 0; i < filtered_size; i++) {
-        LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(filtered_devices[i]));
+        printf("Device %d: %s\n", i, EMA_get_device_name(filtered_devices[i]));
         e0[i] = EMA_get_energy_uj(filtered_devices[i]);
         t0[i] = EMA_get_time_in_us();
-        LOG(log_fd, "\t e0: %llu", e0[i]);
-        LOG(log_fd, "\t t0: %llu", t0[i]);
+        printf("\t e0: %llu\n", e0[i]);
+        printf("\t t0: %llu\n", t0[i]);
     }
 
-    LOG(log_fd, "EFP waiting...");
+    printf("EFP waiting...\n");
 
     sem_wait(proceed_efp);
 
     for (int i = 0; i < filtered_size; i++) {
         e1[i] = EMA_get_energy_uj(filtered_devices[i]);
         t1[i] = EMA_get_time_in_us();
-        LOG(log_fd, "Device %d: %s", i, EMA_get_device_name(filtered_devices[i]));
-        LOG(log_fd, "\te1: %llu", e1[i]);
-        LOG(log_fd, "\tt1: %llu", t1[i]);
+        printf("Device %d: %s\n", i, EMA_get_device_name(filtered_devices[i]));
+        printf("\te1: %llu\n", e1[i]);
+        printf("\tt1: %llu\n", t1[i]);
     }
 
-    LOG(log_fd, "Finalizing EMA...");
+    printf("Finalizing EMA...\n");
     err = EMA_finalize(NULL);
+    printf("EMA_finalize returned: %d\n", err);
     if (err) {
-        LOG(log_fd, "Failed to finalize EMA: %d", err);
+        printf("Failed to finalize EMA: %d\n", err);
     }
 
     sem_post(proceed_exit);
@@ -158,12 +194,12 @@ exit:
 
     if (filtered_devices) free(filtered_devices);
 
-    LOG(log_fd, "Closing semaphores...");
+    printf("Closing semaphores...\n");
     if (proceed_init) sem_close(proceed_init);
     if (proceed_efp) sem_close(proceed_efp);
     if (proceed_exit) sem_close(proceed_exit);
 
-    LOG(log_fd, "EFP exiting %d...", status);
+    printf("EFP exiting %d...\n", status);
     if (log_fd) fclose(log_fd);
 
     exit(status);    
