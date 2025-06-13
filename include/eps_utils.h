@@ -8,17 +8,6 @@
 
 #include <src/common/xstring.h>
 
-#ifdef HAS_NVML
-#define NVML_HANDLE_RET(RET, FN) do { \
-    if (RET != NVML_SUCCESS) \
-    { \
-        slurm_info("error: " FN ": %s", nvmlErrorString(RET)); \
-        free(gres_uuid_list); \
-        free(gres_idxs); \
-        return SLURM_ERROR; \
-    } \
-} while(0)
-#endif
 
 char* get_suffixed_name(const char* base, uint32_t jid);
 char* get_efp_log_file_path(uint32_t jid);

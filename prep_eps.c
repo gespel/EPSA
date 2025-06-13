@@ -26,6 +26,18 @@
 
 #define EFP_WAIT_TIMEOUT 10 /* in seconds */
 
+#ifdef HAS_NVML
+#define NVML_HANDLE_RET(RET, FN) do { \
+    if (RET != NVML_SUCCESS) \
+    { \
+        slurm_info("error: " FN ": %s", nvmlErrorString(RET)); \
+        free(gres_uuid_list); \
+        free(gres_idxs); \
+        return SLURM_ERROR; \
+    } \
+} while(0)
+#endif
+
 const char plugin_name[] = "EPS";
 const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
