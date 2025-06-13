@@ -131,7 +131,7 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
         Device* dev = devices.array[i];
         const char* name = EMA_get_device_name(dev);
         const char* uuid = EMA_get_device_uid(dev);
-        char* type = strdup(EMA_get_device_type(dev));
+        const char* type = EMA_get_device_type(dev);
 
         if (!gres_uuid_count)
         {
@@ -152,7 +152,6 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
             filtered_devices[filtered_size] = dev;
             filtered_size++;
         }
-        free(type);
     }
     e0 = malloc(filtered_size * sizeof(Measurement));
     e1 = malloc(filtered_size * sizeof(Measurement));
