@@ -54,6 +54,10 @@ target_include_directories(prep_eps PRIVATE ${SLURM_INSTALL_DIR}/include)
 target_link_libraries(prep_eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
 
 if(USE_NVML AND CUDAToolkit_FOUND)
+    target_sources(
+      prep_eps
+      PRIVATE src/eps_nvml.c
+    )
     target_compile_definitions(prep_eps PRIVATE HAS_NVML)
     target_link_libraries(prep_eps CUDA::nvml)
 endif()

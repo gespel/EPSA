@@ -16,6 +16,7 @@
 
 #ifdef HAS_NVML
 #include <nvml.h>
+#include <eps_nvml.h>
 #endif
 
 #include <eps_efp.h>
@@ -25,18 +26,6 @@
 #include <eps_utils.h>
 
 #define EFP_WAIT_TIMEOUT 10 /* in seconds */
-
-#ifdef HAS_NVML
-#define NVML_HANDLE_RET(RET, FN) do { \
-    if (RET != NVML_SUCCESS) \
-    { \
-        slurm_info("error: " FN ": %s", nvmlErrorString(RET)); \
-        free(gres_uuid_list); \
-        free(gres_idxs); \
-        return SLURM_ERROR; \
-    } \
-} while(0)
-#endif
 
 #define FREE_GRES_UUIDS do { \
   for (int i = 0; i < gres_uuid_count; i++) { \
@@ -110,7 +99,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         slurm_info("node_rec->gres_used: %s", node_rec.gres_used);
 
         size_t gres_count = 0;
-        int* gres_idxs = NULL;
+        unsigned int* gres_idxs = NULL;
 
         char* idx = NULL;
 
@@ -123,6 +112,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         if (ret > 0)
         {
             gres_idxs = parse_cpuset_restriction(idx, &gres_count);
+            free(idx);
             if (gres_count && !gres_idxs)
             {
                 slurm_info("Failed to parse gres indexes substring!");
@@ -135,56 +125,15 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             #ifdef HAS_NVML
 
             gres_uuid_list = (char **)malloc(gres_count * sizeof(char*));
+            int err = nvml_process_gres(
+              gres_idxs,
+              gres_uuid_list,
+              &gres_uuid_count,
+              gres_count
+            );
+            if (err) slurm_info("error: process_gres");
+            slurm_info("gres_uuid_count: %d", gres_uuid_count);
 
-            nvmlReturn_t ret = nvmlInitWithFlags(NVML_INIT_FLAG_NO_GPUS);
-            NVML_HANDLE_RET(ret, "nvmlInitWithFlags");
-
-            slurm_info("NVML Initialized!");
-
-            unsigned int device_count;
-            ret = nvmlDeviceGetCount_v2(&device_count);
-            NVML_HANDLE_RET(ret, "nvmlDeviceGetCount_v2");
-
-            for (unsigned int i = 0; i < device_count; i++)
-            {
-                nvmlDevice_t handle;
-                ret = nvmlDeviceGetHandleByIndex_v2(i, &handle);
-                NVML_HANDLE_RET(ret, "nvmlDeviceGetHandleByIndex_v2");
-
-                unsigned int minor;
-                ret = nvmlDeviceGetMinorNumber(handle, &minor);
-                NVML_HANDLE_RET(ret, "nvmlDeviceGetMinorNumber");
-
-                int match = 0;
-                for (int i = 0; i < gres_count; i++)
-                {
-                    unsigned int idx = gres_idxs[i];
-                    if (minor == idx) match = 1;
-                }
-
-                if (!match) continue;
-
-                char uuid[NVML_DEVICE_UUID_BUFFER_SIZE];
-                ret = nvmlDeviceGetUUID(
-                    handle,
-                    uuid,
-                    NVML_DEVICE_UUID_BUFFER_SIZE
-                );
-                NVML_HANDLE_RET(ret, "nvmlDeviceGetUUID");
-
-                gres_uuid_list[gres_uuid_count] = strdup(uuid);
-                gres_uuid_count++;
-            }
-
-            ret = nvmlShutdown();
-            if (ret != NVML_SUCCESS)
-            {
-                slurm_info("error: nvmlShutdown: %s", nvmlErrorString(ret));
-            }
-            else
-            {
-                slurm_info("NVML shutdown!");
-            }
             #endif
         }
         free(gres_idxs);

@@ -208,7 +208,7 @@ static int* parse_range(const char* range, size_t* size)
     return parsed;
 }
 
-static int* parse_core_token(const char* token, size_t* size)
+static unsigned int* parse_core_token(const char* token, size_t* size)
 {
     int* range_cand = parse_range(token, size);
     if (range_cand)
@@ -221,7 +221,7 @@ static int* parse_core_token(const char* token, size_t* size)
         int err = eps_parse_int(token, &core);
         if (err) return NULL;
         *size = 1;
-        int* parsed = calloc(*size, sizeof(int));
+        unsigned int* parsed = calloc(*size, sizeof(unsigned int));
         parsed[0] = core;
         return parsed;
     }
@@ -261,8 +261,8 @@ int* parse_cpuset_restriction(const char* restriction, size_t* size)
 
     size_t total_size = 0;
     size_t s;
-    int** parsed = malloc(num_tokens * sizeof(int*));
-    int* sizes = malloc(num_tokens * sizeof(int));
+    unsigned int** parsed = malloc(num_tokens * sizeof(unsigned int*));
+    size_t* sizes = malloc(num_tokens * sizeof(size_t));
 
     for (i = 0; i < num_tokens; i++)
     {
@@ -272,7 +272,7 @@ int* parse_cpuset_restriction(const char* restriction, size_t* size)
     }
     free(tokens);
 
-    int* cores = calloc(total_size, sizeof(int));
+    unsigned int* cores = calloc(total_size, sizeof(unsigned int));
     int j = 0;
     int k = 0;
     int* current = parsed[j];
@@ -290,6 +290,10 @@ int* parse_cpuset_restriction(const char* restriction, size_t* size)
         }
     }
     *size = total_size;
+    for (int i = 0; i < num_tokens; i++)
+    {
+      free(parsed[i]);
+    }
     free(parsed);
     free(sizes);
     return cores;
