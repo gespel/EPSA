@@ -20,25 +20,10 @@ uint32_t threads_per_core(char* host);
 FILE* get_log_file_fd(const char* filename);
 
 int parse_gres(const char* gres, char** idx);
-int* parse_indexes(const char* restriction, size_t* size);
-
 int eps_parse_int(const char* str, int* val);
 unsigned int* parse_index_range(const char* range, size_t* size);
 
 #define LOG(FD, MSG, ...) do { \
         fprintf(FD, MSG "\n", ##__VA_ARGS__); \
     } while (0)
-
-
-#ifdef HAS_NVML
-    #define NVML_HANDLE_RET(RET, FN) do { \
-        if (RET != NVML_SUCCESS) \
-        { \
-            slurm_info("error: " FN ": %s", nvmlErrorString(RET)); \
-            free(gres_uuid_list); \
-            free(gres_idxs); \
-            return SLURM_ERROR; \
-        } \
-    } while(0)
-#endif
 #endif

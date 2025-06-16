@@ -7,7 +7,8 @@
 int process_cpus(
   job_info_msg_t* job_info_list,
   job_env_t* job_env,
-  char* hostname
+  char* hostname,
+  char* cpu_ids
 )
 {
     for (int i = 0; i < job_info_list->record_count; i++)
@@ -29,7 +30,7 @@ int process_cpus(
 
         int bit_reps = *job_resrcs->sockets_per_node *
                        *job_resrcs->cores_per_socket;
-        uint32_t threads = _threads_per_core(hostname);
+        uint32_t threads = threads_per_core(hostname);
         bitstr_t* cpu_bitmap = bit_alloc(bit_reps * threads);
         int bit_idx = 0;
         for (int j = 0; j < bit_reps; j++)
@@ -41,7 +42,6 @@ int process_cpus(
             }
             bit_idx++;
         }
-        char cpu_ids[128];
         bit_fmt(cpu_ids, sizeof(cpu_ids), cpu_bitmap);
         slurm_info("cpu_ids: %s", cpu_ids);
         FREE_NULL_BITMAP(cpu_bitmap);

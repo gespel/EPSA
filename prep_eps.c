@@ -10,29 +10,25 @@
 #include <time.h>
 #include <unistd.h>
 
-#ifdef HAS_NVML
-#include <nvml.h>
-#endif
-
 #include <slurm/slurm.h>
 #include <slurm/slurm_errno.h>
 #include <src/interfaces/prep.h>
 
+#include <eps_cpu.h>
 #include <eps_cpuinfo.h>
 #include <eps_data.h>
 #include <eps_db.h>
-#ifdef HAS_NVML
-#include <nvml.h>
-#include <eps_nvml.h>
-#endif
-
-#include <eps_cpu.h>
 #include <eps_efp.h>
 #include <eps_gres.h>
 #include <eps_sem.h>
 #include <eps_shm.h>
 #include <eps_wait.h>
 #include <eps_utils.h>
+
+#ifdef HAS_NVML
+#include <nvml.h>
+#include <eps_nvml.h>
+#endif
 
 #define EFP_WAIT_TIMEOUT 10 /* in seconds */
 
@@ -108,9 +104,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     int nodeid;
     uint16_t show_flags = 0;
     char hostname[HOST_NAME_MAX];
-    char cpu_ids[128];
     hostname[0] = '\0';
-    cpu_ids[0] ='\0';
 
     int err = gethostname(hostname, HOST_NAME_MAX); 
     if (err)
@@ -179,9 +173,11 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         return SLURM_ERROR;
     } 
 
+    char cpu_ids[128];
+    cpu_ids[0] ='\0';
     if (job_info_list->record_count > 0)
     {
-      err = process_cpus(job_info_list, job_env, hostname);
+      err = process_cpus(job_info_list, job_env, hostname, cpu_ids);
       if (err) slurm_info("error: process_cpus");
     }
 

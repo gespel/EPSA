@@ -1,5 +1,5 @@
-#ifndef _EPS_CPU_H
-#define _EPS_CPU_H
+#ifndef _EPS_CPUINFO_H
+#define _EPS_CPUINFO_H
 
 #include <hwloc.h>
 

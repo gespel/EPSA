@@ -15,9 +15,6 @@ node of the cluster.
    - [Considerations](#considerations)
    - [Steps](#steps)
 3. [Installation and Setup](#installation-and-setup)
-   - [Plugin](#plugin)
-   - [Database](#database)
-4. [Database Consistency](#database-consistency)
 
 ## Limitations
 
@@ -111,7 +108,7 @@ After successful completion of the above steps you should have a plugin file ins
 
 - `prep_eps.so` (PREP plugin)
 
-### Plugins
+## Installation and Setup
 
 1. After building the plugin copy the `.so` file from `build`
    directory to corresponding location that `slurm` scans for the plugins.
@@ -123,91 +120,11 @@ After successful completion of the above steps you should have a plugin file ins
    *NOTE: On this step potentially some issue may arise (see
    [Considerations](#considerations)).*
 
-### Database
-
-1. Run `postgresql` server on your cluster's head node (or on a separate database
-   node).
-
-2. Create a new database (we suggest `eps` as a name).
-
-3. Set up (create) following tables:
-
-   ```sql
-   CREATE TABLE allocations (
-       id SERIAL PRIMARY KEY,
-       jobid INT NOT NULL,
-       job_name VARCHAR(255) NOT NULL,
-       nnodes INT NOT NULL,
-       userid INT NOT NULL,
-       ts TIMESTAMPTZ
-   );
-
-   CREATE TABLE executions (
-       id SERIAL PRIMARY KEY,
-       jobid INT NOT NULL,
-       node_name VARCHAR(253),
-       node_id INT,
-       ts_start TIMESTAMPTZ,
-       ts_end TIMESTAMPTZ
-   );
-
-   CREATE TABLE measurements (
-       id SERIAL PRIMARY KEY,
-       exec_id INTEGER REFERENCES executions (id),
-       device_name TEXT NOT NULL,
-       device_uid TEXT NOT NULL,
-       e0 BIGINT,
-       e1 BIGINT,
-       t0 BIGINT,
-       t1 BIGINT,
-       utilization REAL default 100
-   );
-
-   ```
-
-4. Make connection string available via environment variable on all cluster
-   nodes.
+3. Make database connection string available via environment variable on all
+   cluster nodes.
 
    Name of the variable: **`EPS_DB_CONN_STR`**.
    Connection string example: `postgresql://user:password@10.0.0.42/eps`
 
    **Important**: As the connection string most probably will contain sensitive
    info, make sure to restrict it's availability accordingly.
-
-## Database Consistency
-
-As can be seen in previous section `allocations` table does not have any
-explicit (foreign key) relations with `executions` table, however it is
-assumed that column `nnodes` value from `allocations` should always equal to
-the count of `executions` rows (with unique `node_name` and `node_id` column
-values) for the same job (`jobid`). If it is not so it can be a sign of some
-failures or unexpected behaviour from either `Slurm` or `EPS` plugin that
-require inspection and addressing.
-
-To identify such inconsistencies in the database use the following query:
-
-```sql
-WITH distinct_executions AS (
-    SELECT DISTINCT e1.jobid, e1.node_name, e1.node_id
-    FROM executions e1
-    WHERE NOT EXISTS (
-        SELECT 1 
-        FROM executions e2
-        WHERE e1.jobid = e2.jobid
-        AND e1.node_name = e2.node_name
-        AND e1.node_id = e2.node_id
-        AND e1.id > e2.id
-    )
-)
-SELECT 
-    a.jobid, 
-    a.nnodes AS nodes_allocated, 
-    COUNT(de.jobid) AS executions
-FROM allocations a
-LEFT JOIN distinct_executions de ON a.jobid = de.jobid
-GROUP BY a.jobid, a.nnodes
-HAVING a.nnodes <> COUNT(de.jobid);
-```
-
-*NOTE: It is planned for the future to provide convenient tooling allowing to 
-simplify and/or automate those consistency checks.*

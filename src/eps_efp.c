@@ -1,12 +1,10 @@
 #include <errno.h>
-#include <limits.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
 #include <execinfo.h>
+#include <limits.h>
 #include <signal.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <eps_cpuinfo.h>
@@ -21,17 +19,6 @@
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
 
-void
-efp_main(
-    int jid,
-    int nodeid,
-    unsigned int gres_uuid_count,
-    char** gres_uuid_list,
-    time_t tstart,
-    const char* cpu_ids,
-    eps_cpuinfo_t* cpuinfo
-)
-{
 void crash_handler(int sig) {
     void *buffer[30];
     int nptrs = backtrace(buffer, 30);
@@ -54,7 +41,17 @@ void install_signal_handlers() {
     sigaction(SIGILL,  &sa, NULL);
 }
 
-void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
+void
+efp_main(
+    int jid,
+    int nodeid,
+    unsigned int gres_uuid_count,
+    char** gres_uuid_list,
+    time_t tstart,
+    const char* cpu_ids,
+    eps_cpuinfo_t* cpuinfo
+)
+{
     int status = EXIT_SUCCESS;
     install_signal_handlers();
 
@@ -122,9 +119,9 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     }
 
     size_t size;
-    int* cores = parse_indexes(cpu_ids, &size);
+    int* cores = parse_index_range(cpu_ids, &size);
     if (!cores) {
-        LOG(log_fd, "Failed to parse cpuset restriction!");
+        printf("Failed to parse cpuset restriction!\n");
         status = EXIT_FAILURE;
         goto exit;
     }
@@ -138,24 +135,23 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     }
 
     for (int i = 0; i < cpuinfo->socket_cnt; i++) {
-        LOG(log_fd, "Utilized on socket %d: %d", i, utilized[i]);
-        LOG(
-            log_fd,
-            "Cores per socket %d: %d",
+        printf("Utilized on socket %d: %d\n", i, utilized[i]);
+        printf(
+            "Cores per socket %d: %d\n",
             i,
             cpuinfo->cores_per_socket[i]
         );
         double utilization =
             (double)utilized[i] / (double)cpuinfo->cores_per_socket[i];
-        LOG(log_fd, "Utilization on socket %d: %f", i, utilization);
+        printf("Utilization on socket %d: %f\n", i, utilization);
     }
 
-    LOG(log_fd, "Initializig EMA...");
+    printf("Initializig EMA...\n");
     int err = EMA_init(NULL);
 
     if (err)
     {
-        LOG(log_fd, "Failed to initialize EMA: %d", err);
+        printf("Failed to initialize EMA: %d\n", err);
         status = EXIT_FAILURE;
         goto exit;
     }
@@ -228,14 +224,13 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
         printf("\tt1: %llu\n", t1[i]);
     }
 
-    LOG(log_fd, "Connecting to db...");
+    printf("Connecting to db...\n");
     PGconn* db_connection = connect_db();
     int connection_is_not_ok = check_connection(db_connection);
     if (connection_is_not_ok)
     {
-        LOG(
-            log_fd,
-            "error: problems with db connection: %s",
+        printf(
+            "error: problems with db connection: %s\n",
             PQerrorMessage(db_connection)
         );
         PQfinish(db_connection);
@@ -251,16 +246,15 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     err = gethostname(nodename, HOST_NAME_MAX);
     if (err)
     {
-        LOG(log_fd, "error: gethostname: %s", strerror(errno));
+        printf("error: gethostname: %s\n", strerror(errno));
         snprintf(nodename, HOST_NAME_MAX, "Undefined");
     }
 
     PGresult* res = PQexec(db_connection, "BEGIN");
     if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
-        LOG(
-            log_fd,
-            "error: failed to BEGIN transation:%s",
+        printf(
+            "error: failed to BEGIN transation:%s\n",
             PQerrorMessage(db_connection)
         );
         PQclear(res);
@@ -281,7 +275,7 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     err = insert_execution_data(db_connection, &execution, &execution_id);
     if (err)
     {
-        LOG(log_fd, "error: failed execution data insertion!");
+        printf("error: failed execution data insertion!\n");
         fclose(log_fd);
         PQfinish(db_connection);
         status = EXIT_FAILURE;
@@ -301,9 +295,8 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
             int parsed_idx;
             err = eps_parse_int(socket_idx, &parsed_idx);
             if (err) {
-                LOG(
-                    log_fd,
-                    "error: failed to parse socket index: %s",
+                printf(
+                    "error: failed to parse socket index: %s\n",
                     socket_idx
                 );
                 PQfinish(db_connection);
@@ -330,7 +323,7 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
         err = insert_measurement_data(db_connection, &measurement);
         if (err)
         {
-            LOG(log_fd, "error: failed measurement data insertion!");
+            printf("error: failed measurement data insertion!\n");
             PQfinish(db_connection);
             status = EXIT_FAILURE;
             goto exit;
@@ -340,22 +333,21 @@ void efp_main(int jid, unsigned int gres_uuid_count, char** gres_uuid_list) {
     res = PQexec(db_connection, "COMMIT");
     if (PQresultStatus(res) != PGRES_COMMAND_OK)
     {
-        LOG(
-            log_fd,
-            "error: failed to COMMIT transation:%s",
+        printf(
+            "error: failed to COMMIT transation:%s\n",
             PQerrorMessage(db_connection)
         );
         PQclear(res);
     }
 
-    LOG(log_fd, "Closing db connection...");
+    printf("Closing db connection...\n");
     PQfinish(db_connection);
 
-    LOG(log_fd, "Finalizing EMA...");
+    printf("Finalizing EMA...\n");
     err = EMA_finalize(NULL);
     if (err)
     {
-        LOG(log_fd, "Failed to finalize EMA: %d", err);
+        printf("Failed to finalize EMA: %d\n", err);
     }
     sem_post(proceed_exit);
 
