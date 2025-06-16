@@ -131,7 +131,10 @@ insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* id)
         0
     );
     int err = check_query_result(res, connection);
-    if (err) return err;
+    if (err) {
+        PQclear(res);
+        return err;
+    }
 
     for (int i = 0; i < PQntuples(res); i++)
     {
