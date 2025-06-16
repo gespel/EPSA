@@ -20,6 +20,7 @@
 
 #include <eps_cpu.h>
 #include <eps_efp.h>
+#include <eps_gres.h>
 #include <eps_sem.h>
 #include <eps_shm.h>
 #include <eps_wait.h>
@@ -98,21 +99,16 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         unsigned int* gres_idxs = NULL;
         char* idx = NULL;
 
-        int ret = parse_gres(node_rec.gres_used, &idx);
-        if (ret < 0)
+        err = process_gres_count(
+            node_rec,
+            idx,
+            gres_idxs,
+            &gres_count
+        );
+        if (err)
         {
-            slurm_info("Failed to parse gres_used!");
+            slurm_info("error: process_gres_count");
             return SLURM_ERROR;
-        }
-        if (ret > 0)
-        {
-            gres_idxs = parse_index_range(idx, &gres_count);
-            free(idx);
-            if (gres_count && !gres_idxs)
-            {
-                slurm_info("Failed to parse gres indexes substring!");
-                return SLURM_ERROR;
-            }
         }
 
         if (gres_count > 0)

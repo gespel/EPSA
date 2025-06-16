@@ -44,6 +44,7 @@ target_sources(
     PRIVATE prep_eps.c
     PRIVATE src/eps_cpu.c
     PRIVATE src/eps_efp.c
+    PRIVATE src/eps_gres.c
     PRIVATE src/eps_sem.c
     PRIVATE src/eps_shm.c
     PRIVATE src/eps_wait.c
