@@ -11,7 +11,6 @@ typedef struct eps_allocation_data
     char* jobname;
     int userid;
     int nnodes;
-    // TODO: Adjust type here...
     time_t ts;
 } eps_allocation_data_t;
 
@@ -20,7 +19,6 @@ typedef struct eps_execution_data
     int jobid;
     const char* nodename;
     int nodeid;
-    // TODO: Adjust types here...
     time_t tstart;
     time_t tend;
 } eps_execution_data_t;
