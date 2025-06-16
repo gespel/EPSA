@@ -258,11 +258,8 @@ efp_main(
         eps_measurement_data_t measurement;
 
         double utilization = 100;
-        // TODO: Update this comparison based on EMA's state
-        //       Currently the most up to date version of the device_uid
-        //       for RAPL devices only has index e.g. "0" instead of "CPU-0"
-        if (strstr(device_uid, "CPU-")) {
-            char* socket_idx = device_uid + 4;
+        if (strcmp(device_type, "cpu") == 0) {
+            char* socket_idx = device_uid;
             int parsed_idx;
             err = eps_parse_int(socket_idx, &parsed_idx);
             if (err) {
