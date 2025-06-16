@@ -36,8 +36,7 @@ typedef struct eps_measurement_data
     double utilization;
 } eps_measurement_data_t;
 
-eps_allocation_data_t* get_allocation_data(const job_record_t* job);
-void free_allocation_data(eps_allocation_data_t* data);
+void get_allocation_data(const job_record_t* job, eps_allocation_data_t*);
 void print_allocation_data(eps_allocation_data_t* data);
 
 #endif

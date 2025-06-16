@@ -504,7 +504,8 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
     slurm_info("Job Id: %u", job_ptr->job_id);
 
     slurm_info("Collecting job allocation data...");
-    eps_allocation_data_t* data = get_allocation_data(job_ptr);
+    eps_allocation_data_t data;
+    get_allocation_data(job_ptr, &data);
 
     PGconn* db_connection = connect_db();
 
@@ -515,12 +516,12 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
             "error: problems with db connection: %s",
             PQerrorMessage(db_connection)
         );
-        free_allocation_data(data);
+        free(data.jobname);
         PQfinish(db_connection);
         return SLURM_ERROR;
     }
-    int err = insert_allocation_data(db_connection, data);
-    free_allocation_data(data);
+    int err = insert_allocation_data(db_connection, &data);
+    free(data.jobname);
 
     if (err) {
         slurm_info("error: failed to write data to db");

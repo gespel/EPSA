@@ -3,10 +3,8 @@
 
 #include <eps_data.h>
 
-eps_allocation_data_t* get_allocation_data(const job_record_t* job)
+void get_allocation_data(const job_record_t* job, eps_allocation_data_t* data)
 {
-    eps_allocation_data_t* data = malloc(sizeof(eps_allocation_data_t));
-
     char job_name[NAME_MAX];
 
     if (!job->name)
@@ -23,13 +21,6 @@ eps_allocation_data_t* get_allocation_data(const job_record_t* job)
     data->userid = job->user_id;
     data->nnodes = job->node_cnt;
     data->ts= job->start_time;
-    return data;
-}
-
-void free_allocation_data(eps_allocation_data_t* data)
-{
-    free(data->jobname);
-    free(data);
 }
 
 void print_allocation_data(eps_allocation_data_t* data)
