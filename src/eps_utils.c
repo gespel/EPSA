@@ -241,13 +241,12 @@ unsigned int* parse_index_range(const char* range, size_t* size)
         num_tokens++;
         c = strchr(c+1, delim);
     }
-    char** tokens = malloc(num_tokens * sizeof(char*));
     if (num_tokens == 1) {
         unsigned int* parsed = parse_index_token(range_c, size);
         free(range_c);
-        free(tokens);
         return parsed;
     }
+    char** tokens = malloc(num_tokens * sizeof(char*));
     int i = 0;
     char* token = strtok(range_c, ",");
     do
