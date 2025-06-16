@@ -515,6 +515,7 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
             "error: problems with db connection: %s",
             PQerrorMessage(db_connection)
         );
+        free_allocation_data(data);
         PQfinish(db_connection);
         return SLURM_ERROR;
     }
