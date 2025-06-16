@@ -202,7 +202,8 @@ efp_main(
             PQerrorMessage(db_connection)
         );
         PQfinish(db_connection);
-        // Clear semaphores here and exit failure ?
+        status = EXIT_FAILURE;
+        goto exit;
     }
 
     time_t tend;
@@ -227,7 +228,6 @@ efp_main(
         );
         PQclear(res);
         PQfinish(db_connection);
-        // Clear semaphores here ?
         status = EXIT_FAILURE;
         goto exit;
     }
@@ -246,6 +246,7 @@ efp_main(
     {
         LOG(log_fd, "error: failed execution data insertion!");
         fclose(log_fd);
+        PQfinish(db_connection);
         status = EXIT_FAILURE;
         goto exit;
     }
@@ -268,7 +269,9 @@ efp_main(
                     "error: failed to parse socket index: %s",
                     socket_idx
                 );
-                // TODO: Decide what to do here...
+                PQfinish(db_connection);
+                status = EXIT_FAILURE;
+                goto exit;
             } else {
                 utilization =
                     (double)utilized[parsed_idx] /
@@ -291,6 +294,7 @@ efp_main(
         if (err)
         {
             LOG(log_fd, "error: failed measurement data insertion!");
+            PQfinish(db_connection);
             status = EXIT_FAILURE;
             goto exit;
         }
