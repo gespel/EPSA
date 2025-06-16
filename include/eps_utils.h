@@ -23,6 +23,7 @@ int parse_gres(const char* gres, char** idx);
 int* parse_indexes(const char* restriction, size_t* size);
 
 int eps_parse_int(const char* str, int* val);
+unsigned int* parse_index_range(const char* range, size_t* size);
 
 #define LOG(FD, MSG, ...) do { \
         fprintf(FD, MSG "\n", ##__VA_ARGS__); \

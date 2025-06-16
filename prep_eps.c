@@ -16,19 +16,32 @@
 
 #include <slurm/slurm.h>
 #include <slurm/slurm_errno.h>
-#include <src/common/bitstring.h>
 #include <src/interfaces/prep.h>
 
 #include <eps_cpuinfo.h>
 #include <eps_data.h>
 #include <eps_db.h>
+#ifdef HAS_NVML
+#include <nvml.h>
+#include <eps_nvml.h>
+#endif
+
+#include <eps_cpu.h>
 #include <eps_efp.h>
+#include <eps_gres.h>
 #include <eps_sem.h>
 #include <eps_shm.h>
 #include <eps_wait.h>
 #include <eps_utils.h>
 
 #define EFP_WAIT_TIMEOUT 10 /* in seconds */
+
+#define FREE_GRES_UUIDS do { \
+  for (int i = 0; i < gres_uuid_count; i++) { \
+    free(gres_uuid_list[i]); \
+  } \
+  free(gres_uuid_list); \
+} while(0)
 
 const char plugin_name[] = "EPS";
 const char plugin_type[] = "prep/eps";
@@ -109,9 +122,8 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
 
     show_flags |= SHOW_ALL;
     show_flags |= SHOW_DETAIL;
-    job_info_msg_t* job_info_list = NULL;
-    node_info_msg_t* node_info_list = NULL;
 
+    node_info_msg_t* node_info_list = NULL;
     err = slurm_load_node_single(&node_info_list, hostname, show_flags);
     if (err != SLURM_SUCCESS)
     {
@@ -127,143 +139,50 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         node_info_t node_rec = node_info_list->node_array[0];
 
         size_t gres_count = 0;
-        int* gres_idxs = NULL;
-
+        unsigned int* gres_idxs = NULL;
         char* idx = NULL;
 
-        int ret = parse_gres(node_rec.gres_used, &idx);
-        if (ret < 0)
+        err = process_gres_count(
+            node_rec,
+            idx,
+            gres_idxs,
+            &gres_count
+        );
+        if (err)
         {
-            slurm_info("Failed to parse gres_used!");
+            slurm_info("error: process_gres_count");
             return SLURM_ERROR;
-        }
-        if (ret > 0)
-        {
-            gres_idxs = parse_indexes(idx, &gres_count);
-            if (gres_count && !gres_idxs)
-            {
-                slurm_info("Failed to parse gres indexes substring!");
-                return SLURM_ERROR;
-            }
-            
         }
 
         if (gres_count > 0)
         {
             #ifdef HAS_NVML
-
             gres_uuid_list = (char **)malloc(gres_count * sizeof(char*));
-
-            nvmlReturn_t ret = nvmlInitWithFlags(NVML_INIT_FLAG_NO_GPUS);
-            NVML_HANDLE_RET(ret, "nvmlInitWithFlags");
-
-            slurm_info("NVML Initialized!");
-
-            unsigned int device_count;
-            ret = nvmlDeviceGetCount_v2(&device_count);
-            NVML_HANDLE_RET(ret, "nvmlDeviceGetCount_v2");
-
-            for (unsigned int i = 0; i < device_count; i++)
-            {
-                nvmlDevice_t handle;
-                ret = nvmlDeviceGetHandleByIndex_v2(i, &handle);
-                NVML_HANDLE_RET(ret, "nvmlDeviceGetHandleByIndex_v2");
-
-                unsigned int minor;
-                ret = nvmlDeviceGetMinorNumber(handle, &minor);
-                NVML_HANDLE_RET(ret, "nvmlDeviceGetMinorNumber");
-
-                int match = 0;
-                for (int i = 0; i < gres_count; i++)
-                {
-                    unsigned int idx = gres_idxs[i];
-                    if (minor == idx) match = 1;
-                }
-
-                if (!match) continue;
-
-                char uuid[NVML_DEVICE_UUID_BUFFER_SIZE];
-                ret = nvmlDeviceGetUUID(
-                    handle,
-                    uuid,
-                    NVML_DEVICE_UUID_BUFFER_SIZE
-                );
-                NVML_HANDLE_RET(ret, "nvmlDeviceGetUUID");
-
-                gres_uuid_list[gres_uuid_count] = strdup(uuid);
-                gres_uuid_count++;
-            }
-
-            ret = nvmlShutdown();
-            if (ret != NVML_SUCCESS)
-            {
-                slurm_info("error: nvmlShutdown: %s", nvmlErrorString(ret));
-            }
-            else
-            {
-                slurm_info("NVML shutdown!");
-            }
+            int err = nvml_process_gres(
+                gres_idxs,
+                gres_uuid_list,
+                &gres_uuid_count,
+                gres_count
+            );
+            if (err) slurm_info("error: process_gres");
             #endif
         }
         free(gres_idxs);
     }
 
+    job_info_msg_t* job_info_list = NULL;
     err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
     if (err != SLURM_SUCCESS)
     {
         slurm_info("error: slurm_load_job: %d", err);
+        FREE_GRES_UUIDS;
         return SLURM_ERROR;
     } 
+
     if (job_info_list->record_count > 0)
     {
-        for (int i = 0; i < job_info_list->record_count; i++)
-        {
-            job_info_t job_rec = job_info_list->job_array[i];
-            if (job_rec.job_id != job_env->jobid) continue;
-
-            job_resources_t* job_resrcs = job_rec.job_resrcs;
-
-            if (
-                !job_resrcs ||
-                !job_resrcs->core_bitmap ||
-                bit_fls(job_resrcs->core_bitmap) == -1
-            )
-            {
-                slurm_info("error: invalid job_resrcs");
-                return SLURM_ERROR;
-            }
-
-            hostlist_t* hostlist = slurm_hostlist_create(job_resrcs->nodes);
-            if (!hostlist) {
-                slurm_info("error: hostlist_create");
-                return SLURM_ERROR;
-            }
-
-            nodeid = slurm_hostlist_find(hostlist, hostname);
-            if (nodeid == -1)
-            {
-                slurm_info("error: hostlist_find");
-                return SLURM_ERROR;
-            }
-            slurm_hostlist_destroy(hostlist);
-
-            int bit_reps = *job_resrcs->sockets_per_node *
-                           *job_resrcs->cores_per_socket;
-            uint32_t threads = threads_per_core(hostname);
-            bitstr_t* cpu_bitmap = bit_alloc(bit_reps * threads);
-            int bit_idx = 0;
-            for (int j = 0; j < bit_reps; j++)
-            {
-                if (bit_test(job_resrcs->core_bitmap, bit_idx))
-                {
-                    for (int k = 0; k < threads; k++)
-                        bit_set(cpu_bitmap, (j * threads) + k);
-                }
-                bit_idx++;
-            }
-            bit_fmt(cpu_ids, sizeof(cpu_ids), cpu_bitmap);
-            FREE_NULL_BITMAP(cpu_bitmap);
-        }
+      err = process_cpus(job_info_list, job_env, hostname);
+      if (err) slurm_info("error: process_cpus");
     }
 
     slurm_info("Initializing shared memory...");
@@ -278,6 +197,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     if (!efp_pid)
     {
         slurm_info("error: get_shared_memory_addr: %s", strerror(errno));
+        FREE_GRES_UUIDS;
         return SLURM_ERROR;
     }
 
@@ -297,6 +217,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         }
         free(sem_name);
         slurm_info("error: get_efp_sem: %s", strerror(errno));
+        FREE_GRES_UUIDS;
         return SLURM_ERROR;
     }
 
@@ -314,8 +235,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             sem_close(proceed_init);
             sem_unlink(sem_name);
             free(sem_name);
-            
-            if (gres_uuid_list) free(gres_uuid_list);
+            FREE_GRES_UUIDS;
 
             slurm_info("error: fork: %s", strerror(errno));
             return SLURM_ERROR;
@@ -375,8 +295,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             sem_close(proceed_init);
             sem_unlink(sem_name);
             free(sem_name);
-
-            if (gres_uuid_list) free(gres_uuid_list);
+            FREE_GRES_UUIDS;
 
             slurm_info("Init hook exits...");
     }

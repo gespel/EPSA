@@ -47,13 +47,6 @@ else()
     message(STATUS "NVML support explicitly disabled.")
 endif()
 
-# TODO: Remove this completely...
-add_library(eps SHARED)
-target_sources(
-    eps
-    PRIVATE eps.c
-)
-
 add_library(prep_eps SHARED)
 target_sources(
     prep_eps
@@ -61,7 +54,9 @@ target_sources(
     PRIVATE src/eps_cpuinfo.c
     PRIVATE src/eps_data.c
     PRIVATE src/eps_db.c
+    PRIVATE src/eps_cpu.c
     PRIVATE src/eps_efp.c
+    PRIVATE src/eps_gres.c
     PRIVATE src/eps_sem.c
     PRIVATE src/eps_shm.c
     PRIVATE src/eps_wait.c
@@ -78,6 +73,10 @@ target_link_libraries(prep_eps ${HWLOC_INSTALL_DIR}/lib/libhwloc.so)
 target_link_libraries(prep_eps ${PQ_INSTALL_DIR}/libs/libpq.so)
 
 if(USE_NVML AND CUDAToolkit_FOUND)
+    target_sources(
+      prep_eps
+      PRIVATE src/eps_nvml.c
+    )
     target_compile_definitions(prep_eps PRIVATE HAS_NVML)
     target_link_libraries(prep_eps CUDA::nvml)
 endif()

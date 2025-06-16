@@ -116,6 +116,7 @@ int parse_gres(const char* gres, char** idx)
         }
         token = strtok(NULL, ":");
     }
+    free(_gres);
     if (!strlen(idx_str)) return -1;
     if (idx_str[0] == '0')
     {
@@ -166,12 +167,21 @@ static int is_range(const char* value, int* o_start, int* o_end)
     {
         return 0;
     }
-    char dup[len];
+    char* dup = malloc(len + 1);
     strcpy(dup, value);
     const char* s = strtok(dup, "-");
-    if (!s) return 0;
+    if (!s)
+    {
+      free(dup);
+      return 0;
+    }
     const char* e = strtok(NULL, "-");
-    if (!e) return 0;
+    if (!e)
+    {
+      free(dup);
+      return 0;
+    }
+    free(dup);
     int start = 0;
     int end = 0;
     int err = eps_parse_int(s, &start);
@@ -198,7 +208,7 @@ static int* parse_range(const char* range, size_t* size)
     return parsed;
 }
 
-static int* parse_core_token(const char* token, size_t* size)
+static unsigned int* parse_index_token(const char* token, size_t* size)
 {
     int* range_cand = parse_range(token, size);
     if (range_cand)
@@ -207,36 +217,38 @@ static int* parse_core_token(const char* token, size_t* size)
     }
     else
     {
-        int core;
-        int err = eps_parse_int(token, &core);
+        int _parsed;
+        int err = eps_parse_int(token, &_parsed);
         if (err) return NULL;
         *size = 1;
-        int* parsed = calloc(*size, sizeof(int));
-        parsed[0] = core;
+        unsigned int* parsed = calloc(*size, sizeof(unsigned int));
+        parsed[0] = _parsed;
         return parsed;
     }
 }
 
-int* parse_indexes(const char* restriction, size_t* size)
+unsigned int* parse_index_range(const char* range, size_t* size)
 {
     const char delim = ',';
-    int len = strlen(restriction);
+    int len = strlen(range);
     if (!len) return NULL;
-    char restr_c[len];
-    strcpy(restr_c, restriction);
+    char* range_c = malloc(len + 1);
+    strcpy(range_c, range);
     int num_tokens = 1;
-    char* c = strchr(restr_c, delim);
+    char* c = strchr(range_c, delim);
     while (c != NULL)
     {
         num_tokens++;
         c = strchr(c+1, delim);
     }
-    char* tokens[num_tokens];
     if (num_tokens == 1) {
-        return parse_core_token(restr_c, size);
+        unsigned int* parsed = parse_index_token(range_c, size);
+        free(range_c);
+        return parsed;
     }
+    char** tokens = malloc(num_tokens * sizeof(char*));
     int i = 0;
-    char* token = strtok(restr_c, ",");
+    char* token = strtok(range_c, ",");
     do
     {
         tokens[i] = token;
@@ -244,26 +256,28 @@ int* parse_indexes(const char* restriction, size_t* size)
         token = strtok(NULL, ",");
     }
     while (token != NULL);
+    free(range_c);
 
     size_t total_size = 0;
     size_t s;
-    int* parsed[num_tokens];
-    int sizes[num_tokens];
+    unsigned int** parsed = malloc(num_tokens * sizeof(unsigned int*));
+    size_t* sizes = malloc(num_tokens * sizeof(size_t));
 
     for (i = 0; i < num_tokens; i++)
     {
-        parsed[i] = parse_core_token(tokens[i], &s);
+        parsed[i] = parse_index_token(tokens[i], &s);
         total_size = total_size + s;
         sizes[i] = s;
     }
+    free(tokens);
 
-    int* cores = calloc(total_size, sizeof(int));
+    unsigned int* indexes = calloc(total_size, sizeof(unsigned int));
     int j = 0;
     int k = 0;
     int* current = parsed[j];
     for (i = 0; i < total_size; i++)
     {
-        cores[i] = current[k];
+        indexes[i] = current[k];
         if (k == sizes[j] - 1)
         {
             k = 0;
@@ -275,5 +289,11 @@ int* parse_indexes(const char* restriction, size_t* size)
         }
     }
     *size = total_size;
-    return cores;
+    for (int i = 0; i < num_tokens; i++)
+    {
+      free(parsed[i]);
+    }
+    free(parsed);
+    free(sizes);
+    return indexes;
 }

@@ -104,17 +104,17 @@ across nodes if you have homogeneous cluster/partition setup.
     **IMPORTANT:** Check [considerations](#considerations) section if you
     haven't done that.
 
-4. Build the plugins by running `make` inside `build` directory.
+4. Build the plugin by running `make` inside `build` directory.
 
-After successful completion of the above steps you should a plugin file inside
-`build` directory called `eps.so`.
+After successful completion of the above steps you should have a plugin file inside
+`build` directory:
 
-## Installation and Setup
+- `prep_eps.so` (PREP plugin)
 
 ### Plugins
 
-1. After building the plugins copy the `.so` files from `build`
-   directory to corresponding locations that `slurm` scans for the plugins.
+1. After building the plugin copy the `.so` file from `build`
+   directory to corresponding location that `slurm` scans for the plugins.
 
 2. Restart `Slurm` daemons:
    - `slurmd` on compute nodes;
