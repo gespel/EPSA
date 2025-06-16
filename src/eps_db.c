@@ -61,15 +61,15 @@ int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
     char ts[12];
     snprintf(ts, 12, "%ld", data->ts);
 
-    int paramFormats[5] = {1, 0, 1, 1, 0};
-    const char* paramValues[5] = {
+    int param_formats[5] = {1, 0, 1, 1, 0};
+    const char* param_values[5] = {
         (char*) &bin_jobid,
         data->jobname,
         (char*) &bin_nnodes,
         (char*) &bin_userid,
         ts
     };
-    int paramLengths[5] = {
+    int param_lengths[5] = {
         sizeof(bin_jobid),
         sizeof(data->jobname),
         sizeof(bin_nnodes),
@@ -82,9 +82,9 @@ int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
         "VALUES($1, $2, $3, $4, to_timestamp($5));",
         5,
         NULL,
-        paramValues,
-        paramLengths,
-        paramFormats,
+        param_values,
+        param_lengths,
+        param_formats,
         0
     );
     int err = check_query_result(res, connection);
@@ -104,15 +104,15 @@ insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* id)
     char tend[12];
     snprintf(tend, 12, "%ld", data->tend);
 
-    int paramFormats[5] = {1, 0, 1, 0, 0};
-    const char* paramValues[5] = {
+    int param_formats[5] = {1, 0, 1, 0, 0};
+    const char* param_values[5] = {
         (char*) &bin_jobid,
         data->nodename,
         (char*) &bin_nodeid,
         tstart,
         tend
     };
-    int paramLengths[5] = {
+    int param_lengths[5] = {
         sizeof(bin_jobid),
         sizeof(data->nodename),
         sizeof(bin_nodeid),
@@ -125,9 +125,9 @@ insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* id)
         " VALUES($1, $2, $3, to_timestamp($4), to_timestamp($5)) RETURNING id;",
         5,
         NULL,
-        paramValues,
-        paramLengths,
-        paramFormats,
+        param_values,
+        param_lengths,
+        param_formats,
         0
     );
     int err = check_query_result(res, connection);
@@ -160,7 +160,7 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
     snprintf(t1, 20, "%llu", data->t1);
     snprintf(utilization, 6, "%.2f", data->utilization);
 
-    const char* paramValues[9] = {
+    const char* param_values[9] = {
         exec_id,
         data->device_name,
         data->device_uid,
@@ -171,7 +171,7 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
         t1,
         utilization
     };
-    int paramLengths[9] = {
+    int param_lengths[9] = {
         sizeof(exec_id),
         sizeof(data->device_name),
         sizeof(data->device_uid),
@@ -187,8 +187,8 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
         "INSERT INTO measurements ("MES_COLS") VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9);",
         9,
         NULL,
-        paramValues,
-        paramLengths,
+        param_values,
+        param_lengths,
         NULL,
         0
     );
