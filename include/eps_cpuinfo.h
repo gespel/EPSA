@@ -11,8 +11,5 @@ typedef struct {
 } eps_cpuinfo_t;
 
 int populate_cpuinfo(hwloc_topology_t topology, eps_cpuinfo_t* info);
-int map_cpuinfo(eps_cpuinfo_t* info, int fd);
-
-void free_cpuinfo(eps_cpuinfo_t* info);
 
 #endif
