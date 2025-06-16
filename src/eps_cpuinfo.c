@@ -15,9 +15,33 @@ static int _get_cores_count(hwloc_topology_t topology)
     return count;
 }
 
-int populate_cpuinfo(hwloc_topology_t topology, eps_cpuinfo_t* info) {
-    int socket_cnt = get_sockets_count(topology);
-    int core_cnt = get_cores_count(topology);
+int populate_cpuinfo(hwloc_topology_t topology, eps_cpuinfo_t* info)
+{
+    int socket_cnt = _get_sockets_count(topology);
+    if (socket_cnt == 0)
+    {
+        printf("error: hwloc returned socket objects count 0");
+        return 1;
+    }
+
+    int core_cnt = _get_cores_count(topology);
+    if (socket_cnt == 0)
+    {
+        printf("error: hwloc returned core objects count 0");
+        return 1;
+    }
+
+    if (socket_cnt == -1)
+        printf("warn: multiple levels with socket objects detected");
+    if (core_cnt == -1)
+        printf("warn: multiple levels with core objects detected");
+
+    if (socket_cnt == -1 || core_cnt == -1)
+    {
+        // TODO: Handle multi level topologies ?
+        printf("error: multi level topology detected");
+        return 1;
+    }
 
     int* cores_per_socket = calloc(socket_cnt, sizeof(int));
     int* socket_idx = calloc(core_cnt, sizeof(int));
