@@ -8,7 +8,7 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "")
 set(SLURM_INSTALL_DIR "" CACHE PATH "A directory of slurm installation")
 set(SLURM_SRC_DIR "" CACHE PATH "A directory with slurm source code")
 set(EMA_INSTALL_DIR "" CACHE PATH "A directory of EMA installation")
-set(PQ_INSTALL_DIR "" CACHE PATH "A directory with PostgresQL installation")
+set(PQ_INSTALL_DIR "" CACHE PATH "A directory with PostgreSQL installation")
 set(HWLOC_INSTALL_DIR "" CACHE PATH "A directory of hwloc installation")
 
 if(NOT SLURM_INSTALL_DIR)
