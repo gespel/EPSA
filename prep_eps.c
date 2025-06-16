@@ -523,6 +523,7 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 
     if (err) {
         slurm_info("error: failed to write data to db");
+        PQfinish(db_connection);
         return SLURM_ERROR;
     }
 
@@ -534,11 +535,6 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 
 extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
 {
-    if (!running_in_slurmctld()) return SLURM_SUCCESS;
-
-    slurm_info("Ctld_epilog: %s", plugin_name);
-    slurm_info("Job Id: %u", job_ptr->job_id);
-
     return SLURM_SUCCESS;
 }
 
