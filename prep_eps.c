@@ -14,7 +14,6 @@
 #include <slurm/slurm_errno.h>
 #include <src/interfaces/prep.h>
 
-#include <eps_cpu.h>
 #include <eps_cpuinfo.h>
 #include <eps_data.h>
 #include <eps_db.h>
