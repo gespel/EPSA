@@ -17,7 +17,7 @@ DB. \*
    system used for the build.
 
    **IMPORTANT:** The source code version should match exactly (up to minor number)
-   the version of `Slurm` installed on your cluster. Otherwise plugin compatability
+   the version of `Slurm` installed on your cluster. Otherwise plugin compatibility
    issues may arise.
 
 3. `EMA` library installed on all cluster nodes.
@@ -48,19 +48,26 @@ DB. \*
       -DEMA_INSTALL_DIR=/path/to/your/EMA/installation/directory
       ```
 
-4. Build the plugins by running `make` inside `build` directory.
+    **IMPORTANT:** You should probably build and update plugin on the target system.
+    The plugin uses `NVML` library for filtering GPU devices measurements, carefully
+    check `USE_NVML` option from CMake, disable it for systems where no `NVML`
+    installation is available.
 
-After successfull completion of the above steps you should have two plugin files inside
+4. Build the plugin by running `make` inside `build` directory.
+
+After successful completion of the above steps you should have a plugin file inside
 `build` directory:
 
-- `eps.so` (SPANK plugin)
 - `prep_eps.so` (PREP plugin)
 
 ## Installation
 
-1. After building the plugins copy the `.so` files from `build`
-   directory to corresponding locations that `slurm` scans for the plugins.
+1. After building the plugin copy the `.so` file from `build`
+   directory to corresponding location that `slurm` scans for the plugins.
 
 2. You need to restart `slurm` daemons:
    - `slurmd` on compute nodes;
    - `slurmctld` on the head (controller) node.
+
+   *NOTE: On this step potentially some issue may arise (see `step 3` **IMPORTANT**
+   note).*
