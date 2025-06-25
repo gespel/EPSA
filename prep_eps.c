@@ -100,6 +100,13 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     slurm_info("Prolog: %s", plugin_name);
     slurm_info("Job Id: %u", job_env->jobid);
 
+    int nodeid = get_nodeid();
+    if (nodeid == -1)
+    {
+        slurm_info("error: get_nodeid");
+        return SLURM_ERROR;
+    }
+
     int gres_uuid_count = 0;
     char** gres_uuid_list = NULL;
 

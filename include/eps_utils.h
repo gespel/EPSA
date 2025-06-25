@@ -19,6 +19,8 @@ uint32_t threads_per_core(char* host);
 
 FILE* get_log_file_fd(const char* filename);
 
+int get_nodeid();
+
 int parse_gres(const char* gres, char** idx);
 int eps_parse_int(const char* str, int* val);
 unsigned int* parse_index_range(const char* range, size_t* size);

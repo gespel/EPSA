@@ -132,7 +132,7 @@ static int _process_cpus(
 
         int bit_reps = *job_resrcs->sockets_per_node *
                        *job_resrcs->cores_per_socket;
-        uint32_t threads = _threads_per_core(hostname);
+        uint32_t threads = threads_per_core(hostname);
         bitstr_t* cpu_bitmap = bit_alloc(bit_reps * threads);
         int bit_idx = 0;
         for (int j = 0; j < bit_reps; j++)

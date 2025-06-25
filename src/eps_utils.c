@@ -102,6 +102,39 @@ uint32_t threads_per_core(char* host)
     return threads;
 }
 
+int get_nodeid()
+{
+    node_info_msg_t *node_info_msg = NULL;
+    int nodeid = -1;
+
+    char hostname[HOST_NAME_MAX];
+    hostname[0] = '\0';
+
+    int err = gethostname(hostname, HOST_NAME_MAX);
+    if (err)
+    {
+        perror("gethostname: ");
+        return nodeid;
+    }
+
+    if (!(node_info_msg = _get_node_info_for_jobs())) return nodeid;
+    for (int i = 0; i < node_info_msg->record_count; i++)
+    {
+        if (
+            node_info_msg->node_array[i].name &&
+            !xstrcmp(hostname, node_info_msg->node_array[i].name)
+           )
+        {
+                nodeid = i;
+                break;
+        }
+    }
+    slurm_free_node_info_msg(node_info_msg);
+
+    return nodeid;
+}
+
+
 int parse_gres(const char* gres, char** idx)
 {
     char* _gres = strdup(gres);
