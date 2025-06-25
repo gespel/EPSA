@@ -10,12 +10,17 @@ DB. \*
 
 ### Prerequisites
 
-1. `Slurm` installed and configured on the cluster.
-2. `Slurm` source code present on the system used for the build.
+1. [CMake](https://cmake.org/)
+1. [Slurm](https://www.schedmd.com/slurm/) installed and configured on the
+   cluster.
+2. [Slurm source code](https://github.com/SchedMD/slurm) present on the
+   system used for the build.
 
    **IMPORTANT:** The source code version should match exactly (up to minor number)
    the version of `Slurm` installed on your cluster. Otherwise plugin compatability
    issues may arise.
+
+3. `EMA` library installed on all cluster nodes.
 
 ### Steps
 
@@ -39,7 +44,8 @@ DB. \*
       ```bash
       cmake .. \
       -DSLURM_INSTALL_DIR=/path/to/your/slurm/installation/directory \
-      -DSLURM_SRC_DIR=/path/to/slurm/sources/directory
+      -DSLURM_SRC_DIR=/path/to/slurm/sources/directory \
+      -DEMA_INSTALL_DIR=/path/to/your/EMA/installation/directory
       ```
 
 4. Build the plugins by running `make` inside `build` directory.
@@ -58,17 +64,3 @@ After successfull completion of the above steps you should have two plugin files
 2. You need to restart `slurm` daemons:
    - `slurmd` on compute nodes;
    - `slurmctld` on the head (controller) node.
-
-### Suggested handy aliases
-
-```bash
-alias remake="make clean && make && make test"
-
-alias screstart="sudo systemctl restart slurmctld.service"
-alias scstatus="sudo systemctl status slurmctld.service"
-alias sclog="sudo journalctl -xefu slurmctld.service"
-
-alias sdrestart="sudo systemctl restart slurmd.service"
-alias sdstatus="sudo systemctl status slurmd.service"
-alias sdlog="sudo journalctl -xefu slurmd.service"
-```
