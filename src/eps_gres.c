@@ -100,6 +100,7 @@ int init_gres(char** gres_uuid_list, int* gres_uuid_count)
     }
 
     err = _process_gres(gres_uuid_list, gres_uuid_count, node_info_list);
+    slurm_free_node_info_msg(node_info_list);
     if (err)
     {
         slurm_info("error: process_gres: %d", err);

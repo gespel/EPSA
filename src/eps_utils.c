@@ -99,6 +99,7 @@ uint32_t threads_per_core(char* host)
                 break;
         }
     }
+    slurm_free_node_info_msg(node_info_msg);
     return threads;
 }
 

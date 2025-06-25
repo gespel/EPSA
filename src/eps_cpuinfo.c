@@ -168,6 +168,7 @@ int init_cpuinfo(job_env_t* job_env, char* cpu_ids)
     if (job_info_list->record_count > 0)
     {
         err = _process_cpus(job_info_list, job_env, cpu_ids);
+        slurm_free_job_info_msg(job_info_list);
         if (err) slurm_info("error: process_cpus");
     }
     return 0;
