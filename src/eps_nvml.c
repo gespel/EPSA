@@ -24,6 +24,7 @@ int nvml_process_gres(
     size_t gres_count
 )
 {
+    slurm_info("Initializing NVML...");
     nvmlReturn_t ret = nvmlInitWithFlags(NVML_INIT_FLAG_NO_GPUS);
     NVML_HANDLE_RET(ret, "nvmlInitWithFlags");
 
@@ -62,6 +63,7 @@ int nvml_process_gres(
         *gres_uuid_count = *gres_uuid_count + 1;
     }
 
+    slurm_info("Finalizing NVML...");
     ret = nvmlShutdown();
     if (ret != NVML_SUCCESS)
     {

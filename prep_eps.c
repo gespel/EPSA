@@ -111,10 +111,10 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     char** gres_uuid_list = NULL;
 
     slurm_info("Initializing GRES info...");
-    int err = init_gres(gres_uuid_list, &gres_uuid_count);
+    int err = init_gres(&gres_uuid_list, &gres_uuid_count);
     if (err)
     {
-        slurm_info("error: _init_gres: %d", err);
+        slurm_info("error: init_gres: %d", err);
         return SLURM_ERROR;
     }
 
@@ -124,7 +124,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     err = init_cpuinfo(job_env, cpu_ids);
     if (err)
     {
-        slurm_info("error: _init_cpuinfo: %d", err);
+        slurm_info("error: init_cpuinfo: %d", err);
         FREE_GRES_UUIDS;
         return SLURM_ERROR;
     }
