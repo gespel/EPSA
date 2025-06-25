@@ -39,6 +39,62 @@ const char plugin_name[] = "EPS";
 const char plugin_type[] = "prep/eps";
 const uint32_t plugin_version = SLURM_VERSION_NUMBER;
 
+static int _init_gres(char** gres_uuid_list, int* gres_uuid_count)
+{
+    char hostname[HOST_NAME_MAX];
+    hostname[0] = '\0';
+
+    int err = gethostname(hostname, HOST_NAME_MAX);
+    if (err)
+    {
+        perror("gethostname: ");
+        slurm_info("error: gethostname");
+        return 1;
+    }
+
+    uint16_t show_flags = 0;
+    show_flags |= SHOW_ALL;
+    show_flags |= SHOW_DETAIL;
+
+    node_info_msg_t* node_info_list = NULL;
+    err = slurm_load_node_single(&node_info_list, hostname, show_flags);
+    if (err != SLURM_SUCCESS)
+    {
+        slurm_info("error: slurm_load_node_single: %d", err);
+        return 1;
+    }
+
+    err = process_gres(gres_uuid_list, gres_uuid_count, node_info_list);
+    if (err)
+    {
+        slurm_info("error: process_gres: %d", err);
+        return err;
+    }
+    return 0;
+}
+
+static int _init_cpuinfo(job_env_t* job_env)
+{
+    uint16_t show_flags = 0;
+    show_flags |= SHOW_ALL;
+    show_flags |= SHOW_DETAIL;
+
+    job_info_msg_t* job_info_list = NULL;
+    int err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
+    if (err != SLURM_SUCCESS)
+    {
+        slurm_info("error: slurm_load_job: %d", err);
+        return 1;
+    } 
+
+    if (job_info_list->record_count > 0)
+    {
+      err = process_cpus(job_info_list, job_env);
+      if (err) slurm_info("error: process_cpus");
+    }
+    return 0;
+}
+
 /********************************
  *
  * Slurm Plugin API hooks
@@ -65,81 +121,24 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     slurm_info("Prolog: %s", plugin_name);
     slurm_info("Job Id: %u", job_env->jobid);
 
-    char hostname[HOST_NAME_MAX];
-    hostname[0] = '\0';
-
-    int err = gethostname(hostname, HOST_NAME_MAX); 
-    if (err)
-    {
-        perror("gethostname: ");
-        slurm_info("error: gethostname");
-        return SLURM_ERROR;
-    }
-
-    uint16_t show_flags = 0;
-    show_flags |= SHOW_ALL;
-    show_flags |= SHOW_DETAIL;
-
-    node_info_msg_t* node_info_list = NULL;
-    err = slurm_load_node_single(&node_info_list, hostname, show_flags);
-    if (err != SLURM_SUCCESS)
-    {
-        slurm_info("error: slurm_load_node_single: %d", err);
-        return SLURM_ERROR;
-    } 
-
     int gres_uuid_count = 0;
     char** gres_uuid_list = NULL;
 
-    if (node_info_list->record_count > 0)
+    slurm_info("Initializing GRES info...");
+    int err = _init_gres(gres_uuid_list, &gres_uuid_count);
+    if (err)
     {
-        node_info_t node_rec = node_info_list->node_array[0];
-
-        size_t gres_count = 0;
-        unsigned int* gres_idxs = NULL;
-        char* idx = NULL;
-
-        err = process_gres_count(
-            node_rec,
-            idx,
-            gres_idxs,
-            &gres_count
-        );
-        if (err)
-        {
-            slurm_info("error: process_gres_count");
-            return SLURM_ERROR;
-        }
-
-        if (gres_count > 0)
-        {
-            #ifdef HAS_NVML
-            gres_uuid_list = (char **)malloc(gres_count * sizeof(char*));
-            int err = nvml_process_gres(
-                gres_idxs,
-                gres_uuid_list,
-                &gres_uuid_count,
-                gres_count
-            );
-            if (err) slurm_info("error: process_gres");
-            #endif
-        }
-        free(gres_idxs);
+        slurm_info("error: _init_gres: %d", err);
+        return SLURM_ERROR;
     }
 
-    job_info_msg_t* job_info_list = NULL;
-    err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
-    if (err != SLURM_SUCCESS)
+    slurm_info("Initializing cpuinfo...");
+    err = _init_cpuinfo(job_env);
+    if (err)
     {
-        slurm_info("error: slurm_load_job: %d", err);
+        slurm_info("error: _init_cpuinfo: %d", err);
         FREE_GRES_UUIDS;
         return SLURM_ERROR;
-    } 
-
-    if (job_info_list->record_count > 0)
-    {
-      err = process_cpus(job_info_list, job_env, hostname);
-      if (err) slurm_info("error: process_cpus");
     }
 
     slurm_info("Initializing shared memory...");

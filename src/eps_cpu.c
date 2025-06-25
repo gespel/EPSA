@@ -6,10 +6,20 @@
 
 int process_cpus(
   job_info_msg_t* job_info_list,
-  job_env_t* job_env,
-  char* hostname
+  job_env_t* job_env
 )
 {
+    char hostname[HOST_NAME_MAX];
+    hostname[0] = '\0';
+
+    int err = gethostname(hostname, HOST_NAME_MAX);
+    if (err)
+    {
+        perror("gethostname: ");
+        slurm_info("error: gethostname");
+        return 1;
+    }
+
     for (int i = 0; i < job_info_list->record_count; i++)
     {
         job_info_t job_rec = job_info_list->job_array[i];
@@ -46,5 +56,5 @@ int process_cpus(
         slurm_info("cpu_ids: %s", cpu_ids);
         FREE_NULL_BITMAP(cpu_bitmap);
     }
-  return 0;
+    return 0;
 }

@@ -5,8 +5,7 @@
 
 int process_cpus(
   job_info_msg_t* job_info_list,
-  job_env_t* job_env,
-  char* hostname
+  job_env_t* job_env
 );
 
 #endif
