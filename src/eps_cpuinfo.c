@@ -96,13 +96,23 @@ int populate_cpuinfo(hwloc_topology_t topology, eps_cpuinfo_t* info)
     return 0;
 }
 
-int process_cpus(
+static int _process_cpus(
   job_info_msg_t* job_info_list,
   job_env_t* job_env,
-  char* hostname,
   char* cpu_ids
 )
 {
+    char hostname[HOST_NAME_MAX];
+    hostname[0] = '\0';
+
+    int err = gethostname(hostname, HOST_NAME_MAX);
+    if (err)
+    {
+        perror("gethostname: ");
+        slurm_info("error: gethostname");
+        return 1;
+    }
+
     for (int i = 0; i < job_info_list->record_count; i++)
     {
         job_info_t job_rec = job_info_list->job_array[i];
@@ -122,7 +132,7 @@ int process_cpus(
 
         int bit_reps = *job_resrcs->sockets_per_node *
                        *job_resrcs->cores_per_socket;
-        uint32_t threads = threads_per_core(hostname);
+        uint32_t threads = _threads_per_core(hostname);
         bitstr_t* cpu_bitmap = bit_alloc(bit_reps * threads);
         int bit_idx = 0;
         for (int j = 0; j < bit_reps; j++)
@@ -138,5 +148,27 @@ int process_cpus(
         slurm_info("cpu_ids: %s", cpu_ids);
         FREE_NULL_BITMAP(cpu_bitmap);
     }
-  return 0;
+    return 0;
+}
+
+int init_cpuinfo(job_env_t* job_env, char* cpu_ids)
+{
+    uint16_t show_flags = 0;
+    show_flags |= SHOW_ALL;
+    show_flags |= SHOW_DETAIL;
+
+    job_info_msg_t* job_info_list = NULL;
+    int err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
+    if (err != SLURM_SUCCESS)
+    {
+        slurm_info("error: slurm_load_job: %d", err);
+        return 1;
+    } 
+
+    if (job_info_list->record_count > 0)
+    {
+        err = _process_cpus(job_info_list, job_env, cpu_ids);
+        if (err) slurm_info("error: process_cpus");
+    }
+    return 0;
 }

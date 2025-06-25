@@ -14,10 +14,8 @@ typedef struct {
 
 int populate_cpuinfo(hwloc_topology_t topology, eps_cpuinfo_t* info);
 
-int process_cpus(
-  job_info_msg_t* job_info_list,
+int init_cpuinfo(
   job_env_t* job_env,
-  char* hostname,
   char* cpu_ids
 );
 
