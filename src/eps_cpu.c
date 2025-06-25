@@ -4,7 +4,7 @@
 #include <eps_utils.h>
 
 
-int process_cpus(
+static int _process_cpus(
   job_info_msg_t* job_info_list,
   job_env_t* job_env
 )
@@ -55,6 +55,28 @@ int process_cpus(
         bit_fmt(cpu_ids, sizeof(cpu_ids), cpu_bitmap);
         slurm_info("cpu_ids: %s", cpu_ids);
         FREE_NULL_BITMAP(cpu_bitmap);
+    }
+    return 0;
+}
+
+ int init_cpuinfo(job_env_t* job_env)
+{
+    uint16_t show_flags = 0;
+    show_flags |= SHOW_ALL;
+    show_flags |= SHOW_DETAIL;
+
+    job_info_msg_t* job_info_list = NULL;
+    int err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
+    if (err != SLURM_SUCCESS)
+    {
+        slurm_info("error: slurm_load_job: %d", err);
+        return 1;
+    } 
+
+    if (job_info_list->record_count > 0)
+    {
+      err = _process_cpus(job_info_list, job_env);
+      if (err) slurm_info("error: process_cpus");
     }
     return 0;
 }

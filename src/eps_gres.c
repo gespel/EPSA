@@ -4,7 +4,7 @@
 
 #include <src/interfaces/prep.h>
 
-int _process_gres_count(
+static int _process_gres_count(
   node_info_t node_rec,
   char* idx,
   unsigned int* gres_idxs,
@@ -30,7 +30,7 @@ int _process_gres_count(
     return 0;
 }
 
-int process_gres(
+static int _process_gres(
     char** gres_uuid_list,
     int* gres_uuid_count,
     node_info_msg_t* node_info_list
@@ -70,6 +70,40 @@ int process_gres(
             #endif
         }
         free(gres_idxs);
+    }
+    return 0;
+}
+
+int init_gres(char** gres_uuid_list, int* gres_uuid_count)
+{
+    char hostname[HOST_NAME_MAX];
+    hostname[0] = '\0';
+
+    int err = gethostname(hostname, HOST_NAME_MAX);
+    if (err)
+    {
+        perror("gethostname: ");
+        slurm_info("error: gethostname");
+        return 1;
+    }
+
+    uint16_t show_flags = 0;
+    show_flags |= SHOW_ALL;
+    show_flags |= SHOW_DETAIL;
+
+    node_info_msg_t* node_info_list = NULL;
+    err = slurm_load_node_single(&node_info_list, hostname, show_flags);
+    if (err != SLURM_SUCCESS)
+    {
+        slurm_info("error: slurm_load_node_single: %d", err);
+        return 1;
+    }
+
+    err = _process_gres(gres_uuid_list, gres_uuid_count, node_info_list);
+    if (err)
+    {
+        slurm_info("error: process_gres: %d", err);
+        return err;
     }
     return 0;
 }
