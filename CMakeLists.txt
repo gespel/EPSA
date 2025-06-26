@@ -8,6 +8,8 @@ set(CMAKE_SHARED_LIBRARY_PREFIX "")
 set(SLURM_INSTALL_DIR "" CACHE PATH "A directory of slurm installation")
 set(SLURM_SRC_DIR "" CACHE PATH "A directory with slurm source code")
 set(EMA_INSTALL_DIR "" CACHE PATH "A directory of EMA installation")
+set(PQ_INSTALL_DIR "" CACHE PATH "A directory with PostgreSQL installation")
+set(HWLOC_INSTALL_DIR "" CACHE PATH "A directory of hwloc installation")
 
 if(NOT SLURM_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `SLURM_INSTALL_DIR` path!")
@@ -21,11 +23,18 @@ if(NOT EMA_INSTALL_DIR)
     message(FATAL_ERROR "You have to set up `EMA_INSTALL_DIR` path!")
 endif()
 
+if(NOT PQ_INSTALL_DIR)
+    message(FATAL_ERROR "You have to set up `PQ_INSTALL_DIR` path!")
+endif()
+
+if(NOT HWLOC_INSTALL_DIR)
+    message(FATAL_ERROR "You have to set up `HWLOC_INSTALL_DIR` path!")
+endif()
+
 option(USE_NVML "Enable NVML support if available" ON)
 
 if (USE_NVML)
     find_package(CUDAToolkit)
-
     if (CUDAToolkit_FOUND)
         set(HAS_NVML TRUE)
         message(STATUS "NVML support enabled.")
@@ -42,7 +51,9 @@ add_library(prep_eps SHARED)
 target_sources(
     prep_eps
     PRIVATE prep_eps.c
-    PRIVATE src/eps_cpu.c
+    PRIVATE src/eps_cpuinfo.c
+    PRIVATE src/eps_data.c
+    PRIVATE src/eps_db.c
     PRIVATE src/eps_efp.c
     PRIVATE src/eps_gres.c
     PRIVATE src/eps_sem.c
@@ -51,9 +62,13 @@ target_sources(
     PRIVATE src/eps_utils.c
 )
 target_include_directories(prep_eps PRIVATE include)
+target_include_directories(prep_eps PRIVATE ${HWLOC_INSTALL_DIR}/include)
+target_include_directories(prep_eps PRIVATE ${PQ_INSTALL_DIR}/include)
 target_include_directories(prep_eps PRIVATE ${SLURM_SRC_DIR})
 target_include_directories(prep_eps PRIVATE ${SLURM_INSTALL_DIR}/include)
 target_link_libraries(prep_eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
+target_link_libraries(prep_eps ${HWLOC_INSTALL_DIR}/lib/libhwloc.so)
+target_link_libraries(prep_eps ${PQ_INSTALL_DIR}/lib/libpq.so)
 
 if(USE_NVML AND CUDAToolkit_FOUND)
     target_sources(

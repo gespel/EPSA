@@ -7,7 +7,7 @@
 static int _process_gres_count(
   node_info_t node_rec,
   char* idx,
-  unsigned int* gres_idxs,
+  unsigned int** gres_idxs,
   size_t* gres_count
 )
 {
@@ -19,7 +19,7 @@ static int _process_gres_count(
     }
     if (ret > 0)
     {
-        gres_idxs = parse_index_range(idx, gres_count);
+        *gres_idxs = parse_index_range(idx, gres_count);
         free(idx);
         if (gres_count && !gres_idxs)
         {
@@ -31,7 +31,7 @@ static int _process_gres_count(
 }
 
 static int _process_gres(
-    char** gres_uuid_list,
+    char*** gres_uuid_list,
     int* gres_uuid_count,
     node_info_msg_t* node_info_list
 )
@@ -47,7 +47,7 @@ static int _process_gres(
         int err = _process_gres_count(
             node_rec,
             idx,
-            gres_idxs,
+            &gres_idxs,
             &gres_count
         );
         if (err)
@@ -59,10 +59,10 @@ static int _process_gres(
         if (gres_count > 0)
         {
             #ifdef HAS_NVML
-            gres_uuid_list = (char **)malloc(gres_count * sizeof(char*));
+            *gres_uuid_list = (char **)malloc(gres_count * sizeof(char*));
             err = nvml_process_gres(
                 gres_idxs,
-                gres_uuid_list,
+                *gres_uuid_list,
                 gres_uuid_count,
                 gres_count
             );
@@ -74,7 +74,7 @@ static int _process_gres(
     return 0;
 }
 
-int init_gres(char** gres_uuid_list, int* gres_uuid_count)
+int init_gres(char*** gres_uuid_list, int* gres_uuid_count)
 {
     char hostname[HOST_NAME_MAX];
     hostname[0] = '\0';
@@ -100,6 +100,7 @@ int init_gres(char** gres_uuid_list, int* gres_uuid_count)
     }
 
     err = _process_gres(gres_uuid_list, gres_uuid_count, node_info_list);
+    slurm_free_node_info_msg(node_info_list);
     if (err)
     {
         slurm_info("error: process_gres: %d", err);

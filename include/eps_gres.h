@@ -2,7 +2,7 @@
 #define _EPS_GRES_H
 
 int init_gres(
-    char** gres_uuid_list,
+    char*** gres_uuid_list,
     int* gres_uuid_count
 );
 
