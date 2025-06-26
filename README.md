@@ -15,6 +15,7 @@ node of the cluster.
    - [Considerations](#considerations)
    - [Steps](#steps)
 3. [Installation and Setup](#installation-and-setup)
+4. [Funding](#funding)
 
 ## Limitations
 
@@ -128,3 +129,17 @@ After successful completion of the above steps you should have a plugin file ins
 
    **Important**: As the connection string most probably will contain sensitive
    info, make sure to restrict it's availability accordingly.
+
+## Funding
+
+The development of EPS is funded by the BMFTR Germany in the context of the
+[NAAICE](https://gauss-allianz.de/en/project/title/NAAICE) project
+([GreenHPC grant](https://gauss-allianz.de/en/project/call/Richtlinie%20zur%20F%C3%B6rderung%20von%20Verbundprojekten%20auf%20dem%20Gebiet%20des%20energieeffizienten%20High-%E2%80%8BPerformance%20Computings%20%28GreenHPC%29)).
+
+<div align=center>
+  <img
+    src="./assets/img/BMFTR-sponsored.jpg"
+    alt="Sponsored by the Federal Ministry of Research, Technology and Space"
+    width="300"
+  />
+</div>
