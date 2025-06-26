@@ -68,8 +68,7 @@ target_include_directories(prep_eps PRIVATE ${SLURM_SRC_DIR})
 target_include_directories(prep_eps PRIVATE ${SLURM_INSTALL_DIR}/include)
 target_link_libraries(prep_eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
 target_link_libraries(prep_eps ${HWLOC_INSTALL_DIR}/lib/libhwloc.so)
-# TODO: Fix this `s` ending in `lib` subdir.
-target_link_libraries(prep_eps ${PQ_INSTALL_DIR}/libs/libpq.so)
+target_link_libraries(prep_eps ${PQ_INSTALL_DIR}/lib/libpq.so)
 
 if(USE_NVML AND CUDAToolkit_FOUND)
     target_sources(
