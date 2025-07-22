@@ -71,6 +71,21 @@ We recommend to execute the build steps from the following section on the target
 systems. However it is possible to build plugins once and distribute
 across nodes if you have homogeneous cluster/partition setup.
 
+#### Required Slurm Configuration
+
+**IMPORTANT:** To avoid misleading and/or inconsistent measurement data in the
+EPS DB ensure that your `slurm.conf` contains the following:
+
+```
+PrologFlags=Alloc,Serial
+```
+
+`Alloc` - Executes the Prolog script immediately when the job allocation
+occurs, not just before the first task.
+
+`Serial` - Ensures the Epilog does not start before the Prolog has fully
+completed, even if a job is cancelled mid-Prolog.
+
 ### Steps
 
 1. Clone this repo.
