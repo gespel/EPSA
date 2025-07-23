@@ -165,13 +165,11 @@ efp_main(
       );
       if (err)
       {
-          free_mqtt_plugin_config(config);
           printf("Failed to register mqtt plugin: %d\n", err);
           status = EXIT_FAILURE;
           goto exit;
       }
     }
-    free_mqtt_plugin_config(config);
     #endif
     err = EMA_init(NULL);
     if (err)
@@ -395,6 +393,9 @@ efp_main(
     sem_post(proceed_exit);
 
 exit:
+    #ifdef USE_MQTT
+    free_mqtt_plugin_config(config);
+    #endif
     free(e0);
     free(e1);
     free(t0);
