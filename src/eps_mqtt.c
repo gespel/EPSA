@@ -26,7 +26,7 @@ eps_mqtt_config_t* get_mqtt_plugin_config(uint32_t jid)
   unsigned long res = strtoul(port, &endptr, 10);
   if (errno != 0 || *endptr != '\0' || endptr == port || res > UINT16_MAX)
   {
-    printf("warning: failed to conver %s to uint16_t\n", port);
+    printf("warning: failed to convert %s to uint16_t\n", port);
     return NULL;
   }
 
