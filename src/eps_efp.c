@@ -10,11 +10,16 @@
 #include <eps_cpuinfo.h>
 #include <eps_db.h>
 #include <eps_efp.h>
+#ifdef USE_MQTT
+#include <eps_mqtt.h>
+#define MQTT_PLUGIN_NAME "mqtt_plugin"
+#endif
 #include <eps_sem.h>
 #include <eps_sem.h>
 #include <eps_utils.h>
 
 #include <EMA.h>
+#include <EMA/plugins/plugin_mqtt.user.h>
 
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
@@ -147,8 +152,28 @@ efp_main(
     }
 
     printf("Initializig EMA...\n");
-    int err = EMA_init(NULL);
-
+    int err;
+    #ifdef USE_MQTT
+    eps_mqtt_config_t* config = get_mqtt_plugin_config(jid);
+    if (config)
+    {
+      err = register_mqtt_plugin(
+        MQTT_PLUGIN_NAME,
+        config->host,
+        config->port,
+        config->topic
+      );
+      if (err)
+      {
+          free_mqtt_plugin_config(config);
+          printf("Failed to register mqtt plugin: %d\n", err);
+          status = EXIT_FAILURE;
+          goto exit;
+      }
+    }
+    free_mqtt_plugin_config(config);
+    #endif
+    err = EMA_init(NULL);
     if (err)
     {
         printf("Failed to initialize EMA: %d\n", err);
@@ -198,6 +223,24 @@ efp_main(
             filtered_size++;
         }
     }
+    #ifdef USE_MQTT
+    PluginPtrArray plugins = EMA_get_plugins();
+    for (int i = 0; i < plugins.size; i++)
+    {
+      const char* name = EMA_get_plugin_name(plugins.array[i]);
+      if (strcmp(MQTT_PLUGIN_NAME, name) == 0)
+      {
+        Plugin* mqtt_plugin = plugins.array[i];
+        DevicePtrArray mqtt_devices = EMA_get_plugin_devices(mqtt_plugin);
+        for (int j = 0; j < mqtt_devices.size; j++)
+        {
+            filtered_devices[filtered_size] = mqtt_devices.array[j];
+            filtered_size++;
+        }
+        break;
+      }
+    }
+    #endif
 
     e0 = malloc(filtered_size * sizeof(Measurement));
     e1 = malloc(filtered_size * sizeof(Measurement));
