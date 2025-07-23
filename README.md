@@ -67,6 +67,16 @@ for systems without GPUs, or without `NVML` library installed, but keep in mind
 that for latter case the plugin then would not be able to measure GPU devices
 if they are present and configured on the node.
 
+Also if you're willing to measure network attached devices via MQTT, you should
+enable `USE_MQTT` option during build configuration and setup some extra
+environment variables accessible by `slurmd` processes on compute nodes (see
+[Installation and Setup](#installation-and-setup)).
+
+**Important:** If you're setting a `USE_MQTT` option, make sure that your EMA
+library installed on cluster nodes was built with *MQTT Plugin* support, for
+more details refer to the
+[EMA's main repository README](https://github.com/PERFACCT/EMA).
+
 We recommend to execute the build steps from the following section on the target
 systems. However it is possible to build plugins once and distribute
 across nodes if you have homogeneous cluster/partition setup.
@@ -128,7 +138,14 @@ After successful completion of the above steps you should have a plugin file ins
    Connection string example: `postgresql://user:password@10.0.0.42/eps`
 
    **Important**: As the connection string most probably will contain sensitive
-   info, make sure to restrict it's availability accordingly.
+   info, make sure to restrict it's availability accordingly, that might also
+   be relevant/true for MQTT-related configurations described below.
+
+   If you've built the plugin with `USE_MQTT` you also need to set following 
+   environment variables:
+
+   - `EPS_MQTT_HOST` - a host of the MQTT broker (e.g. 10.10.10.42)
+   - `EPS_MQTT_PORT` - a port of the MQTT broker (e.g. 1883)
 
 ## Funding
 
