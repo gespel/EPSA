@@ -43,7 +43,7 @@ void install_signal_handlers() {
 
 void
 efp_main(
-    int jid,
+    uint32_t jid,
     int nodeid,
     unsigned int gres_uuid_count,
     char** gres_uuid_list,
