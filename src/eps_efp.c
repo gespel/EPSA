@@ -19,7 +19,9 @@
 #include <eps_utils.h>
 
 #include <EMA.h>
+#ifdef USE_MQTT
 #include <EMA/plugins/plugin_mqtt.user.h>
+#endif
 
 typedef unsigned long long Measurement;
 typedef unsigned long long Time;
