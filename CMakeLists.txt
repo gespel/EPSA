@@ -32,6 +32,7 @@ if(NOT HWLOC_INSTALL_DIR)
 endif()
 
 option(USE_NVML "Enable NVML support if available" ON)
+option(USE_MQTT "Enable EMA MQTT Plugin usage" OFF)
 
 if (USE_NVML)
     find_package(CUDAToolkit)
@@ -77,4 +78,12 @@ if(USE_NVML AND CUDAToolkit_FOUND)
     )
     target_compile_definitions(prep_eps PRIVATE HAS_NVML)
     target_link_libraries(prep_eps CUDA::nvml)
+endif()
+
+if (USE_MQTT)
+    target_sources(
+      prep_eps
+      PRIVATE src/eps_mqtt.c
+    )
+    target_compile_definitions(prep_eps PRIVATE USE_MQTT)
 endif()

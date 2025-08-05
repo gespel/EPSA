@@ -1,9 +1,11 @@
 #ifndef _EPS_EFP_H
 #define _EPS_EFP_H
 
+#include <stdint.h>
+
 void
 efp_main(
-    int jid,
+    uint32_t jid,
     int nodeid,
     unsigned int gres_uuid_count,
     char** gres_uuid_list,
