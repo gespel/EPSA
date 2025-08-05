@@ -148,7 +148,6 @@ efp_main(
 
     printf("Initializig EMA...\n");
     int err = EMA_init(NULL);
-
     if (err)
     {
         printf("Failed to initialize EMA: %d\n", err);
@@ -344,7 +343,7 @@ efp_main(
     PQfinish(db_connection);
 
     printf("Finalizing EMA...\n");
-    err = EMA_finalize(NULL);
+    err = EMA_finalize();
     if (err)
     {
         printf("Failed to finalize EMA: %d\n", err);
