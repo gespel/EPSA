@@ -259,13 +259,16 @@ efp_main(
 
     sem_wait(proceed_efp);
 
+    unsigned long long total_uj = 0;
     for (int i = 0; i < filtered_size; i++) {
         e1[i] = EMA_get_energy_uj(filtered_devices[i]);
         t1[i] = EMA_get_time_in_us();
         printf("Device %d: %s\n", i, EMA_get_device_name(filtered_devices[i]));
         printf("\te1: %llu\n", e1[i]);
         printf("\tt1: %llu\n", t1[i]);
+        total_uj += e1[i] - e0[i];
     }
+    printf("Total energy consumption: %.6f kWh\n", (double)total_uj / 3.6e12);
 
     printf("Connecting to db...\n");
     PGconn* db_connection = connect_db();
