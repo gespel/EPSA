@@ -63,6 +63,7 @@ target_sources(
     PRIVATE src/eps_utils.c
 )
 target_include_directories(prep_eps PRIVATE include)
+target_include_directories(prep_eps PRIVATE ${EMA_INSTALL_DIR}/include)
 target_include_directories(prep_eps PRIVATE ${HWLOC_INSTALL_DIR}/include)
 target_include_directories(prep_eps PRIVATE ${PQ_INSTALL_DIR}/include)
 target_include_directories(prep_eps PRIVATE ${SLURM_SRC_DIR})
