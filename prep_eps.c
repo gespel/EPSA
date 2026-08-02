@@ -417,11 +417,45 @@ extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
         return SLURM_ERROR;
     }
 
-    float total_energy = 0;
+    // NOTE: prep_p_epilog_slurmctld() is called as soon as slurmctld marks
+    // the job as terminating, which can race ahead of the node-local
+    // prep_p_epilog()/EFP process that actually inserts the measurement
+    // rows into the DB. Poll briefly for the data to show up before giving
+    // up, since slurmctld holds internal locks here and must not block for
+    // long.
+    #define EPILOG_SLURMCTLD_POLL_INTERVAL_US 100000 /* 100 ms */
+    #define EPILOG_SLURMCTLD_POLL_TIMEOUT_US 2000000 /* 2 s */
+
+    uint64_t measurement_count = 0;
+    unsigned int waited_us = 0;
+    int err;
+    while (1) {
+        err = get_measurement_count(
+            db_connection, job_ptr->job_id, &measurement_count
+        );
+        if (err) {
+            slurm_info("error: failed to get measurement count");
+            PQfinish(db_connection);
+            return SLURM_ERROR;
+        }
+        if (measurement_count > 0) break;
+        if (waited_us >= EPILOG_SLURMCTLD_POLL_TIMEOUT_US) {
+            slurm_info(
+                "warning: no measurements found for JobId=%u after %u ms, "
+                "logging with whatever is available",
+                job_ptr->job_id, waited_us / 1000
+            );
+            break;
+        }
+        usleep(EPILOG_SLURMCTLD_POLL_INTERVAL_US);
+        waited_us += EPILOG_SLURMCTLD_POLL_INTERVAL_US;
+    }
+
+    uint64_t total_energy = 0;
 
     slurm_info("Gathering energy data for %u", job_ptr->job_id);
-    int err = get_total_energy_consumption(
-        db_connection, job_ptr->job_id, (uint64_t*)&total_energy
+    err = get_total_energy_consumption(
+        db_connection, job_ptr->job_id, &total_energy
     );
     
     if (err) {
@@ -430,8 +464,17 @@ extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
         return SLURM_ERROR;
     }
 
-    slurm_info("Gather energy consumption: %f", total_energy);
+    slurm_info("Gather energy consumption: %llu", (unsigned long long)total_energy);
     PQfinish(db_connection);
+
+    FILE *f = fopen("/var/log/slurm/eps_energy.log", "a");
+    if (f == NULL) {
+        slurm_info("error: failed to open log file");
+        return SLURM_ERROR;
+    }
+    fprintf(f, "Job %u: Total energy consumption: %.6f kWh\n", job_ptr->job_id, (double)total_energy / 3.6e12);
+    fclose(f); 
+
     return SLURM_SUCCESS;
 }
 
@@ -446,7 +489,7 @@ extern void prep_p_required(prep_call_type_t type, bool* required)
             break;
         case PREP_EPILOG_SLURMCTLD:
             if (running_in_slurmctld())
-                *required = false;
+                *required = true;
             break;
         case PREP_PROLOG:
         case PREP_EPILOG:

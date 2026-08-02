@@ -22,5 +22,6 @@ int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data);
 int insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* id);
 int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data);
 int get_total_energy_consumption(PGconn* connection, uint32_t jobid, uint64_t* total_energy);
+int get_measurement_count(PGconn* connection, uint32_t jobid, uint64_t* count);
 
 #endif
