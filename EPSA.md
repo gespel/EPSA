@@ -122,6 +122,13 @@ Diese Punkte kosten beim ersten lokalen Testlauf am meisten Zeit:
    ganz ohne `Gres=` in `slurm.conf` zu einem `slurmd`-Crash (`strdup(NULL)`)
    bzw. danach zu einem fehlgeschlagenen Prolog inkl. `DRAIN` des Nodes.
 
+6. **Jobs bleiben mit `launch failed requeued held` hängen** (Log:
+   `cannot setup the scope for cgroup`): Der systemd-Scope
+   `slurmstepd.scope` ist tot (`journalctl -u slurmstepd.scope` zeigt
+   `Deactivated`), meist weil sein Keep-Alive-Prozess bei einem früheren
+   `slurmd`-Neustart mitbeendet wurde. Fix: `sudo systemctl restart
+   slurmctld slurmd` – dabei legt systemd den Scope neu an.
+
 ## Wichtige Slurm-Befehle
 
 ### Dienste
