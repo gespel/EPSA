@@ -19,7 +19,7 @@ import psycopg
 
 NODES = int(os.environ.get("NODES", 1))
 CORES = 8  # Anzahl der Kerne, auf denen die Testlast parallel erzeugt wird
-DURATION = int(os.environ.get("DURATION_SECONDS", 300))
+DURATION = int(os.environ.get("DURATION_SECONDS", 30))
 PARTITION = os.environ.get("PARTITION", "")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", 2))
 TIMEOUT = int(os.environ.get("TIMEOUT", 1800))

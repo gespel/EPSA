@@ -1,0 +1,46 @@
+{
+    "name": "EPSA – Slurm Plugin Dev",
+    "build": {
+        "dockerfile": "Dockerfile",
+        "context": ".."
+    },
+    // Mount workspace at /workspace; use named volume for build cache
+    "workspaceFolder": "/workspace",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+    "mounts": [
+        "source=epsa-build-cache,target=/workspace/build,type=volume"
+    ],
+    // Root required: slurmd/slurmctld + RAPL via /sys/class/powercap
+    "remoteUser": "root",
+    "runArgs": ["--privileged"],
+    // Run post-create setup (munge, postgres, cmake build)
+    "postCreateCommand": "bash /workspace/.devcontainer/scripts/post-create.sh",
+    // Expose PostgreSQL for external inspection
+    "forwardPorts": [5432],
+    "portsAttributes": {
+        "5432": { "label": "PostgreSQL (eps DB)" }
+    },
+    // Useful VS Code extensions for C development
+    "customizations": {
+        "vscode": {
+            "terminal.integrated.defaultProfile.linux": "zsh",
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools",
+                "ms-vscode.cpptools-extension-pack"
+            ],
+            "settings": {
+                "cmake.buildDirectory": "${workspaceFolder}/build",
+                "cmake.configureArgs": [
+                    "-DSLURM_INSTALL_DIR=/usr",
+                    "-DSLURM_SRC_DIR=/opt/slurm-src",
+                    "-DEMA_INSTALL_DIR=/opt/EMA",
+                    "-DPQ_INSTALL_DIR=/opt/pq",
+                    "-DHWLOC_INSTALL_DIR=/opt/hwloc",
+                    "-DUSE_NVML=OFF",
+                    "-DUSE_MQTT=OFF"
+                ]
+            }
+        }
+    }
+}
