@@ -94,7 +94,8 @@ psql "$DB_CONN_STR" -c \
 
 TOTAL_ENERGY="$(psql "$DB_CONN_STR" -tAc \
     "SELECT COALESCE(SUM(m.e1 - m.e0), 0) FROM measurements m JOIN executions e ON m.exec_id = e.id WHERE e.jobid = ${JOBID};")"
-log "Gesamtenergie (Summe aller Devices) für Job ${JOBID}: ${TOTAL_ENERGY}"
+log "Gesamtenergie (Summe aller Devices) für Job ${JOBID}: ${TOTAL_ENERGY} µJ"
+log "Gesamtenergie in kWh: $(awk "BEGIN {printf \"%.9f\", ${TOTAL_ENERGY} / 3.6e12}")"
 
 FAILED=0
 [ "$ALLOC_COUNT" -ge 1 ]       || { log "FEHLER: kein Eintrag in allocations"; FAILED=1; }
