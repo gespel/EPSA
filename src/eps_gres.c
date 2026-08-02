@@ -14,8 +14,8 @@ static int _process_gres_count(
     int ret = parse_gres(node_rec.gres_used, &idx);
     if (ret < 0)
     {
-        slurm_info("Failed to parse gres_used!");
-        return 1;
+        /* No GRES configured/allocated for this node - nothing to process. */
+        return 0;
     }
     if (ret > 0)
     {

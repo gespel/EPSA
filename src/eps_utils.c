@@ -137,6 +137,8 @@ int get_nodeid()
 
 int parse_gres(const char* gres, char** idx)
 {
+    if (!gres) return -1;
+
     char* _gres = strdup(gres);
     char idx_str[30] = "";
     char* token = strtok(_gres, ":");
