@@ -14,6 +14,8 @@ typedef struct {
 
 int populate_cpuinfo(hwloc_topology_t topology, eps_cpuinfo_t* info);
 
+#define CPU_IDS_SIZE 128
+
 int init_cpuinfo(
   job_env_t* job_env,
   char* cpu_ids

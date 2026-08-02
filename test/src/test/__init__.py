@@ -18,15 +18,12 @@ import time
 import psycopg
 
 NODES = int(os.environ.get("NODES", 1))
-CORES = 8  # Anzahl der Kerne, auf denen die Testlast parallel erzeugt wird
-DURATION = int(os.environ.get("DURATION_SECONDS", 30))
+CORES = int(os.environ.get("CORES", 1))
+DURATION = int(os.environ.get("DURATION_SECONDS", 40))
 PARTITION = os.environ.get("PARTITION", "")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", 2))
 TIMEOUT = int(os.environ.get("TIMEOUT", 1800))
 
-# Triviale CPU-Last statt sleep, damit tatsächlich messbar Energie
-# verbraucht wird (ein reiner sleep hält die CPU idle). Ein Worker pro Kern,
-# damit CORES tatsächlich Last erzeugt statt nur allokiert zu werden.
 SBATCH_SCRIPT = f"""#!/bin/bash
 #SBATCH -N{NODES} -n{NODES} -c{CORES}
 {f"#SBATCH -p{PARTITION}" if PARTITION else ""}
@@ -115,14 +112,15 @@ def check_db(jobid: str) -> bool:
         ).fetchall()
 
     bad_deltas = sum(1 for _, _, delta, _ in measurements if delta <= 0)
-    total_energy = sum(delta for _, _, delta, _ in measurements)
+    total_energy = sum(delta * util / 100 for _, _, delta, util in measurements)
 
     log(f"allocations={allocations} executions={executions} "
         f"measurements={len(measurements)} measurements_mit_e1<=e0={bad_deltas}")
     log(f"Gemessener Energieverbrauch für Job {jobid}:")
     for name, dtype, delta, util in measurements:
-        log(f"  {name} ({dtype}): {delta} µJ, Auslastung {util}%")
-    log(f"Gesamtenergie (Summe aller Devices) für Job {jobid}: {total_energy} µJ")
+        attributed = delta * util / 100
+        log(f"  {name} ({dtype}): {attributed:.0f} µJ (Socket: {delta} µJ, Auslastung {util}%)")
+    log(f"Gesamtenergie (zugerechnet) für Job {jobid}: {total_energy:.0f} µJ")
     log(f"Gesamtenergie in kWh: {total_energy / 3.6e12:.9f}")
 
     errors = []

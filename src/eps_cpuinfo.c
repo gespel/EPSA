@@ -130,23 +130,8 @@ static int _process_cpus(
             continue;
         }
 
-        int bit_reps = *job_resrcs->sockets_per_node *
-                       *job_resrcs->cores_per_socket;
-        uint32_t threads = threads_per_core(hostname);
-        bitstr_t* cpu_bitmap = bit_alloc(bit_reps * threads);
-        int bit_idx = 0;
-        for (int j = 0; j < bit_reps; j++)
-        {
-            if (bit_test(job_resrcs->core_bitmap, bit_idx))
-            {
-                for (int k = 0; k < threads; k++)
-                    bit_set(cpu_bitmap, (j * threads) + k);
-            }
-            bit_idx++;
-        }
-        bit_fmt(cpu_ids, sizeof(cpu_ids), cpu_bitmap);
+        bit_fmt(cpu_ids, CPU_IDS_SIZE, job_resrcs->core_bitmap);
         slurm_info("cpu_ids: %s", cpu_ids);
-        FREE_NULL_BITMAP(cpu_bitmap);
     }
     return 0;
 }

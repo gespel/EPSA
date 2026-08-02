@@ -121,7 +121,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     }
 
     slurm_info("Initializing cpuinfo...");
-    char cpu_ids[128];
+    char cpu_ids[CPU_IDS_SIZE];
     cpu_ids[0] = '\0';
     err = init_cpuinfo(job_env, cpu_ids);
     if (err)
