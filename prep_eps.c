@@ -1,3 +1,4 @@
+#include "src/common/log.h"
 #include <errno.h>
 #include <hwloc.h>
 #include <limits.h>
@@ -400,6 +401,34 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 
 extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
 {
+    PGconn* db_connection = connect_db();
+
+    int connection_is_not_ok = check_connection(db_connection);
+
+    if (connection_is_not_ok) {
+        slurm_info(
+            "error: problems with db connection: %s",
+            PQerrorMessage(db_connection)
+        );
+        PQfinish(db_connection);
+        return SLURM_ERROR;
+    }
+
+    float total_energy = 0;
+
+    slurm_info("Gathering energy data for %u", job_ptr->job_id);
+    int err = get_total_energy_consumption(
+        db_connection, job_ptr->job_id, (uint64_t*)&total_energy
+    );
+    
+    if (err) {
+        slurm_info("error: failed to get total energy consumption");
+        PQfinish(db_connection);
+        return SLURM_ERROR;
+    }
+
+    slurm_info("Gather energy consumption: %f", total_energy);
+    PQfinish(db_connection);
     return SLURM_SUCCESS;
 }
 

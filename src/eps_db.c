@@ -199,3 +199,40 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
     PQclear(res);
     return err;
 }
+
+int get_total_energy_consumption(PGconn* connection, uint32_t jobid, uint64_t* total_energy)
+{
+    char jobid_str[12];
+    snprintf(jobid_str, 12, "%d", jobid);
+
+    const char* param_values[1] = {jobid_str};
+    int param_lengths[1] = {sizeof(jobid_str)};
+
+    PGresult* res = PQexecParams(
+        connection,
+        "SELECT SUM(e1 - e0) AS total_energy "
+        "FROM measurements "
+        "JOIN executions ON measurements.exec_id = executions.id "
+        "WHERE executions.jobid = $1;",
+        1,
+        NULL,
+        param_values,
+        param_lengths,
+        NULL,
+        0
+    );
+    int err = check_query_result(res, connection);
+    if (err) {
+        PQclear(res);
+        return err;
+    }
+
+    if (PQntuples(res) > 0 && PQgetisnull(res, 0, 0) == 0) {
+        *total_energy = strtoull(PQgetvalue(res, 0, 0), NULL, 10);
+    } else {
+        *total_energy = 0;
+    }
+
+    PQclear(res);
+    return 0;
+}
