@@ -18,20 +18,24 @@ import time
 import psycopg
 
 NODES = int(os.environ.get("NODES", 1))
-DURATION = int(os.environ.get("DURATION_SECONDS", 30))
+CORES = 8  # Anzahl der Kerne, auf denen die Testlast parallel erzeugt wird
+DURATION = int(os.environ.get("DURATION_SECONDS", 300))
 PARTITION = os.environ.get("PARTITION", "")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", 2))
-TIMEOUT = int(os.environ.get("TIMEOUT", 180))
+TIMEOUT = int(os.environ.get("TIMEOUT", 1800))
 
 # Triviale CPU-Last statt sleep, damit tatsächlich messbar Energie
-# verbraucht wird (ein reiner sleep hält die CPU idle).
+# verbraucht wird (ein reiner sleep hält die CPU idle). Ein Worker pro Kern,
+# damit CORES tatsächlich Last erzeugt statt nur allokiert zu werden.
 SBATCH_SCRIPT = f"""#!/bin/bash
-#SBATCH -N{NODES} -n{NODES}
+#SBATCH -N{NODES} -n{NODES} -c{CORES}
 {f"#SBATCH -p{PARTITION}" if PARTITION else ""}
 end=$((SECONDS + {DURATION}))
-sum=0; i=0
-while [ $SECONDS -lt $end ]; do i=$((i + 1)); sum=$((sum + i * i)); done
-echo "Summe der Quadrate nach $i Iterationen: $sum"
+for _ in $(seq {CORES}); do
+    ( sum=0; i=0; while [ $SECONDS -lt $end ]; do i=$((i + 1)); sum=$((sum + i * i)); done ) &
+done
+wait
+echo "Last auf {CORES} Kern(en) für {DURATION}s abgeschlossen"
 """
 
 
@@ -66,7 +70,7 @@ def db_conn_str() -> str:
 
 
 def submit_job() -> str:
-    log(f"Reiche Testjob ein (Nodes={NODES}, Rechenlast={DURATION}s)...")
+    log(f"Reiche Testjob ein (Nodes={NODES}, Kerne={CORES}, Rechenlast={DURATION}s)...")
     with tempfile.NamedTemporaryFile("w", suffix=".sbatch") as script:
         script.write(SBATCH_SCRIPT)
         script.flush()
