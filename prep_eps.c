@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <hwloc.h>
 #include <limits.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -399,51 +400,54 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
     return SLURM_SUCCESS;
 }
 
-extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
+// NOTE: prep_p_epilog_slurmctld() is called as soon as slurmctld marks the
+// job as terminating, which can race ahead of the node-local
+// prep_p_epilog()/EFP process that actually inserts the measurement rows
+// into the DB (confirmed: the epilog RPC to slurmd, the EFP run and its DB
+// commit can together take several seconds after job completion). Since we
+// want a single, centrally-written log on the ctld node rather than one per
+// compute node, we can't just move this into the slurmd-side epilog.
+// Instead we run the poll + log write asynchronously in a detached thread
+// (as supported by the PrEp plugin API, see prep_epilog_slurmctld_callback())
+// so we can wait as long as it takes without holding up slurmctld's
+// internal locks.
+#define EPILOG_SLURMCTLD_POLL_INTERVAL_US 100000 /* 100 ms */
+#define EPILOG_SLURMCTLD_POLL_TIMEOUT_US 15000000 /* 15 s */
+
+static void* epilog_energy_thread(void* arg)
 {
-    /*
-        EPSA Core Functionality: Gather energy consumption data for the job and store it in the database.
-    */
+    uint32_t job_id = *(uint32_t*)arg;
+    free(arg);
+
+    int rc = SLURM_SUCCESS;
+
     PGconn* db_connection = connect_db();
-
-    int connection_is_not_ok = check_connection(db_connection);
-
-    if (connection_is_not_ok) {
+    if (check_connection(db_connection)) {
         slurm_info(
             "error: problems with db connection: %s",
             PQerrorMessage(db_connection)
         );
         PQfinish(db_connection);
-        return SLURM_ERROR;
+        rc = SLURM_ERROR;
+        goto callback;
     }
-
-    // NOTE: prep_p_epilog_slurmctld() is called as soon as slurmctld marks
-    // the job as terminating, which can race ahead of the node-local
-    // prep_p_epilog()/EFP process that actually inserts the measurement
-    // rows into the DB. Poll briefly for the data to show up before giving
-    // up, since slurmctld holds internal locks here and must not block for
-    // long.
-    #define EPILOG_SLURMCTLD_POLL_INTERVAL_US 100000 /* 100 ms */
-    #define EPILOG_SLURMCTLD_POLL_TIMEOUT_US 2000000 /* 2 s */
 
     uint64_t measurement_count = 0;
     unsigned int waited_us = 0;
     int err;
     while (1) {
-        err = get_measurement_count(
-            db_connection, job_ptr->job_id, &measurement_count
-        );
+        err = get_measurement_count(db_connection, job_id, &measurement_count);
         if (err) {
             slurm_info("error: failed to get measurement count");
-            PQfinish(db_connection);
-            return SLURM_ERROR;
+            rc = SLURM_ERROR;
+            break;
         }
         if (measurement_count > 0) break;
         if (waited_us >= EPILOG_SLURMCTLD_POLL_TIMEOUT_US) {
             slurm_info(
                 "warning: no measurements found for JobId=%u after %u ms, "
                 "logging with whatever is available",
-                job_ptr->job_id, waited_us / 1000
+                job_id, waited_us / 1000
             );
             break;
         }
@@ -451,30 +455,63 @@ extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
         waited_us += EPILOG_SLURMCTLD_POLL_INTERVAL_US;
     }
 
-    uint64_t total_energy = 0;
+    if (rc == SLURM_SUCCESS) {
+        uint64_t total_energy = 0;
 
-    slurm_info("Gathering energy data for %u", job_ptr->job_id);
-    err = get_total_energy_consumption(
-        db_connection, job_ptr->job_id, &total_energy
-    );
-    
-    if (err) {
-        slurm_info("error: failed to get total energy consumption");
-        PQfinish(db_connection);
-        return SLURM_ERROR;
+        slurm_info("Gathering energy data for %u", job_id);
+        err = get_total_energy_consumption(db_connection, job_id, &total_energy);
+
+        if (err) {
+            slurm_info("error: failed to get total energy consumption");
+            rc = SLURM_ERROR;
+        } else {
+            slurm_info("Gather energy consumption: %llu", (unsigned long long)total_energy);
+
+            FILE* f = fopen("/var/log/slurm/eps_energy.log", "a");
+            if (f == NULL) {
+                slurm_info("error: failed to open log file");
+                rc = SLURM_ERROR;
+            } else {
+                fprintf(
+                    f, "Job %u: Total energy consumption: %.6f kWh\n",
+                    job_id, (double)total_energy / 3.6e12
+                );
+                fclose(f);
+            }
+        }
     }
 
-    slurm_info("Gather energy consumption: %llu", (unsigned long long)total_energy);
     PQfinish(db_connection);
 
-    FILE *f = fopen("/var/log/slurm/eps_energy.log", "a");
-    if (f == NULL) {
-        slurm_info("error: failed to open log file");
+callback:
+    prep_epilog_slurmctld_callback(rc, job_id, false);
+    return NULL;
+}
+
+extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
+{
+    /*
+        EPSA Core Functionality: Gather energy consumption data for the job and store it in the database.
+    */
+    uint32_t* job_id = malloc(sizeof(uint32_t));
+    *job_id = job_ptr->job_id;
+
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+
+    pthread_t tid;
+    int err = pthread_create(&tid, &attr, epilog_energy_thread, job_id);
+    pthread_attr_destroy(&attr);
+
+    if (err) {
+        slurm_info("error: failed to spawn epilog energy thread: %s", strerror(err));
+        free(job_id);
+        *async = false;
         return SLURM_ERROR;
     }
-    fprintf(f, "Job %u: Total energy consumption: %.6f kWh\n", job_ptr->job_id, (double)total_energy / 3.6e12);
-    fclose(f); 
 
+    *async = true;
     return SLURM_SUCCESS;
 }
 

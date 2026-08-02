@@ -72,6 +72,9 @@ target_link_libraries(prep_eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
 target_link_libraries(prep_eps ${HWLOC_INSTALL_DIR}/lib/libhwloc.so)
 target_link_libraries(prep_eps ${PQ_INSTALL_DIR}/lib/libpq.so)
 
+find_package(Threads REQUIRED)
+target_link_libraries(prep_eps Threads::Threads)
+
 if(USE_NVML AND CUDAToolkit_FOUND)
     target_sources(
       prep_eps

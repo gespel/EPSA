@@ -3,3 +3,6 @@ build/
 
 # Misc outputs
 *.out
+
+# Python
+test/.venv/
