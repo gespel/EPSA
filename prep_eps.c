@@ -401,6 +401,9 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 
 extern int prep_p_epilog_slurmctld(job_record_t* job_ptr, bool* async)
 {
+    /*
+        EPSA Core Functionality: Gather energy consumption data for the job and store it in the database.
+    */
     PGconn* db_connection = connect_db();
 
     int connection_is_not_ok = check_connection(db_connection);
