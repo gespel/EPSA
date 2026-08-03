@@ -72,8 +72,8 @@ cmake .. \
     -DHWLOC_INSTALL_DIR=/opt/hwloc \
     -DUSE_NVML=OFF \
     -DUSE_MQTT=OFF
-make -j"$(nproc)" prep_eps
+make -j"$(nproc)" prep_epsa
 
 echo ""
-echo "✓ Plugin built at /workspace/build/prep_eps.so"
+echo "✓ Plugin built at /workspace/build/prep_epsa.so"
 echo "  Run '.devcontainer/scripts/start-slurm.sh' to install and start Slurm."

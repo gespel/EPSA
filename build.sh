@@ -5,7 +5,7 @@ cmake .. \
   -DEMA_INSTALL_DIR=/home/sten/Uni/EMA/install \
   -DPQ_INSTALL_DIR=/usr \
   -DHWLOC_INSTALL_DIR=/usr
-make prep_eps
-sudo cp prep_eps.so /usr/lib/slurm/prep_eps.so
-sudo chmod 755 /usr/lib/slurm/prep_eps.so
+make prep_epsa
+sudo cp prep_epsa.so /usr/lib/slurm/prep_epsa.so
+sudo chmod 755 /usr/lib/slurm/prep_epsa.so
 sudo systemctl restart slurmctld slurmd

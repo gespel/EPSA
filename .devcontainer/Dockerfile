@@ -109,12 +109,11 @@ if [[ ! -f /workspace/build/CMakeCache.txt ]]; then
         -DUSE_MQTT=OFF
 fi
 
-echo "==> Building prep_eps..."
-cmake --build /workspace/build --target prep_eps -- -j"$(nproc)"
+echo "==> Building prep_epsa..."
+cmake --build /workspace/build --target prep_epsa -- -j"$(nproc)"
 
 echo "==> Installing plugin..."
-install -m 755 /workspace/build/prep_eps.so /usr/lib/slurm/prep_eps.so
-
+install -m 755 /workspace/build/prep_epsa.so /usr/lib/slurm/prep_epsa.so
 echo "==> Restarting Slurm daemons..."
 pkill -x slurmctld 2>/dev/null || true
 pkill -x slurmd    2>/dev/null || true

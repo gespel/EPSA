@@ -48,10 +48,10 @@ else()
     message(STATUS "NVML support explicitly disabled.")
 endif()
 
-add_library(prep_eps SHARED)
+add_library(prep_epsa SHARED)
 target_sources(
-    prep_eps
-    PRIVATE prep_eps.c
+    prep_epsa
+    PRIVATE prep_epsa.c
     PRIVATE src/eps_cpuinfo.c
     PRIVATE src/eps_data.c
     PRIVATE src/eps_db.c
@@ -62,32 +62,32 @@ target_sources(
     PRIVATE src/eps_wait.c
     PRIVATE src/eps_utils.c
 )
-target_include_directories(prep_eps PRIVATE include)
-target_include_directories(prep_eps PRIVATE ${EMA_INSTALL_DIR}/include)
-target_include_directories(prep_eps PRIVATE ${HWLOC_INSTALL_DIR}/include)
-target_include_directories(prep_eps PRIVATE ${PQ_INSTALL_DIR}/include)
-target_include_directories(prep_eps PRIVATE ${SLURM_SRC_DIR})
-target_include_directories(prep_eps PRIVATE ${SLURM_INSTALL_DIR}/include)
-target_link_libraries(prep_eps ${EMA_INSTALL_DIR}/lib/libEMA.so)
-target_link_libraries(prep_eps ${HWLOC_INSTALL_DIR}/lib/libhwloc.so)
-target_link_libraries(prep_eps ${PQ_INSTALL_DIR}/lib/libpq.so)
+target_include_directories(prep_epsa PRIVATE include)
+target_include_directories(prep_epsa PRIVATE ${EMA_INSTALL_DIR}/include)
+target_include_directories(prep_epsa PRIVATE ${HWLOC_INSTALL_DIR}/include)
+target_include_directories(prep_epsa PRIVATE ${PQ_INSTALL_DIR}/include)
+target_include_directories(prep_epsa PRIVATE ${SLURM_SRC_DIR})
+target_include_directories(prep_epsa PRIVATE ${SLURM_INSTALL_DIR}/include)
+target_link_libraries(prep_epsa ${EMA_INSTALL_DIR}/lib/libEMA.so)
+target_link_libraries(prep_epsa ${HWLOC_INSTALL_DIR}/lib/libhwloc.so)
+target_link_libraries(prep_epsa ${PQ_INSTALL_DIR}/lib/libpq.so)
 
 find_package(Threads REQUIRED)
-target_link_libraries(prep_eps Threads::Threads)
+target_link_libraries(prep_epsa Threads::Threads)
 
 if(USE_NVML AND CUDAToolkit_FOUND)
     target_sources(
-      prep_eps
+      prep_epsa
       PRIVATE src/eps_nvml.c
     )
-    target_compile_definitions(prep_eps PRIVATE HAS_NVML)
-    target_link_libraries(prep_eps CUDA::nvml)
+    target_compile_definitions(prep_epsa PRIVATE HAS_NVML)
+    target_link_libraries(prep_epsa CUDA::nvml)
 endif()
 
 if (USE_MQTT)
     target_sources(
-      prep_eps
+      prep_epsa
       PRIVATE src/eps_mqtt.c
     )
-    target_compile_definitions(prep_eps PRIVATE USE_MQTT)
+    target_compile_definitions(prep_epsa PRIVATE USE_MQTT)
 endif()
