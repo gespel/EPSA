@@ -96,6 +96,19 @@ RUN cat > /usr/local/bin/rebuild <<'EOF'
 #!/usr/bin/env zsh
 set -euo pipefail
 
+if [[ ! -f /workspace/build/CMakeCache.txt ]]; then
+    echo "==> No CMake cache found, configuring from scratch..."
+    mkdir -p /workspace/build
+    cmake -S /workspace -B /workspace/build \
+        -DSLURM_INSTALL_DIR=/usr \
+        -DSLURM_SRC_DIR=/opt/slurm-src \
+        -DEMA_INSTALL_DIR=/opt/EMA \
+        -DPQ_INSTALL_DIR=/opt/pq \
+        -DHWLOC_INSTALL_DIR=/opt/hwloc \
+        -DUSE_NVML=OFF \
+        -DUSE_MQTT=OFF
+fi
+
 echo "==> Building prep_eps..."
 cmake --build /workspace/build --target prep_eps -- -j"$(nproc)"
 

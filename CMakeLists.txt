@@ -1,7 +1,7 @@
-project(EPS)
+project(EPSA)
 cmake_minimum_required(VERSION 3.17)
 
-# INFO: This is to prevent `libeps.so` and `libprep_eps.so` as
+# INFO: This is to prevent `libepsa.so` and `libprepa_epsa.so` as
 #       filenames for built deliverables.
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
