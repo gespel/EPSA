@@ -3,11 +3,11 @@
 # Run this after every rebuild of prep_eps.so.
 set -euo pipefail
 
-PLUGIN_SRC=/workspace/build/prep_eps.so
-PLUGIN_DST=/usr/lib/slurm/prep_eps.so
+PLUGIN_SRC=/workspace/build/prep_epsa.so
+PLUGIN_DST=/usr/lib/slurm/prep_epsa.so
 
 if [ ! -f "$PLUGIN_SRC" ]; then
-    echo "ERROR: $PLUGIN_SRC not found. Run 'make prep_eps' first." >&2
+    echo "ERROR: $PLUGIN_SRC not found. Run 'make prep_epsa' first." >&2
     exit 1
 fi
 

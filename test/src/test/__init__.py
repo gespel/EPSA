@@ -18,7 +18,7 @@ import time
 import psycopg
 
 NODES = int(os.environ.get("NODES", 1))
-CORES = int(os.environ.get("CORES", 1))
+CORES = int(os.environ.get("CORES", 4))
 DURATION = int(os.environ.get("DURATION_SECONDS", 40))
 PARTITION = os.environ.get("PARTITION", "")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", 2))
