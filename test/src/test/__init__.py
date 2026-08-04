@@ -19,7 +19,7 @@ from matplotlib import pyplot as plt
 import psycopg
 
 NODES = int(os.environ.get("NODES", 1))
-DURATION = int(os.environ.get("DURATION_SECONDS", 40))
+DURATION = int(os.environ.get("DURATION_SECONDS", 10))
 PARTITION = os.environ.get("PARTITION", "")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", 2))
 TIMEOUT = int(os.environ.get("TIMEOUT", 1800))
@@ -155,4 +155,4 @@ def main() -> None:
     plt.xlabel("Kernanzahl")
     plt.ylabel("Energieverbrauch (kWh)")
     plt.grid()
-    plt.show()
+    plt.savefig(f"energy_consumption{time.time()}.png")
