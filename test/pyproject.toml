@@ -8,7 +8,7 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
-    "matplotlib",
+    "matplotlib>=3.11.1",
     "psycopg[binary]>=3.3.4",
 ]
 
