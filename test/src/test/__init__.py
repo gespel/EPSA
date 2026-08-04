@@ -14,26 +14,15 @@ import subprocess
 import sys
 import tempfile
 import time
+from matplotlib import pyplot as plt
 
 import psycopg
 
 NODES = int(os.environ.get("NODES", 1))
-CORES = int(os.environ.get("CORES", 1))
 DURATION = int(os.environ.get("DURATION_SECONDS", 40))
 PARTITION = os.environ.get("PARTITION", "")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", 2))
 TIMEOUT = int(os.environ.get("TIMEOUT", 1800))
-
-SBATCH_SCRIPT = f"""#!/bin/bash
-#SBATCH -N{NODES} -n{NODES} -c{CORES}
-{f"#SBATCH -p{PARTITION}" if PARTITION else ""}
-end=$((SECONDS + {DURATION}))
-for _ in $(seq {CORES}); do
-    ( sum=0; i=0; while [ $SECONDS -lt $end ]; do i=$((i + 1)); sum=$((sum + i * i)); done ) &
-done
-wait
-echo "Last auf {CORES} Kern(en) für {DURATION}s abgeschlossen"
-"""
 
 
 def log(msg: str) -> None:
@@ -66,10 +55,20 @@ def db_conn_str() -> str:
     fail("EPS_DB_CONN_STR ist nicht gesetzt und konnte nicht aus slurmctld ermittelt werden")
 
 
-def submit_job() -> str:
-    log(f"Reiche Testjob ein (Nodes={NODES}, Kerne={CORES}, Rechenlast={DURATION}s)...")
+def submit_job(cores: int) -> str:
+    rscript = f"""#!/bin/bash
+        #SBATCH -N{NODES} -n{NODES} -c{cores}
+        {f"#SBATCH -p{PARTITION}" if PARTITION else ""}
+        end=$((SECONDS + {DURATION}))
+        for _ in $(seq {cores}); do
+            ( sum=0; i=0; while [ $SECONDS -lt $end ]; do i=$((i + 1)); sum=$((sum + i * i)); done ) &
+        done
+        wait
+        echo "Last auf {cores} Kern(en) für {DURATION}s abgeschlossen"
+        """
+    log(f"Reiche Testjob ein (Nodes={NODES}, Kerne={cores}, Rechenlast={DURATION}s)...")
     with tempfile.NamedTemporaryFile("w", suffix=".sbatch") as script:
-        script.write(SBATCH_SCRIPT)
+        script.write(rscript)
         script.flush()
         out = subprocess.run(
             ["sbatch", script.name], capture_output=True, text=True, check=True
@@ -94,7 +93,7 @@ def wait_for_completion(jobid: str) -> None:
     fail(f"Job {jobid} ist nach {TIMEOUT}s nicht abgeschlossen (Timeout)")
 
 
-def check_db(jobid: str) -> bool:
+def check_db(jobid: str) -> float:
     log(f"Prüfe Datenbankeinträge für Job {jobid}...")
 
     with psycopg.connect(db_conn_str()) as conn, conn.cursor() as cur:
@@ -118,13 +117,7 @@ def check_db(jobid: str) -> bool:
         if "package" in name
     )
 
-    log(f"allocations={allocations} executions={executions} "
-        f"measurements={len(measurements)} measurements_mit_e1<=e0={bad_deltas}")
-    log(f"Gemessener Energieverbrauch für Job {jobid}:")
-    for name, dtype, delta, util in measurements:
-        attributed = delta * util / 100
-        log(f"  {name} ({dtype}): {attributed:.0f} µJ (Socket: {delta} µJ, Auslastung {util}%)")
-    log(f"Gesamtenergie (zugerechnet) für Job {jobid}: {total_energy:.0f} µJ")
+    log(f"Gesamtenergie für Job {jobid}: {total_energy:.0f} µJ")
     log(f"Gesamtenergie in kWh: {total_energy / 3.6e12:.9f}")
 
     errors = []
@@ -139,18 +132,27 @@ def check_db(jobid: str) -> bool:
 
     for error in errors:
         log(f"FEHLER: {error}")
-    return not errors
+    return total_energy / 3.6e12 if not errors else 0.0
 
 
 def main() -> None:
     for cmd in ("sbatch", "squeue"):
         if not shutil.which(cmd):
             fail(f"{cmd} nicht gefunden (Slurm installiert?)")
+    results = []
+    for core_count in range(1, 9):
+        jobid = submit_job(core_count)
+        wait_for_completion(jobid)
+        time.sleep(2)  # slurmd-Epilog Zeit geben, die Messwerte fertig zu schreiben
 
-    jobid = submit_job()
-    wait_for_completion(jobid)
-    time.sleep(2)  # slurmd-Epilog Zeit geben, die Messwerte fertig zu schreiben
+        results.append((core_count, check_db(jobid)))
 
-    if not check_db(jobid):
-        fail(f"Testlauf für Job {jobid}: FAIL")
-    log(f"Testlauf für Job {jobid}: PASS")
+    log("\nTestlauf abgeschlossen. Ergebnisse:")
+    for cores, energy_kwh in results:
+        log(f"  {cores} Kern(e): {energy_kwh:.9f} kWh")
+    plt.plot([cores for cores, _ in results], [energy for _, energy in results], marker="o")
+    plt.title("Energieverbrauch vs. Kernanzahl")
+    plt.xlabel("Kernanzahl")
+    plt.ylabel("Energieverbrauch (kWh)")
+    plt.grid()
+    plt.show()

@@ -132,6 +132,13 @@ echo "==> Done. $(sinfo 2>/dev/null || true)"
 EOF
 RUN chmod +x /usr/local/bin/rebuild
 
+RUN cat > /usr/local/bin/clean <<'EOF'
+#!/usr/bin/env zsh
+set -euo pipefail
+rm -rf build
+EOF
+RUN chmod +x /usr/local/bin/clean
+
 # ── Oh My Zsh ────────────────────────────────────────────────────────────────
 RUN sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
 ENV SHELL=/usr/bin/zsh
