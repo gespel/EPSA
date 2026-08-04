@@ -18,7 +18,7 @@ import time
 import psycopg
 
 NODES = int(os.environ.get("NODES", 1))
-CORES = int(os.environ.get("CORES", 4))
+CORES = int(os.environ.get("CORES", 1))
 DURATION = int(os.environ.get("DURATION_SECONDS", 40))
 PARTITION = os.environ.get("PARTITION", "")
 POLL_INTERVAL = int(os.environ.get("POLL_INTERVAL", 2))
@@ -112,7 +112,11 @@ def check_db(jobid: str) -> bool:
         ).fetchall()
 
     bad_deltas = sum(1 for _, _, delta, _ in measurements if delta <= 0)
-    total_energy = sum(delta * util / 100 for _, _, delta, util in measurements)
+    total_energy = sum(
+        delta * util / 100
+        for name, _, delta, util in measurements
+        if "package" in name
+    )
 
     log(f"allocations={allocations} executions={executions} "
         f"measurements={len(measurements)} measurements_mit_e1<=e0={bad_deltas}")
