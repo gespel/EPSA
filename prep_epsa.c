@@ -1,4 +1,5 @@
 #include "src/common/log.h"
+#include "src/common/uid.h"
 #include <errno.h>
 #include <hwloc.h>
 #include <limits.h>
@@ -367,6 +368,7 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 
     slurm_info("Ctld_prolog: %s", plugin_name);
     slurm_info("Job Id: %u", job_ptr->job_id);
+    slurm_info("User: %s", job_ptr->user_name);
 
     slurm_info("Collecting job allocation data...");
     eps_allocation_data_t data;

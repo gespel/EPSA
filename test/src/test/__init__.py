@@ -134,11 +134,7 @@ def check_db(jobid: str) -> float:
         log(f"FEHLER: {error}")
     return total_energy / 3.6e12 if not errors else 0.0
 
-
-def main() -> None:
-    for cmd in ("sbatch", "squeue"):
-        if not shutil.which(cmd):
-            fail(f"{cmd} nicht gefunden (Slurm installiert?)")
+def cpu_test():
     results = []
     for core_count in range(1, 17):
         jobid = submit_job(core_count)
@@ -156,3 +152,17 @@ def main() -> None:
     plt.ylabel("Energieverbrauch (kWh)")
     plt.grid()
     plt.savefig(f"energy_consumption{time.time()}.png")
+
+def short_test():
+    jobid = submit_job(1)
+    wait_for_completion(jobid)
+    time.sleep(2)  # slurmd-Epilog Zeit geben, die Messwerte fertig zu schreiben
+    energy_kwh = check_db(jobid)
+    log(f"Testlauf abgeschlossen. Energieverbrauch: {energy_kwh:.9f} kWh")
+
+
+def main() -> None:
+    for cmd in ("sbatch", "squeue"):
+        if not shutil.which(cmd):
+            fail(f"{cmd} nicht gefunden (Slurm installiert?)")
+    short_test()
