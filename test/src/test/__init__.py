@@ -70,9 +70,12 @@ def submit_job(cores: int) -> str:
     with tempfile.NamedTemporaryFile("w", suffix=".sbatch") as script:
         script.write(rscript)
         script.flush()
-        out = subprocess.run(
-            ["sbatch", script.name], capture_output=True, text=True, check=True
-        ).stdout
+        try:
+            out = subprocess.run(
+                ["sbatch", script.name], capture_output=True, text=True, check=True
+            ).stdout
+        except subprocess.CalledProcessError as e:
+            fail(f"sbatch fehlgeschlagen: {e.stderr.strip()}")
 
     match = re.search(r"\d+$", out.strip())
     if not match:

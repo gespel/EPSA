@@ -368,6 +368,7 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 
     slurm_info("Ctld_prolog: %s", plugin_name);
     slurm_info("Job Id: %u", job_ptr->job_id);
+    
     char *uname = uid_to_string_cached(job_ptr->user_id);
     slurm_info("User: %s", uname);
     free(uname);
