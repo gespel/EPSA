@@ -15,7 +15,7 @@ import sys
 import tempfile
 import time
 from matplotlib import pyplot as plt
-
+import datetime
 import psycopg
 
 NODES = int(os.environ.get("NODES", 1))
@@ -154,7 +154,7 @@ def cpu_test():
     plt.xlabel("Kernanzahl")
     plt.ylabel("Energieverbrauch (kWh)")
     plt.grid()
-    plt.savefig(f"energy_consumption{time.time()}.png")
+    plt.savefig(f"energy_consumption{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
 
 def short_test():
     jobid = submit_job(1)
