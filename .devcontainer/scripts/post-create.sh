@@ -16,6 +16,18 @@ su -s /bin/bash munge -c "munged --foreground &"
 sleep 1
 
 # ── PostgreSQL ───────────────────────────────────────────────────────────────
+PG_VERSION=$(ls /etc/postgresql)
+PG_CONF_DIR="/etc/postgresql/${PG_VERSION}/main"
+
+# Listen on all interfaces so the port can be forwarded/reached from the host
+sed -i "s/^#\?listen_addresses.*/listen_addresses = '*'/" "${PG_CONF_DIR}/postgresql.conf"
+
+# Allow password auth (fixed local devcontainer creds) from any host
+if ! grep -q "^host all all all scram-sha-256$" "${PG_CONF_DIR}/pg_hba.conf" 2>/dev/null; then
+    printf 'host    all             all             0.0.0.0/0               scram-sha-256\nhost    all             all             ::/0                    scram-sha-256\n' \
+        >> "${PG_CONF_DIR}/pg_hba.conf"
+fi
+
 service postgresql start
 sleep 2
 
@@ -23,6 +35,12 @@ sleep 2
 if ! su -s /bin/bash postgres -c "psql -tAc \"SELECT 1 FROM pg_roles WHERE rolname='eps'\"" | grep -q 1; then
     su -s /bin/bash postgres -c "psql -f /docker-entrypoint-initdb.d/init-postgres.sql"
 fi
+
+# Ensure fixed, known credentials for the local devcontainer (idempotent)
+su -s /bin/bash postgres -c "psql -c \"ALTER USER eps WITH PASSWORD 'eps';\""
+
+service postgresql restart
+sleep 1
 
 # ── slurm.conf ───────────────────────────────────────────────────────────────
 NCPUS=$(nproc)

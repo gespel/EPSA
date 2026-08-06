@@ -56,7 +56,8 @@ efp_main(
     char** gres_uuid_list,
     time_t tstart,
     const char* cpu_ids,
-    eps_cpuinfo_t* cpuinfo
+    eps_cpuinfo_t* cpuinfo,
+    uid_t uid
 )
 {
     int status = EXIT_SUCCESS;
@@ -357,6 +358,7 @@ efp_main(
         }
 
         measurement.execution_id = execution_id;
+        measurement.userid = uid;
         measurement.device_name = device_name;
         measurement.device_uid = device_uid;
         measurement.device_type = device_type;

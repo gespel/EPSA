@@ -2,6 +2,7 @@
 #define _EPS_EFP_H
 
 #include <stdint.h>
+#include <sys/types.h>
 
 void
 efp_main(
@@ -11,7 +12,8 @@ efp_main(
     char** gres_uuid_list,
     time_t tstart,
     const char* cpu_ids,
-    eps_cpuinfo_t* cpuinfo
+    eps_cpuinfo_t* cpuinfo,
+    uid_t uid
 );
 
 #endif

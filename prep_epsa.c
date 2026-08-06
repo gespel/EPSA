@@ -213,7 +213,8 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
                 gres_uuid_list,
                 tstart,
                 cpu_ids,
-                &cpuinfo
+                &cpuinfo,
+                job_env->uid
             );
             break;
         default:
@@ -386,11 +387,13 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
             PQerrorMessage(db_connection)
         );
         free(data.jobname);
+        free(data.username);
         PQfinish(db_connection);
         return SLURM_ERROR;
     }
     int err = insert_allocation_data(db_connection, &data);
     free(data.jobname);
+    free(data.username);
 
     if (err) {
         slurm_info("error: failed to write data to db");

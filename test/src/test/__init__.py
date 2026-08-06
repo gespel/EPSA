@@ -157,7 +157,7 @@ def cpu_test():
     plt.savefig(f"energy_consumption{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
 
 def short_test():
-    jobid = submit_job(1)
+    jobid = submit_job(32)
     wait_for_completion(jobid)
     time.sleep(2)  # slurmd-Epilog Zeit geben, die Messwerte fertig zu schreiben
     energy_kwh = check_db(jobid)

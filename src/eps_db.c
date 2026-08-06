@@ -20,9 +20,10 @@ For further details check:
 
 #include <eps_db.h>
 
+#define USER_COLS "userid, username"
 #define ALLOC_COLS "jobid, job_name, nnodes, userid, ts"
 #define EXEC_COLS "jobid, node_name, node_id, ts_start, ts_end"
-#define MES_COLS "exec_id, device_name, device_uid, device_type, " \
+#define MES_COLS "exec_id, userid, device_name, device_uid, device_type, " \
                  "e0, e1, t0, t1, utilization"
 
 PGconn* connect_db()
@@ -52,8 +53,40 @@ int check_query_result(PGresult* result, PGconn* connection)
     return 0;
 }
 
+int insert_user_data(PGconn* connection, int userid, const char* username)
+{
+    uint32_t bin_userid = htobe32((uint32_t) userid);
+
+    int param_formats[2] = {1, 0};
+    const char* param_values[2] = {
+        (char*) &bin_userid,
+        username
+    };
+    int param_lengths[2] = {
+        sizeof(bin_userid),
+        sizeof(username)
+    };
+    PGresult* res = PQexecParams(
+        connection,
+        "INSERT INTO users ("USER_COLS") VALUES($1, $2) "
+        "ON CONFLICT (userid) DO UPDATE SET username = EXCLUDED.username;",
+        2,
+        NULL,
+        param_values,
+        param_lengths,
+        param_formats,
+        0
+    );
+    int err = check_query_result(res, connection);
+    PQclear(res);
+    return err;
+}
+
 int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
 {
+    int err = insert_user_data(connection, data->userid, data->username);
+    if (err) return err;
+
     uint32_t bin_jobid = htobe32((uint32_t) data->jobid);
     uint32_t bin_nnodes = htobe32((uint32_t) data->nnodes);
     uint32_t bin_userid = htobe32((uint32_t) data->userid);
@@ -87,7 +120,7 @@ int insert_allocation_data(PGconn* connection, eps_allocation_data_t* data)
         param_formats,
         0
     );
-    int err = check_query_result(res, connection);
+    err = check_query_result(res, connection);
     PQclear(res);
     return err;
 }
@@ -152,6 +185,9 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
     char exec_id[12];
     snprintf(exec_id, 12, "%d", data->execution_id);
 
+    char userid[12];
+    snprintf(userid, 12, "%d", data->userid);
+
     char e0[20], e1[20];
     char t0[20], t1[20];
     char utilization[6];
@@ -163,8 +199,9 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
     snprintf(t1, 20, "%llu", data->t1);
     snprintf(utilization, 6, "%.2f", data->utilization);
 
-    const char* param_values[9] = {
+    const char* param_values[10] = {
         exec_id,
+        userid,
         data->device_name,
         data->device_uid,
         data->device_type,
@@ -174,8 +211,9 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
         t1,
         utilization
     };
-    int param_lengths[9] = {
+    int param_lengths[10] = {
         sizeof(exec_id),
+        sizeof(userid),
         sizeof(data->device_name),
         sizeof(data->device_uid),
         sizeof(data->device_type),
@@ -187,8 +225,8 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
     };
     PGresult* res = PQexecParams(
         connection,
-        "INSERT INTO measurements ("MES_COLS") VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9);",
-        9,
+        "INSERT INTO measurements ("MES_COLS") VALUES($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);",
+        10,
         NULL,
         param_values,
         param_lengths,

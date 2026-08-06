@@ -10,6 +10,7 @@ typedef struct eps_allocation_data
     int jobid;
     char* jobname;
     int userid;
+    char* username;
     int nnodes;
     time_t ts;
 } eps_allocation_data_t;
@@ -26,6 +27,7 @@ typedef struct eps_execution_data
 typedef struct eps_measurement_data
 {
     int execution_id;
+    int userid;
     const char* device_name;
     const char* device_uid;
     const char* device_type;
