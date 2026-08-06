@@ -140,7 +140,7 @@ def main() -> None:
         if not shutil.which(cmd):
             fail(f"{cmd} nicht gefunden (Slurm installiert?)")
     results = []
-    for core_count in range(1, 9):
+    for core_count in range(1, 17):
         jobid = submit_job(core_count)
         wait_for_completion(jobid)
         time.sleep(2)  # slurmd-Epilog Zeit geben, die Messwerte fertig zu schreiben

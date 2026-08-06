@@ -249,7 +249,7 @@ efp_main(
 
     for (int i = 0; i < filtered_size; i++) {
         printf("Device %d: %s\n", i, EMA_get_device_name(filtered_devices[i]));
-        e0[i] = EMA_get_energy_uj(filtered_devices[i]);
+        e0[i] = EMA_plugin_get_energy_uj(filtered_devices[i]);
         t0[i] = EMA_get_time_in_us();
         printf("\t e0: %llu\n", e0[i]);
         printf("\t t0: %llu\n", t0[i]);
@@ -261,7 +261,7 @@ efp_main(
 
     unsigned long long total_uj = 0;
     for (int i = 0; i < filtered_size; i++) {
-        e1[i] = EMA_get_energy_uj(filtered_devices[i]);
+        e1[i] = EMA_plugin_get_energy_uj(filtered_devices[i]);
         t1[i] = EMA_get_time_in_us();
         printf("Device %d: %s\n", i, EMA_get_device_name(filtered_devices[i]));
         printf("\te1: %llu\n", e1[i]);
