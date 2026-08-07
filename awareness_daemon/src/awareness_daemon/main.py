@@ -30,6 +30,8 @@ def index():
 
     print(f"UserId of {username} is {user_id}")
 
+    print(f"All jobs: {db_handler.get_all_jobs_of_user(user_id)}")
+
     return "Awareness Daemon is running."
 
 def main():

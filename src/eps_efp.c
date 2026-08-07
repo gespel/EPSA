@@ -323,7 +323,6 @@ efp_main(
     if (err)
     {
         printf("error: failed execution data insertion!\n");
-        fclose(log_fd);
         PQfinish(db_connection);
         status = EXIT_FAILURE;
         goto exit;

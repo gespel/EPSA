@@ -4,7 +4,12 @@ CREATE DATABASE eps OWNER eps;
 
 \connect eps
 
--- Column names must match ALLOC_COLS / EXEC_COLS / MES_COLS in eps_db.c
+-- Column names must match USER_COLS / ALLOC_COLS / EXEC_COLS / MES_COLS in eps_db.c
+CREATE TABLE users (
+    userid      INTEGER PRIMARY KEY,
+    username    TEXT
+);
+
 CREATE TABLE allocations (
     jobid       INTEGER PRIMARY KEY,
     job_name    TEXT,
@@ -25,6 +30,7 @@ CREATE TABLE executions (
 CREATE TABLE measurements (
     id              SERIAL PRIMARY KEY,
     exec_id         INTEGER REFERENCES executions(id),
+    userid          INTEGER,
     device_name     TEXT,
     device_uid      TEXT,
     device_type     TEXT,
