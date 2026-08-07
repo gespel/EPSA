@@ -22,7 +22,7 @@ For further details check:
 
 #define USER_COLS "userid, username"
 #define ALLOC_COLS "jobid, job_name, nnodes, userid, ts"
-#define EXEC_COLS "jobid, node_name, node_id, ts_start, ts_end"
+#define EXEC_COLS "jobid, node_name, node_id, userid, ts_start, ts_end"
 #define MES_COLS "exec_id, userid, device_name, device_uid, device_type, " \
                  "e0, e1, t0, t1, utilization"
 
@@ -130,6 +130,7 @@ insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* id)
 {
     uint32_t bin_jobid = htobe32((uint32_t) data->jobid);
     uint32_t bin_nodeid = htobe32((uint32_t) data->nodeid);
+    uint32_t bin_userid = htobe32((uint32_t) data->userid);
 
     char tstart[12];
     snprintf(tstart, 12, "%ld", data->tstart);
@@ -137,26 +138,28 @@ insert_execution_data(PGconn* connection, eps_execution_data_t* data, int* id)
     char tend[12];
     snprintf(tend, 12, "%ld", data->tend);
 
-    int param_formats[5] = {1, 0, 1, 0, 0};
-    const char* param_values[5] = {
+    int param_formats[6] = {1, 0, 1, 1, 0, 0};
+    const char* param_values[6] = {
         (char*) &bin_jobid,
         data->nodename,
         (char*) &bin_nodeid,
+        (char*) &bin_userid,
         tstart,
         tend
     };
-    int param_lengths[5] = {
+    int param_lengths[6] = {
         sizeof(bin_jobid),
         sizeof(data->nodename),
         sizeof(bin_nodeid),
+        sizeof(bin_userid),
         sizeof(tstart),
         sizeof(tend)
     };
     PGresult* res = PQexecParams(
         connection,
         "INSERT INTO executions ("EXEC_COLS")"
-        " VALUES($1, $2, $3, to_timestamp($4), to_timestamp($5)) RETURNING id;",
-        5,
+        " VALUES($1, $2, $3, $4, to_timestamp($5), to_timestamp($6)) RETURNING id;",
+        6,
         NULL,
         param_values,
         param_lengths,

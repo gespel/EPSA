@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ username or ("uid:" ~ userid) }} – EPSA{% endblock %}
+
+{% block headerlink %}
+<a class="back" href="{{ url_for('index') }}">&larr; Back to leaderboard</a>
+{% endblock %}
+
+{% block content %}
+<h1 class="page-title">{{ username or ("User " ~ userid) }}</h1>
+<p class="subtitle">Energy consumption breakdown per job (userid: {{ userid }})</p>
+
+<div class="grid">
+    <div class="card stat-card">
+        <div class="label">Total Energy</div>
+        <div class="value energy">{{ "%.4f"|format(total_kwh) }} kWh</div>
+    </div>
+    <div class="card stat-card">
+        <div class="label">Total Jobs</div>
+        <div class="value jobs">{{ jobs|length }}</div>
+    </div>
+    <div class="card stat-card">
+        <div class="label">Avg. per Job</div>
+        <div class="value users">
+            {{ "%.4f"|format((total_kwh / jobs|length) if jobs|length else 0) }} kWh
+        </div>
+    </div>
+</div>
+
+{% if chart_labels %}
+<div class="panel">
+    <h2>Energy per Job (most recent)</h2>
+    <div class="chart-wrap">
+        <canvas id="userChart"></canvas>
+    </div>
+</div>
+{% endif %}
+
+<div class="panel">
+    <h2>Job History</h2>
+    {% if jobs %}
+    <table>
+        <thead>
+            <tr>
+                <th>Job ID</th>
+                <th>Job Name</th>
+                <th>Nodes</th>
+                <th>Executions</th>
+                <th>Submitted</th>
+                <th>Energy (kWh)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for j in jobs %}
+            <tr>
+                <td>{{ j.jobid }}</td>
+                <td>{{ j.jobname or "—" }}</td>
+                <td>{{ j.nnodes }}</td>
+                <td>{{ j.execution_count }}</td>
+                <td>{{ j.ts }}</td>
+                <td><span class="pill">{{ "%.4f"|format(j.total_energy_kwh or 0) }}</span></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No jobs found for this user yet.</div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if chart_labels %}
+<script>
+    const ctx = document.getElementById('userChart');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|tojson }},
+            datasets: [{
+                label: 'kWh',
+                data: {{ chart_values|tojson }},
+                fill: true,
+                backgroundColor: 'rgba(96, 165, 250, 0.15)',
+                borderColor: '#60a5fa',
+                tension: 0.35,
+                pointBackgroundColor: '#60a5fa',
+                pointRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#8b92a8' }, grid: { color: '#232838' } },
+                y: { ticks: { color: '#8b92a8' }, grid: { color: '#232838' }, beginAtZero: true }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

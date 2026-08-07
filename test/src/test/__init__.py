@@ -139,7 +139,7 @@ def check_db(jobid: str) -> float:
 
 def cpu_test():
     results = []
-    for core_count in range(1, 17):
+    for core_count in range(1, 9):
         jobid = submit_job(core_count)
         wait_for_completion(jobid)
         time.sleep(2)  # slurmd-Epilog Zeit geben, die Messwerte fertig zu schreiben
@@ -154,7 +154,7 @@ def cpu_test():
     plt.xlabel("Kernanzahl")
     plt.ylabel("Energieverbrauch (kWh)")
     plt.grid()
-    plt.savefig(f"energy_consumption{datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
+    plt.savefig(f"energy_consumption{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png")
 
 def short_test():
     jobid = submit_job(32)
@@ -169,3 +169,4 @@ def main() -> None:
         if not shutil.which(cmd):
             fail(f"{cmd} nicht gefunden (Slurm installiert?)")
     short_test()
+    cpu_test()

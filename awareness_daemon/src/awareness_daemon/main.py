@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, render_template, abort
 import logging
 import db
 
@@ -14,25 +14,66 @@ handler.setFormatter(formatter)
 
 logger.addHandler(handler)
 
-@app.route("/")
-def index():
-    logger.info("Index route accessed")
 
-    db_handler = db.DatabaseHandler(
+def get_db_handler():
+    return db.DatabaseHandler(
         host="localhost",
         database="eps",
         user="eps",
         password="eps"
     )
 
-    username = "root"
-    user_id = db_handler.get_userid_by_username(username)
 
-    print(f"UserId of {username} is {user_id}")
+@app.route("/")
+def index():
+    logger.info("Dashboard index route accessed")
 
-    print(f"All jobs: {db_handler.get_all_jobs_of_user(user_id)}")
+    db_handler = get_db_handler()
+    leaderboard = db_handler.get_energy_leaderboard()
 
-    return "Awareness Daemon is running."
+    total_kwh = sum(u["total_energy_kwh"] or 0 for u in leaderboard)
+    total_jobs = sum(u["job_count"] or 0 for u in leaderboard)
+    active_users = len([u for u in leaderboard if (u["total_energy_kwh"] or 0) > 0])
+
+    chart_labels = [u["username"] or f"uid:{u['userid']}" for u in leaderboard[:10]]
+    chart_values = [round(float(u["total_energy_kwh"] or 0), 4) for u in leaderboard[:10]]
+
+    return render_template(
+        "dashboard.html",
+        leaderboard=leaderboard,
+        total_kwh=total_kwh,
+        total_jobs=total_jobs,
+        active_users=active_users,
+        chart_labels=chart_labels,
+        chart_values=chart_values,
+    )
+
+
+@app.route("/user/<int:userid>")
+def user_detail(userid):
+    logger.info(f"User detail route accessed for userid={userid}")
+
+    db_handler = get_db_handler()
+    username = db_handler.get_username_by_userid(userid)
+    if username is None:
+        abort(404)
+
+    jobs = db_handler.get_jobs_with_energy_for_user(userid)
+    total_kwh = sum(j["total_energy_kwh"] or 0 for j in jobs)
+
+    chart_labels = [f"Job {j['jobid']}" for j in jobs][:15]
+    chart_values = [round(float(j["total_energy_kwh"] or 0), 4) for j in jobs][:15]
+
+    return render_template(
+        "user_detail.html",
+        userid=userid,
+        username=username,
+        jobs=jobs,
+        total_kwh=total_kwh,
+        chart_labels=chart_labels,
+        chart_values=chart_values,
+    )
+
 
 def main():
     logger.info("Starting Awareness Daemon WSGI application")

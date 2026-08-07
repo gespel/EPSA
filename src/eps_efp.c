@@ -314,6 +314,7 @@ efp_main(
     execution.jobid = jid;
     execution.nodename = nodename;
     execution.nodeid = nodeid;
+    execution.userid = uid;
     execution.tstart = tstart;
     execution.tend = tend;
 

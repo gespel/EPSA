@@ -23,6 +23,7 @@ CREATE TABLE executions (
     jobid       INTEGER REFERENCES allocations(jobid),
     node_name   TEXT,
     node_id     INTEGER,
+    userid      INTEGER REFERENCES users(userid),
     ts_start    TIMESTAMP,
     ts_end      TIMESTAMP
 );

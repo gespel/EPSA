@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% block title %}Dashboard – EPSA{% endblock %}
+
+{% block content %}
+<h1 class="page-title">Energy Consumption Leaderboard</h1>
+<p class="subtitle">Live overview of energy usage per user across all Slurm jobs.</p>
+
+<div class="grid">
+    <div class="card stat-card">
+        <div class="label">Total Energy</div>
+        <div class="value energy">{{ "%.3f"|format(total_kwh) }} kWh</div>
+    </div>
+    <div class="card stat-card">
+        <div class="label">Total Jobs</div>
+        <div class="value jobs">{{ total_jobs }}</div>
+    </div>
+    <div class="card stat-card">
+        <div class="label">Active Users</div>
+        <div class="value users">{{ active_users }}</div>
+    </div>
+</div>
+
+{% if chart_labels %}
+<div class="panel">
+    <h2>Top Consumers</h2>
+    <div class="chart-wrap">
+        <canvas id="leaderboardChart"></canvas>
+    </div>
+</div>
+{% endif %}
+
+<div class="panel">
+    <h2>All Users</h2>
+    {% if leaderboard %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>User</th>
+                <th>Jobs</th>
+                <th>Executions</th>
+                <th>Energy (kWh)</th>
+                <th style="width: 30%">Share</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set max_kwh = (leaderboard|map(attribute='total_energy_kwh')|max) or 1 %}
+            {% for u in leaderboard %}
+            <tr>
+                <td>
+                    {% if loop.index == 1 %}<span class="rank gold">1</span>
+                    {% elif loop.index == 2 %}<span class="rank silver">2</span>
+                    {% elif loop.index == 3 %}<span class="rank bronze">3</span>
+                    {% else %}<span class="rank">{{ loop.index }}</span>{% endif %}
+                </td>
+                <td>
+                    <a class="row-link" href="{{ url_for('user_detail', userid=u.userid) }}">
+                        {{ u.username or ("uid:" ~ u.userid) }}
+                    </a>
+                </td>
+                <td>{{ u.job_count }}</td>
+                <td>{{ u.execution_count }}</td>
+                <td><span class="pill">{{ "%.4f"|format(u.total_energy_kwh or 0) }}</span></td>
+                <td>
+                    <div class="bar-bg">
+                        <div class="bar-fill" style="width: {{ ((u.total_energy_kwh or 0) / max_kwh * 100) if max_kwh else 0 }}%;"></div>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">No users found in the database yet.</div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if chart_labels %}
+<script>
+    const ctx = document.getElementById('leaderboardChart');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: {{ chart_labels|tojson }},
+            datasets: [{
+                label: 'kWh',
+                data: {{ chart_values|tojson }},
+                backgroundColor: 'rgba(110, 231, 183, 0.55)',
+                borderColor: '#6ee7b7',
+                borderWidth: 1.5,
+                borderRadius: 6,
+                maxBarThickness: 46
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: '#8b92a8' }, grid: { color: '#232838' } },
+                y: { ticks: { color: '#8b92a8' }, grid: { color: '#232838' }, beginAtZero: true }
+            }
+        }
+    });
+</script>
+{% endif %}
+{% endblock %}

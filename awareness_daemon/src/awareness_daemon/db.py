@@ -141,10 +141,11 @@ class DatabaseHandler:
             list: List of dicts with keys (execution_id, jobid, nodename, nodeid, tstart, tend)
         """
         query = """
-            SELECT id as execution_id, jobid, nodename, nodeid, tstart, tend
+            SELECT id as execution_id, jobid, node_name as nodename,
+                   node_id as nodeid, userid, ts_start as tstart, ts_end as tend
             FROM executions
             WHERE jobid = %s
-            ORDER BY nodeid
+            ORDER BY node_id
         """
         try:
             with self.get_connection() as conn:
@@ -168,10 +169,10 @@ class DatabaseHandler:
             list: List of dicts with measurement data
         """
         query = """
-            SELECT execution_id, userid, device_name, device_uid, device_type,
+            SELECT exec_id as execution_id, userid, device_name, device_uid, device_type,
                    e0, e1, t0, t1, utilization
             FROM measurements
-            WHERE execution_id = %s
+            WHERE exec_id = %s
             ORDER BY device_name
         """
         try:
@@ -198,7 +199,7 @@ class DatabaseHandler:
         query = """
             SELECT SUM(m.e1 - m.e0) as total_energy
             FROM measurements m
-            JOIN executions e ON m.execution_id = e.id
+            JOIN executions e ON m.exec_id = e.id
             WHERE e.jobid = %s
         """
         try:
@@ -208,7 +209,7 @@ class DatabaseHandler:
                     result = cur.fetchone()
                     if result and result.get('total_energy'):
                         energy = float(result['total_energy'])
-                        logger.debug(f"Total energy for job {jobid}: {energy} J")
+                        logger.debug(f"Total energy for job {jobid}: {energy} mJ")
                         return energy
                     return None
         except Exception as e:
@@ -228,7 +229,7 @@ class DatabaseHandler:
         query = """
             SELECT COUNT(*) as count
             FROM measurements m
-            JOIN executions e ON m.execution_id = e.id
+            JOIN executions e ON m.exec_id = e.id
             WHERE e.jobid = %s
         """
         try:
@@ -288,3 +289,113 @@ class DatabaseHandler:
         except Exception as e:
             logger.error(f"Error retrieving jobs for user {userid}: {e}")
             return []
+
+    def get_total_energy_consumption_for_user_in_kwh(self, userid):
+        """
+        Get total energy consumption for all jobs of a specific user in kWh.
+        
+        Args:
+            userid: User ID
+            
+        Returns:
+            float: Total energy in kWh, or None on error
+        """
+        total_energy = 0.0
+        job_ids = self.get_all_jobs_of_user(userid)
+        for jobid in job_ids:
+            energy = self.get_total_energy_consumption(jobid)
+            if energy is not None:
+                total_energy += energy / 3.6e12  # Convert from Joules to kWh
+        return total_energy if total_energy > 0 else None
+
+    def get_energy_leaderboard(self):
+        """
+        Get an aggregated energy-consumption leaderboard for all known users,
+        computed in a single query for efficiency.
+
+        Returns:
+            list: List of dicts with keys (userid, username, total_energy_kwh,
+                  job_count, execution_count), sorted descending by energy use.
+        """
+        query = """
+            SELECT
+                u.userid,
+                u.username,
+                COALESCE(SUM(m.e1 - m.e0), 0) / 3.6e12 AS total_energy_kwh,
+                COUNT(DISTINCT e.jobid) AS job_count,
+                COUNT(DISTINCT e.id) AS execution_count
+            FROM users u
+            LEFT JOIN executions e ON e.userid = u.userid
+            LEFT JOIN measurements m ON m.exec_id = e.id
+            GROUP BY u.userid, u.username
+            ORDER BY total_energy_kwh DESC
+        """
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(query)
+                    results = cur.fetchall()
+                    logger.debug(f"Retrieved leaderboard with {len(results)} users")
+                    return [dict(row) for row in results]
+        except Exception as e:
+            logger.error(f"Error retrieving energy leaderboard: {e}")
+            return []
+
+    def get_jobs_with_energy_for_user(self, userid):
+        """
+        Get all jobs of a user together with their aggregated energy
+        consumption, node count and timestamps in a single query.
+
+        Args:
+            userid: User ID
+
+        Returns:
+            list: List of dicts with keys (jobid, jobname, nnodes, ts,
+                  total_energy_kwh, execution_count), sorted by newest first.
+        """
+        query = """
+            SELECT
+                a.jobid,
+                a.job_name AS jobname,
+                a.nnodes,
+                a.ts,
+                COALESCE(SUM(m.e1 - m.e0), 0) / 3.6e12 AS total_energy_kwh,
+                COUNT(DISTINCT e.id) AS execution_count
+            FROM allocations a
+            LEFT JOIN executions e ON e.jobid = a.jobid
+            LEFT JOIN measurements m ON m.exec_id = e.id
+            WHERE a.userid = %s
+            GROUP BY a.jobid, a.job_name, a.nnodes, a.ts
+            ORDER BY a.ts DESC
+        """
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(query, (userid,))
+                    results = cur.fetchall()
+                    logger.debug(f"Retrieved {len(results)} jobs for user {userid}")
+                    return [dict(row) for row in results]
+        except Exception as e:
+            logger.error(f"Error retrieving jobs with energy for user {userid}: {e}")
+            return []
+
+    def get_username_by_userid(self, userid):
+        """
+        Get username by user ID.
+
+        Args:
+            userid: User ID
+
+        Returns:
+            str: Username, or None if not found
+        """
+        query = "SELECT username FROM users WHERE userid = %s LIMIT 1"
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(query, (userid,))
+                    result = cur.fetchone()
+                    return result['username'] if result else None
+        except Exception as e:
+            logger.error(f"Error retrieving username for userid '{userid}': {e}")
+            return None

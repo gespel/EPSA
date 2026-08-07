@@ -20,6 +20,7 @@ typedef struct eps_execution_data
     int jobid;
     const char* nodename;
     int nodeid;
+    int userid;
     time_t tstart;
     time_t tend;
 } eps_execution_data_t;
