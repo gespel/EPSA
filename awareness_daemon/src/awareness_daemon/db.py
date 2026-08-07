@@ -83,8 +83,8 @@ class DatabaseHandler:
             int: User ID, or None if username not found
         """
         query = """
-            SELECT DISTINCT userid
-            FROM allocations
+            SELECT userid
+            FROM users
             WHERE username = %s
             LIMIT 1
         """

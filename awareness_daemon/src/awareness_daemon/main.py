@@ -1,5 +1,6 @@
 from flask import Flask
 import logging
+import db
 
 app = Flask(__name__)
 logger = logging.getLogger("awareness_daemon")
@@ -16,6 +17,19 @@ logger.addHandler(handler)
 @app.route("/")
 def index():
     logger.info("Index route accessed")
+
+    db_handler = db.DatabaseHandler(
+        host="localhost",
+        database="eps",
+        user="eps",
+        password="eps"
+    )
+
+    username = "root"
+    user_id = db_handler.get_userid_by_username(username)
+
+    print(f"UserId of {username} is {user_id}")
+
     return "Awareness Daemon is running."
 
 def main():
