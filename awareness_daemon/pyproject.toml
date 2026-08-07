@@ -7,7 +7,10 @@ authors = [
     { name = "gespel", email = "sten.heimbrodt@hotmail.de" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "flask>=3.1.3",
+    "psycopg2-binary>=2.9.0",
+]
 
 [project.scripts]
 awareness-daemon = "awareness_daemon:main"

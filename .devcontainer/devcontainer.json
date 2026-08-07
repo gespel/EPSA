@@ -16,9 +16,10 @@
     // Run post-create setup (munge, postgres, cmake build)
     "postCreateCommand": "bash /workspace/.devcontainer/scripts/post-create.sh",
     // Expose PostgreSQL for external inspection
-    "forwardPorts": [5432],
+    "forwardPorts": [5432, 5000],
     "portsAttributes": {
-        "5432": { "label": "PostgreSQL (eps DB)" }
+        "5432": { "label": "PostgreSQL (eps DB)" },
+        "5000": { "label": "Awareness Daemon (Flask)" }
     },
     // Useful VS Code extensions for C development
     "customizations": {
