@@ -85,6 +85,21 @@ class Comparator:
             ("Air Fryer", 1500),
             ("Waffle Iron", 1200),
             ("Sandwich Maker", 750),
+            # big consumers
+            ("Central AC Unit (Whole House)", 3500),
+            ("Electric Furnace", 10000),
+            ("Hot Tub Heater", 6000),
+            ("Industrial Welder", 7000),
+            ("Walk-In Freezer", 5000),
+            ("Commercial Pizza Oven", 9000),
+            ("Data Center Rack (Full)", 8000),
+            ("Tesla Supercharger", 72000),
+            ("Arc Furnace (Small Foundry)", 50000),
+            ("Crypto Mining Rig (12 GPUs)", 3000),
+            # more wtf
+            ("Flux Capacitor", 1210000),
+            ("Death Star Superlaser (Idle Hum)", 999999),
+            ("Neighbor's Extremely Loud Subwoofer", 1500)
         ]
 
     def compare_consumption(self, consumption_in_kwh):
