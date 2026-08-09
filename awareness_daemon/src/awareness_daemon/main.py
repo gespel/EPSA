@@ -1,6 +1,7 @@
 from flask import Flask, render_template, abort
 import logging
 import db
+import comparator
 
 app = Flask(__name__)
 logger = logging.getLogger("awareness_daemon")
@@ -38,6 +39,10 @@ def index():
     chart_labels = [u["username"] or f"uid:{u['userid']}" for u in leaderboard[:10]]
     chart_values = [round(float(u["total_energy_kwh"] or 0), 4) for u in leaderboard[:10]]
 
+
+    comp = comparator.Comparator()
+    compare_device_name, compare_device_time = comp.compare_consumption(total_kwh)
+
     return render_template(
         "dashboard.html",
         leaderboard=leaderboard,
@@ -46,6 +51,8 @@ def index():
         active_users=active_users,
         chart_labels=chart_labels,
         chart_values=chart_values,
+        compare_device_name=compare_device_name,
+        compare_device_time=compare_device_time,
     )
 
 
@@ -64,6 +71,9 @@ def user_detail(userid):
     chart_labels = [f"Job {j['jobid']}" for j in jobs][:15]
     chart_values = [round(float(j["total_energy_kwh"] or 0), 4) for j in jobs][:15]
 
+    comp = comparator.Comparator()
+    compare_device_name, compare_device_time = comp.compare_consumption(total_kwh)
+
     return render_template(
         "user_detail.html",
         userid=userid,
@@ -72,6 +82,8 @@ def user_detail(userid):
         total_kwh=total_kwh,
         chart_labels=chart_labels,
         chart_values=chart_values,
+        compare_device_name=compare_device_name,
+        compare_device_time=compare_device_time,
     )
 
 

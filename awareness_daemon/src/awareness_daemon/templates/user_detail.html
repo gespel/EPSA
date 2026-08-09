@@ -26,6 +26,17 @@
     </div>
 </div>
 
+{% if compare_device_name %}
+<div class="panel compare-panel">
+    <h2>Fun Fact</h2>
+    <p class="compare-text">
+        This user's total energy consumption of <strong>{{ "%.4f"|format(total_kwh) }} kWh</strong> is roughly equivalent to running a
+        <span class="compare-device">{{ compare_device_name.replace('_', ' ') }}</span>
+        for <span class="compare-time">{{ compare_device_time }}</span>.
+    </p>
+</div>
+{% endif %}
+
 {% if chart_labels %}
 <div class="panel">
     <h2>Energy per Job (most recent)</h2>
