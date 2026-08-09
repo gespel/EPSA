@@ -12,7 +12,11 @@
     ],
     // Root required: slurmd/slurmctld + RAPL via /sys/class/powercap
     "remoteUser": "root",
-    "runArgs": ["--privileged"],
+    "runArgs": [
+        "--privileged",
+        "-p", "0.0.0.0:5432:5432",
+        "-p", "0.0.0.0:5000:5000"
+    ],
     // Run post-create setup (munge, postgres, cmake build)
     "postCreateCommand": "bash /workspace/.devcontainer/scripts/post-create.sh",
     // Expose PostgreSQL for external inspection
