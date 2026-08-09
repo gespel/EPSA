@@ -13,10 +13,12 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import textwrap
 import time
 from matplotlib import pyplot as plt
 import datetime
 import psycopg
+import random
 
 NODES = int(os.environ.get("NODES", 1))
 DURATION = int(os.environ.get("DURATION_SECONDS", 10))
@@ -55,17 +57,19 @@ def db_conn_str() -> str:
     fail("EPS_DB_CONN_STR ist nicht gesetzt und konnte nicht aus slurmctld ermittelt werden")
 
 
-def submit_job(cores: int) -> str:
-    rscript = f"""#!/bin/bash
+def submit_job(cores: int, user: str | None = None) -> str:
+    rscript = textwrap.dedent(f"""\
+        #!/bin/bash
         #SBATCH -N{NODES} -n{NODES} -c{cores}
         {f"#SBATCH -p{PARTITION}" if PARTITION else ""}
+        {f"#SBATCH --uid={user}" if user else ""}
         end=$((SECONDS + {DURATION}))
         for _ in $(seq {cores}); do
             ( sum=0; i=0; while [ $SECONDS -lt $end ]; do i=$((i + 1)); sum=$((sum + i * i)); done ) &
         done
         wait
         echo "Last auf {cores} Kern(en) für {DURATION}s abgeschlossen"
-        """
+        """)
     log(f"Reiche Testjob ein (Nodes={NODES}, Kerne={cores}, Rechenlast={DURATION}s)...")
     with tempfile.NamedTemporaryFile("w", suffix=".sbatch") as script:
         script.write(rscript)
@@ -163,10 +167,20 @@ def short_test():
     energy_kwh = check_db(jobid)
     log(f"Testlauf abgeschlossen. Energieverbrauch: {energy_kwh:.9f} kWh")
 
+def multiuser_test(num_jobs: int = 50):
+    users = ["user1", "user2", "user3"]
 
+    for _ in range(num_jobs):
+        user = random.choice(users)
+        jobid = submit_job(8, user)
+        wait_for_completion(jobid)
+        time.sleep(2)  # slurmd-Epilog Zeit geben, die Messwerte fertig zu schreiben
+        energy_kwh = check_db(jobid)
+        log(f"User {user} - Testlauf abgeschlossen. Energieverbrauch: {energy_kwh:.9f} kWh")
 def main() -> None:
     for cmd in ("sbatch", "squeue"):
         if not shutil.which(cmd):
             fail(f"{cmd} nicht gefunden (Slurm installiert?)")
-    short_test()
-    cpu_test()
+   # short_test()
+    #cpu_test()
+    multiuser_test()
