@@ -91,11 +91,11 @@ class Comparator:
         close_devices = []
         consumption_in_watthours = consumption_in_kwh * 1000  # Convert kWh
         min_time_seconds = 10
-        max_time_seconds = 36000  # 10 hours
+        #max_time_seconds = 36000  # 10 hours
 
         for device, watts in self.consumers_in_watts:
             required_time_seconds = consumption_in_watthours / watts * 3600
-            if min_time_seconds <= required_time_seconds <= max_time_seconds:
+            if min_time_seconds <= required_time_seconds: # <= max_time_seconds:
                 close_devices.append((device, required_time_seconds))
 
         if not close_devices:
@@ -115,13 +115,27 @@ class Comparator:
         return compare_device[0], self.sensible_time_output(compare_device[1])
 
     def sensible_time_output(self, time_seconds):
-        if time_seconds < 60:
-            return f"{time_seconds:.2f} seconds"
-        elif time_seconds < 3600:
-            minutes = time_seconds / 60
-            return f"{minutes:.2f} minutes"
+        total_seconds = round(time_seconds)
+
+        if total_seconds < 60:
+            second_suffix = "s" if total_seconds != 1 else ""
+            return f"{total_seconds} second{second_suffix}"
+        elif total_seconds < 3600:
+            minutes, rest_seconds = divmod(total_seconds, 60)
+            second_suffix = "s" if rest_seconds != 1 else ""
+            minute_suffix = "s" if minutes != 1 else ""
+            return f"{minutes} minute{minute_suffix} and {rest_seconds} second{second_suffix}"
+        elif total_seconds < 86400:
+            hours, rest_seconds = divmod(total_seconds, 3600)
+            rest_minutes = rest_seconds // 60
+            minute_suffix = "s" if rest_minutes != 1 else ""
+            hour_suffix = "s" if hours != 1 else ""
+            return f"{hours} hour{hour_suffix} and {rest_minutes} minute{minute_suffix}"
         else:
-            hours = time_seconds / 3600
-            return f"{hours:.2f} hours"
+            days, rest_seconds = divmod(total_seconds, 86400)
+            rest_hours = rest_seconds // 3600
+            day_suffix = "s" if days != 1 else ""
+            hour_suffix = "s" if rest_hours != 1 else ""
+            return f"{days} day{day_suffix} and {rest_hours} hour{hour_suffix}"
 
     
