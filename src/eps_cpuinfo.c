@@ -116,7 +116,7 @@ static int _process_cpus(
     for (int i = 0; i < job_info_list->record_count; i++)
     {
         job_info_t job_rec = job_info_list->job_array[i];
-        if (job_rec.job_id != job_env->step_id.job_id) continue;
+        if (job_rec.job_id != job_env->jobid) continue;
 
         job_resources_t* job_resrcs = job_rec.job_resrcs;
 
@@ -143,7 +143,7 @@ int init_cpuinfo(job_env_t* job_env, char* cpu_ids)
     show_flags |= SHOW_DETAIL;
 
     job_info_msg_t* job_info_list = NULL;
-    int err = slurm_load_job(&job_info_list, job_env->step_id, show_flags);
+    int err = slurm_load_job(&job_info_list, job_env->jobid, show_flags);
     if (err != SLURM_SUCCESS)
     {
         slurm_info("error: slurm_load_job: %d", err);

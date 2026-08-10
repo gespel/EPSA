@@ -35,8 +35,8 @@ RUN mkdir -p /opt/pq/include /opt/pq/lib \
  && cp -r /usr/include/postgresql/. /opt/pq/include/ \
  && ln -s /usr/lib/x86_64-linux-gnu/libpq.so /opt/pq/lib/libpq.so
 
-# ── Slurm 26.05.2 from source (must match host version) ─────────────────────
-ARG SLURM_TAG=slurm-26-05-2-1
+# ── Slurm 23.11.4 from source (must match host version) ─────────────────────
+ARG SLURM_TAG=slurm-23-11-4-1
 RUN useradd -r -s /sbin/nologin -d /var/lib/slurm slurm 2>/dev/null || true
 RUN mkdir -p /opt/slurm-src \
     && curl -sL "https://github.com/SchedMD/slurm/archive/refs/tags/${SLURM_TAG}.tar.gz" \

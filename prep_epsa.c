@@ -101,7 +101,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     if (!running_in_slurmd()) return SLURM_SUCCESS;
 
     slurm_info("Prolog: %s", plugin_name);
-    slurm_info("Job Id: %u", job_env->step_id.job_id);
+    slurm_info("Job Id: %u", job_env->jobid);
 
     int nodeid = get_nodeid();
     if (nodeid == -1)
@@ -134,7 +134,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
 
     slurm_info("Initializing shared memory...");
     int shmfd;
-    char* shm_name = get_shared_memory_region_name(job_env->step_id.job_id);
+    char* shm_name = get_shared_memory_region_name(job_env->jobid);
 
     unlink_shared_memory_region(shm_name);
     pid_t* efp_pid = (pid_t*)get_shared_memory_addr(
@@ -149,7 +149,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
     }
 
     slurm_info("Obtaining semaphores...");
-    char* sem_name = get_sem_init_name(job_env->step_id.job_id);
+    char* sem_name = get_sem_init_name(job_env->jobid);
     sem_t* proceed_init = get_efp_sem(sem_name, 1);
     if (!proceed_init)
     {
@@ -207,7 +207,7 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             }
             // INFO: Run EFP process...
             efp_main(
-                job_env->step_id.job_id,
+                job_env->jobid,
                 nodeid,
                 gres_uuid_count,
                 gres_uuid_list,
@@ -256,12 +256,12 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
     if (!running_in_slurmd()) return SLURM_SUCCESS;
 
     slurm_info("Epilog: %s", plugin_name);
-    slurm_info("Job Id: %u", job_env->step_id.job_id);
+    slurm_info("Job Id: %u", job_env->jobid);
 
     pid_t hook_pid = getpid();
     slurm_info("Hook PID: %d", hook_pid);
 
-    char* shm_name = get_shared_memory_region_name(job_env->step_id.job_id);
+    char* shm_name = get_shared_memory_region_name(job_env->jobid);
 
     slurm_info("Obtaining shared memory address...");
     int shmfd = open_shared_memory_region(shm_name);
@@ -278,7 +278,7 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
     }
 
     slurm_info("Obtaining semaphores...");
-    char* sem_efp_name = get_sem_efp_name(job_env->step_id.job_id);
+    char* sem_efp_name = get_sem_efp_name(job_env->jobid);
     sem_t* resume_efp = get_efp_sem(sem_efp_name, 0);
     if (!resume_efp) {
         unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));
@@ -290,7 +290,7 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
         return SLURM_ERROR;
     }
 
-    char* sem_exit_name = get_sem_exit_name(job_env->step_id.job_id);
+    char* sem_exit_name = get_sem_exit_name(job_env->jobid);
     sem_t* efp_finalize = get_efp_sem(sem_exit_name, 0);
     if (!efp_finalize) {
         unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));
