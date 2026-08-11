@@ -28,4 +28,15 @@ unsigned int* parse_index_range(const char* range, size_t* size);
 #define LOG(FD, MSG, ...) do { \
         fprintf(FD, MSG "\n", ##__VA_ARGS__); \
     } while (0)
+
+/*
+ * INFO: Newer Slurm releases moved the job id of `job_env_t` into the
+ *       embedded `step_id` member. `HAVE_JOB_ENV_JOBID` is probed at
+ *       configure time (see CMakeLists.txt).
+ */
+#ifdef HAVE_JOB_ENV_JOBID
+#define EPS_JOB_ID(JOB_ENV) ((JOB_ENV)->jobid)
+#else
+#define EPS_JOB_ID(JOB_ENV) ((JOB_ENV)->step_id.job_id)
+#endif
 #endif

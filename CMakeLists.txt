@@ -34,6 +34,16 @@ endif()
 option(USE_NVML "Enable NVML support if available" ON)
 option(USE_MQTT "Enable EMA MQTT Plugin usage" OFF)
 
+# INFO: Newer Slurm releases carry the job id in `job_env_t.step_id.job_id`
+#       instead of `job_env_t.jobid`. See `EPS_JOB_ID` in `include/eps_utils.h`.
+include(CheckStructHasMember)
+set(CMAKE_REQUIRED_INCLUDES ${SLURM_SRC_DIR} ${SLURM_INSTALL_DIR}/include)
+check_struct_has_member(
+    "job_env_t" jobid "slurm/slurm.h;src/interfaces/prep.h"
+    HAVE_JOB_ENV_JOBID LANGUAGE C
+)
+unset(CMAKE_REQUIRED_INCLUDES)
+
 if (USE_NVML)
     find_package(CUDAToolkit)
     if (CUDAToolkit_FOUND)
@@ -74,6 +84,10 @@ target_link_libraries(prep_epsa ${PQ_INSTALL_DIR}/lib/libpq.so)
 
 find_package(Threads REQUIRED)
 target_link_libraries(prep_epsa Threads::Threads)
+
+if(HAVE_JOB_ENV_JOBID)
+    target_compile_definitions(prep_epsa PRIVATE HAVE_JOB_ENV_JOBID)
+endif()
 
 if(USE_NVML AND CUDAToolkit_FOUND)
     target_sources(
