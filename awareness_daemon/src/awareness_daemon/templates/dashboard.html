@@ -48,9 +48,9 @@
             <tr>
                 <th>#</th>
                 <th>User</th>
-                <th>Jobs</th>
-                <th>Executions</th>
-                <th>Energy (kWh)</th>
+                <th class="num">Jobs</th>
+                <th class="num">Executions</th>
+                <th class="num">Energy (kWh)</th>
                 <th style="width: 30%">Share</th>
             </tr>
         </thead>
@@ -69,9 +69,9 @@
                         {{ u.username or ("uid:" ~ u.userid) }}
                     </a>
                 </td>
-                <td>{{ u.job_count }}</td>
-                <td>{{ u.execution_count }}</td>
-                <td><span class="pill">{{ "%.4f"|format(u.total_energy_kwh or 0) }}</span></td>
+                <td class="num">{{ u.job_count }}</td>
+                <td class="num">{{ u.execution_count }}</td>
+                <td class="num"><span class="pill">{{ "%.4f"|format(u.total_energy_kwh or 0) }}</span></td>
                 <td>
                     <div class="bar-bg">
                         <div class="bar-fill" style="width: {{ ((u.total_energy_kwh or 0) / max_kwh * 100) if max_kwh else 0 }}%;"></div>
@@ -98,11 +98,11 @@
             datasets: [{
                 label: 'kWh',
                 data: {{ chart_values|tojson }},
-                backgroundColor: 'rgba(110, 231, 183, 0.55)',
-                borderColor: '#6ee7b7',
-                borderWidth: 1.5,
-                borderRadius: 6,
-                maxBarThickness: 46
+                backgroundColor: '#2a78d6',
+                borderColor: '#1c5cab',
+                borderWidth: 1,
+                borderRadius: 3,
+                maxBarThickness: 40
             }]
         },
         options: {
@@ -110,8 +110,8 @@
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                x: { ticks: { color: '#8b92a8' }, grid: { color: '#232838' } },
-                y: { ticks: { color: '#8b92a8' }, grid: { color: '#232838' }, beginAtZero: true }
+                x: { ticks: { color: '#898781' }, grid: { display: false }, border: { color: '#c3c2b7' } },
+                y: { ticks: { color: '#898781' }, grid: { color: '#e1e0d9' }, border: { color: '#c3c2b7' }, beginAtZero: true }
             }
         }
     });

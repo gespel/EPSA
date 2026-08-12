@@ -52,23 +52,23 @@
     <table>
         <thead>
             <tr>
-                <th>Job ID</th>
+                <th class="num">Job ID</th>
                 <th>Job Name</th>
-                <th>Nodes</th>
-                <th>Executions</th>
+                <th class="num">Nodes</th>
+                <th class="num">Executions</th>
                 <th>Submitted</th>
-                <th>Energy (kWh)</th>
+                <th class="num">Energy (kWh)</th>
             </tr>
         </thead>
         <tbody>
             {% for j in jobs %}
             <tr>
-                <td>{{ j.jobid }}</td>
+                <td class="num">{{ j.jobid }}</td>
                 <td>{{ j.jobname or "—" }}</td>
-                <td>{{ j.nnodes }}</td>
-                <td>{{ j.execution_count }}</td>
+                <td class="num">{{ j.nnodes }}</td>
+                <td class="num">{{ j.execution_count }}</td>
                 <td>{{ j.ts }}</td>
-                <td><span class="pill">{{ "%.4f"|format(j.total_energy_kwh or 0) }}</span></td>
+                <td class="num"><span class="pill">{{ "%.4f"|format(j.total_energy_kwh or 0) }}</span></td>
             </tr>
             {% endfor %}
         </tbody>
@@ -91,10 +91,13 @@
                 label: 'kWh',
                 data: {{ chart_values|tojson }},
                 fill: true,
-                backgroundColor: 'rgba(96, 165, 250, 0.15)',
-                borderColor: '#60a5fa',
-                tension: 0.35,
-                pointBackgroundColor: '#60a5fa',
+                backgroundColor: 'rgba(42, 120, 214, 0.08)',
+                borderColor: '#2a78d6',
+                borderWidth: 2,
+                tension: 0.2,
+                pointBackgroundColor: '#2a78d6',
+                pointBorderColor: '#fcfcfb',
+                pointBorderWidth: 1.5,
                 pointRadius: 4
             }]
         },
@@ -103,8 +106,8 @@
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                x: { ticks: { color: '#8b92a8' }, grid: { color: '#232838' } },
-                y: { ticks: { color: '#8b92a8' }, grid: { color: '#232838' }, beginAtZero: true }
+                x: { ticks: { color: '#898781' }, grid: { display: false }, border: { color: '#c3c2b7' } },
+                y: { ticks: { color: '#898781' }, grid: { color: '#e1e0d9' }, border: { color: '#c3c2b7' }, beginAtZero: true }
             }
         }
     });

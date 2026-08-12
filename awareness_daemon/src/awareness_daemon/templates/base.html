@@ -7,23 +7,26 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
         :root {
-            --bg: #0b0e14;
-            --bg-panel: #131722;
-            --bg-panel-hover: #171c2b;
-            --border: #232838;
-            --text: #e6e9f0;
-            --text-dim: #8b92a8;
-            --accent: #6ee7b7;
-            --accent-2: #60a5fa;
-            --accent-3: #f472b6;
-            --warn: #fbbf24;
-            --radius: 14px;
+            --page: #f9f9f7;
+            --surface: #fcfcfb;
+            --surface-hover: #f2f1ed;
+            --border: rgba(11, 11, 11, 0.10);
+            --border-strong: #c3c2b7;
+            --grid: #e1e0d9;
+            --text: #0b0b0b;
+            --text-dim: #52514e;
+            --text-muted: #898781;
+            --blue: #2a78d6;
+            --orange: #eb6834;
+            --aqua: #1baf7a;
+            --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, "Roboto Mono", monospace;
+            --radius: 6px;
         }
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
-            background: radial-gradient(1200px 600px at 10% -10%, #17203a 0%, var(--bg) 55%);
+            font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+            background: var(--page);
             color: var(--text);
             min-height: 100vh;
         }
@@ -31,10 +34,9 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 22px 36px;
-            border-bottom: 1px solid var(--border);
-            background: rgba(19, 23, 34, 0.6);
-            backdrop-filter: blur(6px);
+            padding: 18px 36px;
+            border-bottom: 1px solid var(--border-strong);
+            background: var(--surface);
             position: sticky;
             top: 0;
             z-index: 10;
@@ -43,27 +45,30 @@
             display: flex;
             align-items: center;
             gap: 10px;
-            font-weight: 700;
-            font-size: 1.15rem;
-            letter-spacing: 0.3px;
+            font-family: var(--mono);
+            font-weight: 600;
+            font-size: 1rem;
+            letter-spacing: 0.01em;
         }
         header.topbar .brand .dot {
-            width: 10px; height: 10px; border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent), var(--accent-2));
-            box-shadow: 0 0 12px var(--accent);
+            width: 9px; height: 9px;
+            background: var(--blue);
+            border: 1px solid var(--text);
         }
         header.topbar a.back {
             color: var(--text-dim);
             text-decoration: none;
-            font-size: 0.9rem;
-            padding: 8px 14px;
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            transition: all .15s ease;
+            font-size: 0.85rem;
+            font-family: var(--mono);
+            padding: 7px 12px;
+            border: 1px solid var(--border-strong);
+            border-radius: 4px;
+            transition: all .12s ease;
         }
         header.topbar a.back:hover {
             color: var(--text);
-            border-color: var(--accent-2);
+            border-color: var(--blue);
+            background: var(--surface-hover);
         }
         main {
             padding: 32px 36px 60px;
@@ -73,51 +78,56 @@
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 18px;
-            margin-bottom: 32px;
+            gap: 14px;
+            margin-bottom: 28px;
         }
         .card {
-            background: var(--bg-panel);
-            border: 1px solid var(--border);
+            background: var(--surface);
+            border: 1px solid var(--border-strong);
             border-radius: var(--radius);
-            padding: 20px 22px;
+            padding: 18px 20px;
         }
         .stat-card .label {
-            color: var(--text-dim);
-            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-size: 0.72rem;
             text-transform: uppercase;
-            letter-spacing: 0.06em;
-            margin-bottom: 8px;
+            letter-spacing: 0.08em;
+            margin-bottom: 10px;
+            font-weight: 600;
         }
         .stat-card .value {
-            font-size: 2rem;
-            font-weight: 700;
+            font-family: var(--mono);
+            font-size: 1.8rem;
+            font-weight: 600;
+            font-variant-numeric: tabular-nums;
         }
-        .stat-card .value.energy { color: var(--accent); }
-        .stat-card .value.jobs { color: var(--accent-2); }
-        .stat-card .value.users { color: var(--accent-3); }
+        .stat-card .value.energy { color: var(--blue); }
+        .stat-card .value.jobs { color: var(--orange); }
+        .stat-card .value.users { color: var(--aqua); }
         h1.page-title {
-            font-size: 1.6rem;
+            font-size: 1.4rem;
+            font-weight: 600;
             margin: 0 0 4px;
         }
         p.subtitle {
             color: var(--text-dim);
-            margin: 0 0 28px;
+            margin: 0 0 24px;
+            font-size: 0.92rem;
         }
         .panel {
-            background: var(--bg-panel);
-            border: 1px solid var(--border);
+            background: var(--surface);
+            border: 1px solid var(--border-strong);
             border-radius: var(--radius);
-            padding: 24px;
-            margin-bottom: 28px;
+            padding: 22px;
+            margin-bottom: 22px;
         }
         .panel h2 {
             margin-top: 0;
-            font-size: 1.05rem;
-            color: var(--text-dim);
-            font-weight: 600;
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
+            letter-spacing: 0.07em;
         }
         table {
             width: 100%;
@@ -125,22 +135,27 @@
         }
         table th, table td {
             text-align: left;
-            padding: 12px 14px;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.92rem;
+            padding: 11px 14px;
+            border-bottom: 1px solid var(--grid);
+            font-size: 0.88rem;
         }
         table th {
-            color: var(--text-dim);
+            color: var(--text-muted);
             font-weight: 600;
             text-transform: uppercase;
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             letter-spacing: 0.06em;
+            border-bottom: 1px solid var(--border-strong);
+        }
+        table td.num, table th.num {
+            font-family: var(--mono);
+            font-variant-numeric: tabular-nums;
         }
         table tbody tr {
-            transition: background .12s ease;
+            transition: background .1s ease;
         }
         table tbody tr:hover {
-            background: var(--bg-panel-hover);
+            background: var(--surface-hover);
         }
         table tbody tr:last-child td {
             border-bottom: none;
@@ -154,61 +169,61 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 26px; height: 26px;
-            border-radius: 8px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            font-size: 0.8rem;
-            color: var(--text-dim);
-            font-weight: 700;
+            width: 22px; height: 22px;
+            border-radius: 4px;
+            background: var(--page);
+            border: 1px solid var(--border-strong);
+            font-family: var(--mono);
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-weight: 600;
         }
-        .rank.gold { color: #fcd34d; border-color: #92702240; }
-        .rank.silver { color: #d1d5db; border-color: #6b728040; }
-        .rank.bronze { color: #f0a875; border-color: #92440022; }
+        .rank.gold { color: var(--text); border-color: var(--blue); }
+        .rank.silver, .rank.bronze { color: var(--text-dim); }
         .bar-bg {
             width: 100%;
-            height: 8px;
-            background: var(--border);
-            border-radius: 999px;
+            height: 6px;
+            background: var(--grid);
+            border-radius: 3px;
             overflow: hidden;
             margin-top: 6px;
         }
         .bar-fill {
             height: 100%;
-            border-radius: 999px;
-            background: linear-gradient(90deg, var(--accent-2), var(--accent));
+            background: var(--blue);
         }
         .pill {
             display: inline-block;
-            padding: 3px 10px;
-            border-radius: 999px;
-            font-size: 0.75rem;
-            background: rgba(110, 231, 183, 0.1);
-            color: var(--accent);
-            border: 1px solid rgba(110, 231, 183, 0.25);
+            font-family: var(--mono);
+            font-variant-numeric: tabular-nums;
+            color: var(--blue);
+            font-weight: 600;
         }
         .empty-state {
             text-align: center;
             padding: 50px 20px;
-            color: var(--text-dim);
+            color: var(--text-muted);
+            font-size: 0.9rem;
         }
         .compare-panel {
-            border-color: rgba(244, 114, 182, 0.35);
-            background: linear-gradient(135deg, rgba(244, 114, 182, 0.06), var(--bg-panel));
+            border-left: 3px solid var(--blue);
+            border-radius: 0 var(--radius) var(--radius) 0;
         }
         .compare-text {
             margin: 0;
-            font-size: 1.02rem;
+            font-size: 0.95rem;
             color: var(--text);
             line-height: 1.6;
         }
         .compare-device {
-            color: var(--accent-3);
+            color: var(--orange);
             font-weight: 700;
+            font-family: var(--mono);
         }
         .compare-time {
-            color: var(--accent);
+            color: var(--blue);
             font-weight: 700;
+            font-family: var(--mono);
         }
         .chart-wrap {
             position: relative;
@@ -216,9 +231,11 @@
         }
         footer {
             text-align: center;
-            color: var(--text-dim);
-            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-family: var(--mono);
             padding: 20px;
+            border-top: 1px solid var(--grid);
         }
     </style>
 </head>
