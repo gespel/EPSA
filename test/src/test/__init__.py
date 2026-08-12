@@ -94,12 +94,14 @@ def submit_job(
         {f"#SBATCH -p{PARTITION}" if PARTITION else ""}
         {f"#SBATCH --uid={user}" if user else ""}
         {f"#SBATCH --nodelist={nodelist}" if nodelist else ""}
-        end=$((SECONDS + {DURATION}))
-        for _ in $(seq {cores}); do
-            ( sum=0; i=0; while [ $SECONDS -lt $end ]; do i=$((i + 1)); sum=$((sum + i * i)); done ) &
-        done
-        wait
-        echo "Last auf {cores} Kern(en) für {DURATION}s abgeschlossen"
+        srun --ntasks={n} --ntasks-per-node=1 bash -c '
+            end=$((SECONDS + {DURATION}))
+            for _ in $(seq {cores}); do
+                ( sum=0; i=0; while [ $SECONDS -lt $end ]; do i=$((i + 1)); sum=$((sum + i * i)); done ) &
+            done
+            wait
+        '
+        echo "Last auf {cores} Kern(en) je Node für {DURATION}s auf {n} Node(s) abgeschlossen"
         """)
     log(f"Reiche Testjob ein (Nodes={n}, Kerne={cores}, Rechenlast={DURATION}s)...")
     with tempfile.NamedTemporaryFile("w", suffix=".sbatch") as script:
@@ -148,7 +150,12 @@ def check_db(jobid: str) -> float:
             [jobid],
         ).fetchall()
 
-    bad_deltas = sum(1 for _, _, delta, _ in measurements if delta <= 0)
+    # "uncore" liefert auf unserer Hardware einen konstanten energy_uj-Zähler
+    # (RAPL-Domain wird vom Kernel nicht aktualisiert) -- das ist erwartetes
+    # Verhalten und kein Messfehler, daher hier von der Delta-Prüfung ausgenommen.
+    bad_deltas = sum(
+        1 for name, _, delta, _ in measurements if delta <= 0 and "uncore" not in name
+    )
     total_energy = float(sum(
         delta * util / 100
         for name, _, delta, util in measurements
