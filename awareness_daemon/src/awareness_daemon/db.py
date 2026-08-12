@@ -13,40 +13,28 @@ class DatabaseHandler:
     Supports querying allocation, execution, and measurement data from PostgreSQL.
     """
 
-    def __init__(self, host, database, user, password, port=5432):
+    def __init__(self, dsn):
         """
         Initialize database connection parameters.
-        
+
         Args:
-            host: Database server hostname
-            database: Database name
-            user: Database user
-            password: Database password
-            port: Database port (default: 5432)
+            dsn: libpq connection string, e.g.
+                 "host=localhost port=5432 dbname=eps user=eps password=eps"
+                 (same format as EPS_DB_CONN_STR used by slurmctld/slurmd)
         """
-        self.host = host
-        self.database = database
-        self.user = user
-        self.password = password
-        self.port = port
+        self.dsn = dsn
         self.connection = None
 
     @contextmanager
     def get_connection(self):
         """
         Context manager for database connections.
-        
+
         Yields:
             psycopg2 connection object
         """
         try:
-            conn = psycopg2.connect(
-                host=self.host,
-                database=self.database,
-                user=self.user,
-                password=self.password,
-                port=self.port
-            )
+            conn = psycopg2.connect(self.dsn)
             yield conn
         except psycopg2.Error as e:
             logger.error(f"Database connection error: {e}")

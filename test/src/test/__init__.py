@@ -57,12 +57,43 @@ def db_conn_str() -> str:
     fail("EPS_DB_CONN_STR ist nicht gesetzt und konnte nicht aus slurmctld ermittelt werden")
 
 
-def submit_job(cores: int, user: str | None = None) -> str:
+def all_nodes() -> list[str]:
+    out = subprocess.run(
+        ["sinfo", "-h", "-o", "%N"], capture_output=True, text=True
+    ).stdout
+    nodes = set()
+    for nodelist in out.split():
+        expanded = subprocess.run(
+            ["scontrol", "show", "hostnames", nodelist], capture_output=True, text=True
+        ).stdout
+        nodes.update(expanded.split())
+    return sorted(nodes)
+
+
+def min_cpus_per_node(nodes: list[str]) -> int:
+    out = subprocess.run(
+        ["sinfo", "-h", "-N", "-o", "%N %c"], capture_output=True, text=True
+    ).stdout
+    cpus = {}
+    for line in out.splitlines():
+        name, count = line.split()
+        cpus[name] = int(count)
+    return min(cpus[node] for node in nodes if node in cpus)
+
+
+def submit_job(
+    cores: int,
+    user: str | None = None,
+    nodes: int | None = None,
+    nodelist: str | None = None,
+) -> str:
+    n = nodes if nodes is not None else NODES
     rscript = textwrap.dedent(f"""\
         #!/bin/bash
-        #SBATCH -N{NODES} -n{NODES} -c{cores}
+        #SBATCH -N{n} -n{n} -c{cores}
         {f"#SBATCH -p{PARTITION}" if PARTITION else ""}
         {f"#SBATCH --uid={user}" if user else ""}
+        {f"#SBATCH --nodelist={nodelist}" if nodelist else ""}
         end=$((SECONDS + {DURATION}))
         for _ in $(seq {cores}); do
             ( sum=0; i=0; while [ $SECONDS -lt $end ]; do i=$((i + 1)); sum=$((sum + i * i)); done ) &
@@ -70,7 +101,7 @@ def submit_job(cores: int, user: str | None = None) -> str:
         wait
         echo "Last auf {cores} Kern(en) für {DURATION}s abgeschlossen"
         """)
-    log(f"Reiche Testjob ein (Nodes={NODES}, Kerne={cores}, Rechenlast={DURATION}s)...")
+    log(f"Reiche Testjob ein (Nodes={n}, Kerne={cores}, Rechenlast={DURATION}s)...")
     with tempfile.NamedTemporaryFile("w", suffix=".sbatch") as script:
         script.write(rscript)
         script.flush()
@@ -118,11 +149,11 @@ def check_db(jobid: str) -> float:
         ).fetchall()
 
     bad_deltas = sum(1 for _, _, delta, _ in measurements if delta <= 0)
-    total_energy = sum(
+    total_energy = float(sum(
         delta * util / 100
         for name, _, delta, util in measurements
         if "package" in name
-    )
+    ))
 
     log(f"Gesamtenergie für Job {jobid}: {total_energy:.0f} µJ")
     log(f"Gesamtenergie in kWh: {total_energy / 3.6e12:.9f}")
@@ -167,6 +198,21 @@ def short_test():
     energy_kwh = check_db(jobid)
     log(f"Testlauf abgeschlossen. Energieverbrauch: {energy_kwh:.9f} kWh")
 
+def all_nodes_test(cores: int | None = None):
+    nodes = all_nodes()
+    if not nodes:
+        fail("Keine Nodes im Cluster gefunden")
+    if cores is None:
+        cores = min_cpus_per_node(nodes)
+        log(f"Kein cores-Wert angegeben, verwende kleinste CPU-Zahl über alle Nodes: {cores}")
+    log(f"Starte Last-Job auf allen {len(nodes)} Node(s): {', '.join(nodes)}")
+    jobid = submit_job(cores, nodes=len(nodes), nodelist=",".join(nodes))
+    wait_for_completion(jobid)
+    time.sleep(2)  # slurmd-Epilog Zeit geben, die Messwerte fertig zu schreiben
+    energy_kwh = check_db(jobid)
+    log(f"Testlauf abgeschlossen. Energieverbrauch: {energy_kwh:.9f} kWh")
+
+
 def multiuser_test(num_jobs: int = 50):
     users = ["user1", "user2", "user3"]
 
@@ -183,4 +229,5 @@ def main() -> None:
             fail(f"{cmd} nicht gefunden (Slurm installiert?)")
    # short_test()
     #cpu_test()
-    multiuser_test()
+    all_nodes_test()
+    #multiuser_test()

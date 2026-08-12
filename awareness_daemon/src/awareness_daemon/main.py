@@ -1,5 +1,6 @@
 from flask import Flask, render_template, abort
 import logging
+import os
 import db
 import comparator
 
@@ -15,14 +16,14 @@ handler.setFormatter(formatter)
 
 logger.addHandler(handler)
 
+# Devcontainer default (see .devcontainer/scripts/init-postgres.sql); override
+# with EPS_DB_CONN_STR to point at a real cluster, e.g. via SSH port-forward:
+# EPS_DB_CONN_STR="host=localhost port=5432 dbname=perfacct_eps user=eps_writer password=..."
+DEFAULT_DSN = "host=localhost port=5432 dbname=eps user=eps password=eps"
+
 
 def get_db_handler():
-    return db.DatabaseHandler(
-        host="localhost",
-        database="eps",
-        user="eps",
-        password="eps"
-    )
+    return db.DatabaseHandler(os.environ.get("EPS_DB_CONN_STR", DEFAULT_DSN))
 
 
 @app.route("/")
