@@ -66,9 +66,12 @@ if [[ -z "${SLURM_SRC_DIR:-}" ]]; then
         log "No matching Slurm source tree found, downloading tag $SLURM_TAG to $SLURM_SRC_DIR"
         run "sudo mkdir -p '$SLURM_SRC_DIR'"
         run "curl -sL 'https://github.com/SchedMD/slurm/archive/refs/tags/${SLURM_TAG}.tar.gz' | sudo tar -xzf - -C '$SLURM_SRC_DIR' --strip-components=1"
+        log "Configuring Slurm source tree (generates config.h / slurm/slurm_version.h)"
+        run "(cd '$SLURM_SRC_DIR' && sudo ./configure >/dev/null)"
     fi
 fi
 [[ -f "$SLURM_SRC_DIR/src/slurmd/slurmd/slurmd.h" ]] || { warn "SLURM_SRC_DIR=$SLURM_SRC_DIR doesn't look like a Slurm source tree"; exit 1; }
+[[ -f "$SLURM_SRC_DIR/config.h" && -f "$SLURM_SRC_DIR/slurm/slurm_version.h" ]] || { warn "SLURM_SRC_DIR=$SLURM_SRC_DIR is not configured (missing config.h / slurm/slurm_version.h) -- run './configure' in it."; exit 1; }
 
 # --- 2. EMA ------------------------------------------------------------------
 if [[ -f "$EMA_INSTALL_DIR/lib/libEMA.so" && -f "$EMA_INSTALL_DIR/include/EMA.h" ]]; then
