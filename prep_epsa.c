@@ -147,6 +147,10 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
         FREE_GRES_UUIDS;
         return SLURM_ERROR;
     }
+    // Sentinel: overwritten with the real EFP pid only once it is actually
+    // running. Lets the Epilog tell "no EFP was started" apart from a valid
+    // pid, so it never kill()s pid 0/garbage from an untouched shm segment.
+    *efp_pid = -1;
 
     slurm_info("Obtaining semaphores...");
     char* sem_name = get_sem_init_name(EPS_JOB_ID(job_env));
@@ -223,7 +227,34 @@ extern int prep_p_prolog(job_env_t* job_env, slurm_cred_t *cred)
             slurm_info("Hook PID: %d", hook_pid);
 
             slurm_info("Waiting for EFP initialization...");
-            sem_wait(proceed_init);
+            struct timespec init_ts;
+            int have_ts = clock_gettime(CLOCK_REALTIME, &init_ts) == 0;
+            if (have_ts) init_ts.tv_sec += EFP_WAIT_TIMEOUT;
+            int init_ret = have_ts
+                ? sem_timedwait(proceed_init, &init_ts)
+                : sem_wait(proceed_init);
+            if (init_ret == -1 && errno == ETIMEDOUT) {
+                slurm_info(
+                    "error: EFP initialization timed out after %ds, "
+                    "killing EFP process %d",
+                    EFP_WAIT_TIMEOUT, pid
+                );
+                kill(pid, SIGKILL);
+
+                err = discard_shared_memory_addr(
+                    (void*)efp_pid, sizeof(pid_t*), &shmfd
+                );
+                if (err) {
+                    slurm_info(
+                        "error: discard_shared_memory_addr: %s", strerror(errno)
+                    );
+                }
+                sem_close(proceed_init);
+                sem_unlink(sem_name);
+                free(sem_name);
+                FREE_GRES_UUIDS;
+                return SLURM_ERROR;
+            }
 
             slurm_info("Child PID: %d", pid);
 
@@ -274,6 +305,19 @@ extern int prep_p_epilog(job_env_t* job_env, slurm_cred_t *cred)
     if (!efp_pid) {
         close_shared_memory_region(shmfd);
         slurm_info("error: map_shared_memory_region: %s", strerror(errno));
+        return SLURM_ERROR;
+    }
+
+    if (*efp_pid <= 0) {
+        // Prolog never got a running EFP (init failed/timed out, see sentinel
+        // in prep_p_prolog). Nothing to signal/wait/kill -- in particular,
+        // never kill(*efp_pid, ...) here: pid 0 targets the whole process
+        // group, i.e. slurmd itself.
+        slurm_info("No EFP was started for this job, skipping wait.");
+        unmap_shared_memory_region((void*)efp_pid, sizeof(pid_t*));
+        close_shared_memory_region(shmfd);
+        unlink_shared_memory_region(shm_name);
+        free(shm_name);
         return SLURM_ERROR;
     }
 

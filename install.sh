@@ -6,9 +6,14 @@
 # and compute) -- there is no shared filesystem between them on this cluster.
 #
 # Usage:
-#   ./install.sh                # build, install, patch slurm.conf, restart daemons
+#   ./install.sh                # build, install, patch slurm.conf, restart daemons (this node only)
 #   ./install.sh --no-restart   # skip restarting slurmctld/slurmd
 #   ./install.sh --dry-run      # print what would happen, change nothing
+#   ./install.sh --all-nodes    # also deploy+build+install on every other cluster node
+#
+# --all-nodes wakes powered-down nodes via wake_bsnodes.sh, rsyncs this repo to
+# each remote node over passwordless SSH (no shared filesystem on this cluster),
+# then runs install.sh (without --all-nodes) remotely on it.
 #
 # Overridable via environment:
 #   EMA_INSTALL_DIR   (default: /opt/perfacct/ema)
@@ -17,17 +22,21 @@
 #   SLURM_CONF        (default: /etc/slurm/slurm.conf)
 #   USE_NVML          (default: OFF)
 #   USE_MQTT          (default: OFF)
+#   REMOTE_NODES      (default: bsnode3,bsnode4 -- only used with --all-nodes)
+#   REMOTE_DEPLOY_DIR (default: /opt/perfacct/epsa-src -- only used with --all-nodes)
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DRY_RUN=0
 DO_RESTART=1
+ALL_NODES=0
 
 for arg in "$@"; do
     case "$arg" in
         --dry-run) DRY_RUN=1 ;;
         --no-restart) DO_RESTART=0 ;;
+        --all-nodes) ALL_NODES=1 ;;
         *) echo "Unknown argument: $arg" >&2; exit 1 ;;
     esac
 done
@@ -192,6 +201,29 @@ if [[ $DO_RESTART -eq 1 ]]; then
     fi
 else
     log "Skipping daemon restart (--no-restart). Plugin won't be loaded until slurmctld/slurmd is restarted."
+fi
+
+# --- 11. Propagate to remaining cluster nodes --------------------------------
+if [[ $ALL_NODES -eq 1 ]]; then
+    REMOTE_NODES="${REMOTE_NODES:-bsnode3,bsnode4}"
+    REMOTE_DEPLOY_DIR="${REMOTE_DEPLOY_DIR:-/opt/perfacct/epsa-src}"
+    THIS_HOST="$(hostname -s)"
+
+    FORWARD_ARGS=()
+    [[ $DRY_RUN -eq 1 ]] && FORWARD_ARGS+=(--dry-run)
+    [[ $DO_RESTART -eq 0 ]] && FORWARD_ARGS+=(--no-restart)
+
+    log "Waking $REMOTE_NODES (power-save) before deploying..."
+    run "'$REPO_DIR/wake_bsnodes.sh' '$REMOTE_NODES'"
+
+    for node in $(scontrol show hostnames "$REMOTE_NODES"); do
+        [[ "$node" == "$THIS_HOST" ]] && continue
+        log "Deploying to $node (via passwordless SSH, no shared filesystem)"
+        run "ssh -o BatchMode=yes '$node' \"sudo mkdir -p '$REMOTE_DEPLOY_DIR' && sudo chown \\\$(id -u):\\\$(id -g) '$REMOTE_DEPLOY_DIR'\""
+        run "rsync -az --delete --exclude build --exclude .git -e 'ssh -o BatchMode=yes' '$REPO_DIR/' '$node:$REMOTE_DEPLOY_DIR/'"
+        log "Running install.sh on $node"
+        run "ssh -o BatchMode=yes '$node' \"cd '$REMOTE_DEPLOY_DIR' && ./install.sh ${FORWARD_ARGS[*]:-}\""
+    done
 fi
 
 log "Done."

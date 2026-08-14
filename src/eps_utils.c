@@ -216,12 +216,14 @@ static int is_range(const char* value, int* o_start, int* o_end)
       free(dup);
       return 0;
     }
-    free(dup);
+    // s and e point into dup (strtok tokenizes in place) -- must stay alive
+    // until both have been parsed, so free(dup) only after that.
     int start = 0;
     int end = 0;
     int err = eps_parse_int(s, &start);
-    if (err) return 0;
+    if (err) { free(dup); return 0; }
     err = eps_parse_int(e, &end);
+    free(dup);
     if (err) return 0;
     if (end <= start) return 0;
     *o_start = start;
@@ -291,7 +293,9 @@ unsigned int* parse_index_range(const char* range, size_t* size)
         token = strtok(NULL, ",");
     }
     while (token != NULL);
-    free(range_c);
+    // tokens[] points into range_c (strtok tokenizes in place) -- must stay
+    // alive until every token has been parsed below, so free(range_c) only
+    // after that loop, not here.
 
     size_t total_size = 0;
     size_t s;
@@ -301,10 +305,20 @@ unsigned int* parse_index_range(const char* range, size_t* size)
     for (i = 0; i < num_tokens; i++)
     {
         parsed[i] = parse_index_token(tokens[i], &s);
+        if (!parsed[i])
+        {
+            for (int f = 0; f < i; f++) free(parsed[f]);
+            free(parsed);
+            free(sizes);
+            free(tokens);
+            free(range_c);
+            return NULL;
+        }
         total_size = total_size + s;
         sizes[i] = s;
     }
     free(tokens);
+    free(range_c);
 
     unsigned int* indexes = calloc(total_size, sizeof(unsigned int));
     int j = 0;

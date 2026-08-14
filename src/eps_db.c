@@ -20,7 +20,7 @@ For further details check:
 
 #include <eps_db.h>
 
-#define USER_COLS "userid, username"
+#define USER_COLS "userid, username, email"
 #define ALLOC_COLS "jobid, job_name, nnodes, userid, ts"
 #define EXEC_COLS "jobid, node_name, node_id, userid, ts_start, ts_end"
 #define MES_COLS "exec_id, userid, device_name, device_uid, device_type, " \
@@ -56,21 +56,25 @@ int check_query_result(PGresult* result, PGconn* connection)
 int insert_user_data(PGconn* connection, int userid, const char* username)
 {
     uint32_t bin_userid = htobe32((uint32_t) userid);
+    char user_email[256];
+    snprintf(user_email, sizeof(user_email), "%s@uni-potsdam.de", username);
 
-    int param_formats[2] = {1, 0};
-    const char* param_values[2] = {
+    int param_formats[3] = {1, 0, 0};
+    const char* param_values[3] = {
         (char*) &bin_userid,
-        username
+        username,
+        user_email
     };
-    int param_lengths[2] = {
+    int param_lengths[3] = {
         sizeof(bin_userid),
-        sizeof(username)
+        sizeof(username),
+        sizeof(user_email)
     };
     PGresult* res = PQexecParams(
         connection,
-        "INSERT INTO users ("USER_COLS") VALUES($1, $2) "
-        "ON CONFLICT (userid) DO UPDATE SET username = EXCLUDED.username;",
-        2,
+        "INSERT INTO users ("USER_COLS") VALUES($1, $2, $3) "
+        "ON CONFLICT (userid) DO UPDATE SET username = EXCLUDED.username, email = EXCLUDED.email;",
+        3,
         NULL,
         param_values,
         param_lengths,

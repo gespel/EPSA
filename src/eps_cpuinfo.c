@@ -1,6 +1,8 @@
 #include <stdio.h>
 
 #include <src/common/bitstring.h>
+#include <src/common/hostlist.h>
+#include <src/common/job_resources.h>
 
 #include <eps_shm.h>
 #include <eps_cpuinfo.h>
@@ -130,7 +132,67 @@ static int _process_cpus(
             continue;
         }
 
-        bit_fmt(cpu_ids, CPU_IDS_SIZE, job_resrcs->core_bitmap);
+        // core_bitmap spans ALL nodes of the allocation concatenated
+        // (Node_0's sockets/cores, then Node_1's, ...) -- slice out just
+        // this node's range, otherwise cpu_ids ends up with core indexes
+        // that belong to a different node and don't exist locally.
+        hostlist_t* hl = hostlist_create(job_resrcs->nodes);
+        if (!hl)
+        {
+            slurm_info(
+                "error: hostlist_create failed for '%s'", job_resrcs->nodes
+            );
+            return 1;
+        }
+        int node_id = hostlist_find(hl, hostname);
+        hostlist_destroy(hl);
+        if (node_id < 0)
+        {
+            slurm_info(
+                "error: node '%s' not found in job node list '%s'",
+                hostname, job_resrcs->nodes
+            );
+            return 1;
+        }
+
+        int start = get_job_resources_offset(
+            job_resrcs, (uint32_t)node_id, 0, 0
+        );
+        if (start < 0)
+        {
+            slurm_info(
+                "error: get_job_resources_offset failed for node_id %d",
+                node_id
+            );
+            return 1;
+        }
+        int end = bit_size(job_resrcs->core_bitmap);
+        if ((uint32_t)(node_id + 1) < job_resrcs->nhosts)
+        {
+            int next = get_job_resources_offset(
+                job_resrcs, (uint32_t)(node_id + 1), 0, 0
+            );
+            if (next >= 0) end = next;
+        }
+
+        int local_len = end - start;
+        if (local_len <= 0)
+        {
+            slurm_info(
+                "error: invalid local core range [%d,%d) for node_id %d",
+                start, end, node_id
+            );
+            return 1;
+        }
+
+        bitstr_t* local_bitmap = bit_alloc(local_len);
+        for (int b = 0; b < local_len; b++)
+        {
+            if (bit_test(job_resrcs->core_bitmap, start + b))
+                bit_set(local_bitmap, b);
+        }
+        bit_fmt(cpu_ids, CPU_IDS_SIZE, local_bitmap);
+        bit_free(local_bitmap);
         slurm_info("cpu_ids: %s", cpu_ids);
     }
     return 0;
