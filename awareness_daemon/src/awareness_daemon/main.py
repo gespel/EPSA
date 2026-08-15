@@ -60,6 +60,9 @@ def index():
 @app.route("/user/<int:userid>")
 def user_detail(userid):
     logger.info(f"User detail route accessed for userid={userid}")
+    u = get_db_handler().get_user_by_userid(userid)
+    if u is not None:
+        logger.info(f"Retrieved user: {u}")
 
     db_handler = get_db_handler()
     username = db_handler.get_username_by_userid(userid)

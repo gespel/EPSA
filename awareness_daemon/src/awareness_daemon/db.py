@@ -3,7 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
 import logging
-
+from user import EPSAUser
 logger = logging.getLogger("awareness_daemon")
 
 
@@ -386,4 +386,26 @@ class DatabaseHandler:
                     return result['username'] if result else None
         except Exception as e:
             logger.error(f"Error retrieving username for userid '{userid}': {e}")
+            return None
+
+    def get_user_by_userid(self, userid):
+        """
+        Get user information by user ID.
+
+        Args:
+            userid: User ID
+
+        Returns:
+            EPSAUser: User information as an EPSAUser object, or None if not found
+        """
+        query = "SELECT userid, username, email FROM users WHERE userid = %s LIMIT 1"
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(query, (userid,))
+                    result = cur.fetchone()
+                    user = EPSAUser(result['userid'], result['username'], result['email']) if result else None
+                    return user
+        except Exception as e:
+            logger.error(f"Error retrieving user info for userid '{userid}': {e}")
             return None
