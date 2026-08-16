@@ -405,6 +405,9 @@ class DatabaseHandler:
                     cur.execute(query, (userid,))
                     result = cur.fetchone()
                     user = EPSAUser(result['userid'], result['username'], result['email']) if result else None
+                    user.total_energy_kwh = self.get_total_energy_consumption_for_user_in_kwh(userid) if user else 0.0
+                    user.job_count = len(self.get_all_jobs_of_user(userid)) if user else 0
+                    user.jobs_with_energy = self.get_jobs_with_energy_for_user(userid) if user else []
                     return user
         except Exception as e:
             logger.error(f"Error retrieving user info for userid '{userid}': {e}")

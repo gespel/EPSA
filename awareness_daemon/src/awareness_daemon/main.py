@@ -63,27 +63,21 @@ def user_detail(userid):
     u = get_db_handler().get_user_by_userid(userid)
     if u is not None:
         logger.info(f"Retrieved user: {u}")
-
-    db_handler = get_db_handler()
-    username = db_handler.get_username_by_userid(userid)
-    if username is None:
+    else:
+        logger.warning(f"No user found with userid={userid}")
         abort(404)
 
-    jobs = db_handler.get_jobs_with_energy_for_user(userid)
-    total_kwh = sum(j["total_energy_kwh"] or 0 for j in jobs)
-
-    chart_labels = [f"Job {j['jobid']}" for j in jobs][:15]
-    chart_values = [round(float(j["total_energy_kwh"] or 0), 4) for j in jobs][:15]
-
+    chart_labels = [f"Job {j['jobid']}" for j in u.jobs_with_energy][:15]
+    chart_values = [round(float(j["total_energy_kwh"] or 0), 4) for j in u.jobs_with_energy][:15]
     comp = comparator.Comparator()
-    compare_device_name, compare_device_time = comp.compare_consumption(total_kwh)
+    compare_device_name, compare_device_time = comp.compare_consumption(u.total_energy_kwh)
 
     return render_template(
         "user_detail.html",
-        userid=userid,
-        username=username,
-        jobs=jobs,
-        total_kwh=total_kwh,
+        userid=u.user_id,
+        username=u.username,
+        jobs=u.jobs_with_energy,
+        total_kwh=u.total_energy_kwh,
         chart_labels=chart_labels,
         chart_values=chart_values,
         compare_device_name=compare_device_name,
