@@ -7,7 +7,8 @@ CREATE DATABASE eps OWNER eps;
 -- Column names must match USER_COLS / ALLOC_COLS / EXEC_COLS / MES_COLS in eps_db.c
 CREATE TABLE users (
     userid      INTEGER PRIMARY KEY,
-    username    TEXT
+    username    TEXT,
+    email       TEXT
 );
 
 CREATE TABLE allocations (
