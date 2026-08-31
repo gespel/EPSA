@@ -412,3 +412,29 @@ class DatabaseHandler:
         except Exception as e:
             logger.error(f"Error retrieving user info for userid '{userid}': {e}")
             return None
+
+    def get_all_users(self):
+        """
+        Get all users in the database.
+
+        Returns:
+            list: List of EPSAUser objects
+        """
+        query = "SELECT userid, username, email FROM users"
+        try:
+            with self.get_connection() as conn:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    cur.execute(query)
+                    results = cur.fetchall()
+                    users = []
+                    for row in results:
+                        user = EPSAUser(row['userid'], row['username'], row['email'])
+                        user.total_energy_kwh = self.get_total_energy_consumption_for_user_in_kwh(user.user_id)
+                        user.job_count = len(self.get_all_jobs_of_user(user.user_id))
+                        user.jobs_with_energy = self.get_jobs_with_energy_for_user(user.user_id)
+                        users.append(user)
+                    logger.debug(f"Retrieved {len(users)} users from database")
+                    return users
+        except Exception as e:
+            logger.error(f"Error retrieving all users: {e}")
+            return []
