@@ -3,6 +3,12 @@ import logging
 import os
 import db
 import comparator
+import daemon
+import time
+from threading import Thread
+
+# Wait this long before respawning the daemon worker after an unexpected crash.
+DAEMON_RESTART_DELAY_SECONDS = 60
 
 app = Flask(__name__)
 logger = logging.getLogger("awareness_daemon")
@@ -85,8 +91,30 @@ def user_detail(userid):
     )
 
 
+def _supervise_daemon(d):
+    while True:
+        worker = Thread(target=d.run, name="awareness-daemon", daemon=True)
+        worker.start()
+        worker.join()
+
+        if not d.running:
+            logger.info("Awareness Daemon worker exited after stop(); supervisor stopping.")
+            return
+
+        logger.error(
+            "Awareness Daemon worker died unexpectedly; restarting in %ss.",
+            DAEMON_RESTART_DELAY_SECONDS,
+        )
+        time.sleep(DAEMON_RESTART_DELAY_SECONDS)
+
+
 def main():
     logger.info("Starting Awareness Daemon WSGI application")
+
+    d = daemon.AwarenessDaemon(logger=logger, db_handler=get_db_handler())
+    d.start()
+    Thread(target=_supervise_daemon, args=(d,), name="awareness-daemon-supervisor", daemon=True).start()
+
     app.run(host="0.0.0.0", port=5000)
 
 if __name__ == "__main__":
