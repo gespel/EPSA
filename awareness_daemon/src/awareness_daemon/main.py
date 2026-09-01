@@ -4,23 +4,27 @@ import os
 import db
 import comparator
 import daemon
+import mailer
 import time
 from threading import Thread
 
-# Wait this long before respawning the daemon worker after an unexpected crash.
 DAEMON_RESTART_DELAY_SECONDS = 60
 
+LOG_FORMAT = "%(asctime)s|%(name)s|%(levelname)s: %(message)s"
+
+
+def configure_logging(level=logging.DEBUG):
+    log = logging.getLogger("awareness_daemon")
+    log.setLevel(level)
+    if not log.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(LOG_FORMAT))
+        log.addHandler(handler)
+    return log
+
+
 app = Flask(__name__)
-logger = logging.getLogger("awareness_daemon")
-logger.setLevel(logging.DEBUG)
-
-handler = logging.StreamHandler()
-handler.setLevel(logging.DEBUG)
-
-formatter = logging.Formatter('%(asctime)s|%(name)s|%(levelname)s: %(message)s')
-handler.setFormatter(formatter)
-
-logger.addHandler(handler)
+logger = configure_logging(level=logging.INFO)
 
 # Devcontainer default (see .devcontainer/scripts/init-postgres.sql); override
 # with EPS_DB_CONN_STR to point at a real cluster, e.g. via SSH port-forward:
@@ -111,7 +115,12 @@ def _supervise_daemon(d):
 def main():
     logger.info("Starting Awareness Daemon WSGI application")
 
-    d = daemon.AwarenessDaemon(logger=logger, db_handler=get_db_handler())
+    d = daemon.AwarenessDaemon(
+        logger=logger,
+        db_handler=get_db_handler(),
+        mailer=mailer.Mailer.from_env(logger),
+        comparator=comparator.Comparator(),
+    )
     d.start()
     Thread(target=_supervise_daemon, args=(d,), name="awareness-daemon-supervisor", daemon=True).start()
 
