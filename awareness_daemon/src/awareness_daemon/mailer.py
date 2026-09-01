@@ -1,61 +1,71 @@
 import os
 import smtplib
+from dataclasses import dataclass
 from email.message import EmailMessage
 
 
+@dataclass
+class SmtpConfig:
+    host: str = "localhost"
+    port: int = 587
+    username: str = ""          # empty -> no authentication
+    password: str = ""
+    from_addr: str = "eps-awareness@example.org"
+    use_tls: bool = True
+
+
+def smtp_config_from_env():
+    defaults = SmtpConfig()
+    return SmtpConfig(
+        host=os.environ.get("EPSA_SMTP_HOST", defaults.host),
+        port=int(os.environ.get("EPSA_SMTP_PORT", defaults.port)),
+        username=os.environ.get("EPSA_SMTP_USER", defaults.username),
+        password=os.environ.get("EPSA_SMTP_PASSWORD", defaults.password),
+        from_addr=os.environ.get("EPSA_MAIL_FROM", defaults.from_addr),
+        use_tls=os.environ.get("EPSA_SMTP_TLS", "true").lower() == "true",
+    )
+
+
 class Mailer:
-    """Thin SMTP wrapper. Opens one connection per batch and isolates
-    per-recipient failures so a single bad address cannot abort a run."""
-
-    def __init__(self, logger, host, port, username, password, from_addr, use_tls=True):
+    def __init__(self, logger, config=None):
         self.logger = logger
-        self.host = host
-        self.port = port
-        self.username = username
-        self.password = password
-        self.from_addr = from_addr
-        self.use_tls = use_tls
-
-    @classmethod
-    def from_env(cls, logger):
-        return cls(
-            logger=logger,
-            host=os.environ.get("EPSA_SMTP_HOST", "localhost"),
-            port=int(os.environ.get("EPSA_SMTP_PORT", "587")),
-            username=os.environ.get("EPSA_SMTP_USER", ""),
-            password=os.environ.get("EPSA_SMTP_PASSWORD", ""),
-            from_addr=os.environ.get("EPSA_MAIL_FROM", "eps-awareness@example.org"),
-            use_tls=os.environ.get("EPSA_SMTP_TLS", "true").lower() == "true",
-        )
-
-    def _connect(self):
-        smtp = smtplib.SMTP(self.host, self.port, timeout=30)
-        if self.use_tls:
-            smtp.starttls()
-        if self.username:
-            smtp.login(self.username, self.password)
-        return smtp
+        self.config = config or smtp_config_from_env()
 
     def send_batch(self, messages):
-        """messages: iterable of (to_addr, subject, body).
-
-        Returns the number of messages successfully handed to the server.
-        """
         messages = list(messages)
-        sent = 0
+        if not messages:
+            return 0
+
         try:
-            with self._connect() as smtp:
-                for to_addr, subject, body in messages:
-                    try:
-                        msg = EmailMessage()
-                        msg["From"] = self.from_addr
-                        msg["To"] = to_addr
-                        msg["Subject"] = subject
-                        msg.set_content(body)
-                        smtp.send_message(msg)
-                        sent += 1
-                    except Exception:
-                        self.logger.exception(f"Failed to send email to {to_addr}")
+            connection = self._connect()
         except Exception:
-            self.logger.exception("SMTP connection failed; skipping this notification run")
+            self.logger.exception("Could not connect to SMTP server! skipping this run")
+            return 0
+
+        sent = 0
+        with connection:
+            for to_addr, subject, body in messages:
+                if self._send_one(connection, to_addr, subject, body):
+                    sent += 1
         return sent
+
+    def _connect(self):
+        connection = smtplib.SMTP(self.config.host, self.config.port, timeout=30)
+        if self.config.use_tls:
+            connection.starttls()
+        if self.config.username:
+            connection.login(self.config.username, self.config.password)
+        return connection
+
+    def _send_one(self, connection, to_addr, subject, body):
+        try:
+            message = EmailMessage()
+            message["From"] = self.config.from_addr
+            message["To"] = to_addr
+            message["Subject"] = subject
+            message.set_content(body)
+            connection.send_message(message)
+            return True
+        except Exception:
+            self.logger.exception(f"Could not send e-mail to {to_addr}")
+            return False

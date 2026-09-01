@@ -118,7 +118,7 @@ def main():
     d = daemon.AwarenessDaemon(
         logger=logger,
         db_handler=get_db_handler(),
-        mailer=mailer.Mailer.from_env(logger),
+        mailer=mailer.Mailer(logger),
         comparator=comparator.Comparator(),
     )
     d.start()
