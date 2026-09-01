@@ -7,10 +7,10 @@ from email.message import EmailMessage
 @dataclass
 class SmtpConfig:
     host: str = "localhost"
-    port: int = 587
-    username: str = ""          # empty -> no authentication
+    port: int = 0
+    username: str = ""
     password: str = ""
-    from_addr: str = "eps-awareness@example.org"
+    from_addr: str = ""
     use_tls: bool = True
 
 
@@ -32,7 +32,6 @@ class Mailer:
         self.config = config or smtp_config_from_env()
 
     def send_batch(self, messages):
-        messages = list(messages)
         if not messages:
             return 0
 
