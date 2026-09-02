@@ -2,7 +2,7 @@ import threading
 
 # The daemon performs its periodic work once every 7 days.
 #SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60
-SEVEN_DAYS_SECONDS = 3
+SEVEN_DAYS_SECONDS = 60
 
 class AwarenessDaemon:
     def __init__(self, logger, db_handler, mailer, comparator, interval_seconds=SEVEN_DAYS_SECONDS):

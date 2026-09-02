@@ -7,11 +7,11 @@ from email.message import EmailMessage
 @dataclass
 class SmtpConfig:
     host: str = "localhost"
-    port: int = 0
+    port: int = 25
     username: str = ""
     password: str = ""
-    from_addr: str = ""
-    use_tls: bool = True
+    from_addr: str = "noreply@cs.uni-potsdam.de"
+    use_tls: bool = False
 
 
 def smtp_config_from_env():
