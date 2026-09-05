@@ -1,0 +1,5 @@
+server:
+  instance_name: University of Potsdam Energy Awareness Daemon
+  host:
+    address: "0.0.0.0"
+    port: 5000

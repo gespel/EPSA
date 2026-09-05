@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}EPSA Awareness Dashboard{% endblock %}</title>
+    <title>{% block title %}{{ instance_name }}{% endblock %}</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <style>
         :root {
@@ -241,13 +241,13 @@
 </head>
 <body>
     <header class="topbar">
-        <div class="brand"><span class="dot"></span> EPSA Awareness Dashboard</div>
+        <div class="brand"><span class="dot"></span> {{ instance_name }}</div>
         {% block headerlink %}{% endblock %}
     </header>
     <main>
         {% block content %}{% endblock %}
     </main>
-    <footer>EPSA &middot; Energy Prediction &amp; Scheduling Awareness</footer>
+    <footer>{{ instance_name }}</footer>
     {% block scripts %}{% endblock %}
 </body>
 </html>

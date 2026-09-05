@@ -7,6 +7,7 @@ import daemon
 import mailer
 import time
 from threading import Thread
+import yaml
 
 DAEMON_RESTART_DELAY_SECONDS = 60
 
@@ -26,6 +27,31 @@ def configure_logging(level=logging.DEBUG):
 app = Flask(__name__)
 logger = configure_logging(level=logging.INFO)
 comp = comparator.Comparator(logger=logger)
+
+
+def load_config():
+    config_path = os.path.join("awareness-daemon-config.yaml")
+    if not os.path.exists(config_path):
+        logger.warning(f"Configuration file {config_path} not found. Using default settings.")
+        return {}
+
+    with open(config_path, "r") as f:
+        try:
+            config = yaml.safe_load(f)
+            logger.info(f"Configuration loaded from {config_path}.")
+            return config
+        except yaml.YAMLError as e:
+            logger.error(f"Error parsing configuration file: {e}")
+            return {}
+
+
+config = load_config()
+INSTANCE_NAME = config.get("server", {}).get("instance_name", "EPSA Awareness Dashboard")
+
+
+@app.context_processor
+def inject_instance_name():
+    return {"instance_name": INSTANCE_NAME}
 
 # Devcontainer default (see .devcontainer/scripts/init-postgres.sql); override
 # with EPS_DB_CONN_STR to point at a real cluster, e.g. via SSH port-forward:
@@ -109,9 +135,11 @@ def _supervise_daemon(d):
         )
         time.sleep(DAEMON_RESTART_DELAY_SECONDS)
 
-
 def main():
     logger.info("Starting Awareness Daemon WSGI application")
+
+    host = config.get("server", {}).get("host", {}).get("address", "0.0.0.0")
+    port = config.get("server", {}).get("host", {}).get("port", 5000)
 
     d = daemon.AwarenessDaemon(
         logger=logger,
@@ -122,7 +150,7 @@ def main():
     #d.start()
     #Thread(target=_supervise_daemon, args=(d,), name="awareness-daemon-supervisor", daemon=True).start()
 
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host=host, port=port)
 
 if __name__ == "__main__":
     main()
