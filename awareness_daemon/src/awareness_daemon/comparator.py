@@ -6,8 +6,8 @@ class Comparator:
     def __init__(self, logger=None):
         self.logger = logger
         # (name, watts) -> devices with typical continuous power draw in watts
-        if os.path.exists("consumers.yaml"):
-            with open("consumers.yaml", "r") as f:
+        if os.path.exists(os.path.join(os.path.dirname(__file__), "consumers.yaml")):
+            with open(os.path.join(os.path.dirname(__file__), "consumers.yaml"), "r") as f:
                 self.consumers_in_watts = yaml.safe_load(f)
                 if self.logger:
                     self.logger.info(f"Loaded {len(self.consumers_in_watts)} devices from consumers.yaml")

@@ -28,4 +28,4 @@ if [[ -z "${EPS_DB_CONN_STR:-}" ]]; then
 fi
 
 cd "$REPO_DIR"
-exec uv run src/awareness_daemon/main.py
+exec uv run python -m awareness_daemon.main

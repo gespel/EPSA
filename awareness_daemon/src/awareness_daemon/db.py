@@ -3,7 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
 import logging
-from user import EPSAUser
+from .user import EPSAUser
 logger = logging.getLogger("awareness_daemon")
 
 
