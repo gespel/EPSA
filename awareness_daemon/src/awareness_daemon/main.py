@@ -25,6 +25,7 @@ def configure_logging(level=logging.DEBUG):
 
 app = Flask(__name__)
 logger = configure_logging(level=logging.INFO)
+comp = comparator.Comparator(logger=logger)
 
 # Devcontainer default (see .devcontainer/scripts/init-postgres.sql); override
 # with EPS_DB_CONN_STR to point at a real cluster, e.g. via SSH port-forward:
@@ -50,8 +51,6 @@ def index():
     chart_labels = [u["username"] or f"uid:{u['userid']}" for u in leaderboard[:10]]
     chart_values = [round(float(u["total_energy_kwh"] or 0), 4) for u in leaderboard[:10]]
 
-
-    comp = comparator.Comparator()
     compare_device_name, compare_device_time = comp.compare_consumption(total_kwh)
 
     return render_template(
@@ -79,7 +78,6 @@ def user_detail(userid):
 
     chart_labels = [f"Job {j['jobid']}" for j in u.jobs_with_energy][:15]
     chart_values = [round(float(j["total_energy_kwh"] or 0), 4) for j in u.jobs_with_energy][:15]
-    comp = comparator.Comparator()
     compare_device_name, compare_device_time = comp.compare_consumption(u.total_energy_kwh)
 
     return render_template(
@@ -119,10 +117,10 @@ def main():
         logger=logger,
         db_handler=get_db_handler(),
         mailer=mailer.Mailer(logger),
-        comparator=comparator.Comparator(),
+        comparator=comp,
     )
-    d.start()
-    Thread(target=_supervise_daemon, args=(d,), name="awareness-daemon-supervisor", daemon=True).start()
+    #d.start()
+    #Thread(target=_supervise_daemon, args=(d,), name="awareness-daemon-supervisor", daemon=True).start()
 
     app.run(host="0.0.0.0", port=5000)
 
