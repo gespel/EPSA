@@ -71,6 +71,7 @@ def try_to_fetch_eps_db_conn_str():
                 return conn
 
     logger.warning("Could not read EPS_DB_CONN_STR from slurmctld (PID %s) (sudo needed?).", pid)
+    logger.warning("If you want to run the awareness daemon without sudo, set EPS_DB_CONN_STR in your environment.")
     return None
 
 def load_config():
