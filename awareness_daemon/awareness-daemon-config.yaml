@@ -3,3 +3,7 @@ server:
   host:
     address: "0.0.0.0"
     port: 5000
+email:
+  enabled: false
+  #sending_interval: 604800  # 1 week in seconds
+  sending_interval: 10

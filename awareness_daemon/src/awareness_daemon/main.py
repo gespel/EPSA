@@ -143,12 +143,13 @@ def main():
 
     d = daemon.AwarenessDaemon(
         logger=logger,
+        config=config,
         db_handler=get_db_handler(),
         mailer=mailer.Mailer(logger),
         comparator=comp,
     )
-    #d.start()
-    #Thread(target=_supervise_daemon, args=(d,), name="awareness-daemon-supervisor", daemon=True).start()
+    d.start()
+    Thread(target=_supervise_daemon, args=(d,), name="awareness-daemon-supervisor", daemon=True).start()
 
     app.run(host=host, port=port)
 

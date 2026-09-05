@@ -5,13 +5,14 @@ import threading
 SEVEN_DAYS_SECONDS = 60
 
 class AwarenessDaemon:
-    def __init__(self, logger, db_handler, mailer, comparator, interval_seconds=SEVEN_DAYS_SECONDS):
+    def __init__(self, logger, config, db_handler, mailer, comparator, interval_seconds=SEVEN_DAYS_SECONDS):
         self.running = False
         self.logger = logger
+        self.config = config
         self.db_handler = db_handler
         self.mailer = mailer
         self.comparator = comparator
-        self.interval_seconds = interval_seconds
+        self.interval_seconds = self.config.get("email", {}).get("sending_interval", interval_seconds)
         self._wakeup = threading.Event()
 
     def start(self):
@@ -34,13 +35,15 @@ class AwarenessDaemon:
         self.send_email_notifications()
 
     def send_email_notifications(self):
+        sent = 0
         users = self.db_handler.get_all_users()
         messages = [
             self._build_message(user)
             for user in users
             if user.total_energy_kwh > 0 and user.email
         ]
-        sent = self.mailer.send_batch(messages)
+        if self.config.get("email", {}).get("enabled", False):
+            sent = self.mailer.send_batch(messages)
         self.logger.info(f"Sent {sent}/{len(messages)} awareness emails")
 
     def _build_message(self, user):
@@ -51,6 +54,6 @@ class AwarenessDaemon:
             f"{user.total_energy_kwh:.4f} kWh.\n\n"
             f"That is roughly equivalent to running a {device_name} for {device_time}.\n\n"
             f"Cheers,\n"
-            f"The EPSA Awareness Daemon\n"
+            f"{self.config.get('server', {}).get('instance_name', 'EPSA Awareness Dashboard')}\n"
         )
         return (user.email, "Your energy consumption this week", body)
