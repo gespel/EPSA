@@ -102,10 +102,10 @@ def inject_instance_name():
 # with EPS_DB_CONN_STR to point at a real cluster, e.g. via SSH port-forward:
 # EPS_DB_CONN_STR="host=localhost port=5432 dbname=perfacct_eps user=eps_writer password=..."
 DEFAULT_DSN = "host=localhost port=5432 dbname=eps user=eps password=eps"
-
+EPS_DB_CONN_STR = try_to_fetch_eps_db_conn_str() or DEFAULT_DSN
 
 def get_db_handler():
-    return db.DatabaseHandler(try_to_fetch_eps_db_conn_str() or DEFAULT_DSN)
+    return db.DatabaseHandler(EPS_DB_CONN_STR)
 
 
 @app.route("/")
