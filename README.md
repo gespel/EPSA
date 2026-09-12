@@ -1,4 +1,4 @@
-# EMA Plugin(s) for Slurm
+# EMA Plugin(s) for Slurm (but Aware!)
 
 Uses PreEp (Prolog/Epilog) Plugin API from Slurm to measure energy on compute
 nodes and write them alongside with some additional (meta) information to the
