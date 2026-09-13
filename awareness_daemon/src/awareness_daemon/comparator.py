@@ -125,8 +125,6 @@ class Comparator:
                 close_devices.append((device, required_time_seconds))
 
         if not close_devices:
-            # Fallback: no device falls within the sensible time window,
-            # just compare against every device instead of crashing.
             close_devices = [
                 (device, consumption_in_watthours / watts * 3600)
                 for device, watts in self.consumers_in_watts

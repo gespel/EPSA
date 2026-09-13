@@ -51,7 +51,7 @@ class AwarenessDaemon:
         body = (
             f"Hi {user.username},\n\n"
             f"Your total energy consumption over the past week is "
-            f"{user.total_energy_kwh:.4f} kWh.\n\n"
+            f"{user.get_last_week_energy():.4f} kWh.\n\n"
             f"That is roughly equivalent to running a {device_name} for {device_time}.\n\n"
             f"Cheers,\n"
             f"{self.config.get('server', {}).get('instance_name', 'EPSA Awareness Dashboard')}\n"

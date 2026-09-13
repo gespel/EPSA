@@ -5,6 +5,7 @@ class EPSAUser:
         self.username = username
         self.email = email
         self.total_energy_kwh = 0.0
+        self.last_week_energy_kwh = 0.0
         self.job_count = 0
         self.jobs_with_energy = []
 
@@ -16,6 +17,9 @@ class EPSAUser:
 
     def get_total_energy(self) -> float:
         return self.total_energy_kwh
+
+    def get_last_week_energy(self) -> float:
+        return self.last_week_energy_kwh
 
     def increment_job_count(self):
         self.job_count += 1

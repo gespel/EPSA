@@ -9,3 +9,5 @@ test/.venv/
 *__pycache__/
 
 .claude/
+
+.~lock.praesi.odp#

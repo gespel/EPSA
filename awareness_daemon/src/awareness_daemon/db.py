@@ -413,6 +413,31 @@ class DatabaseHandler:
             logger.error(f"Error retrieving user info for userid '{userid}': {e}")
             return None
 
+    def get_last_week_energy_consumption_for_user_in_kwh(self, userid):
+        """
+        Get total energy consumption for all jobs of a specific user in the last 7 days in kWh.
+
+        Args:
+            userid: User ID
+
+        Returns:
+            float: Total energy in kWh, or None on error
+        """
+        total_energy = 0.0
+        job_ids = self.get_all_jobs_of_user(userid)
+        for jobid in job_ids:
+            allocation = self.get_allocation_data(jobid)
+            if allocation and allocation['ts']:
+                from datetime import datetime, timedelta
+                ts = allocation['ts']
+                if isinstance(ts, str):
+                    ts = datetime.fromisoformat(ts)
+                if ts >= datetime.now() - timedelta(days=7):
+                    energy = self.get_total_energy_consumption(jobid)
+                    if energy is not None:
+                        total_energy += energy / 3.6e12  # Convert from Joules to kWh
+        return total_energy if total_energy > 0 else None
+
     def get_all_users(self):
         """
         Get all users in the database.
@@ -430,6 +455,7 @@ class DatabaseHandler:
                     for row in results:
                         user = EPSAUser(row['userid'], row['username'], row['email'])
                         user.total_energy_kwh = self.get_total_energy_consumption_for_user_in_kwh(user.user_id)
+                        user.last_week_energy_kwh = self.get_last_week_energy_consumption_for_user_in_kwh(user.user_id)
                         user.job_count = len(self.get_all_jobs_of_user(user.user_id))
                         user.jobs_with_energy = self.get_jobs_with_energy_for_user(user.user_id)
                         users.append(user)
