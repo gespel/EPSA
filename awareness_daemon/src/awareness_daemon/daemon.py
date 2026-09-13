@@ -47,12 +47,13 @@ class AwarenessDaemon:
         self.logger.info(f"Sent {sent}/{len(messages)} awareness emails")
 
     def _build_message(self, user):
-        device_name, device_time = self.comparator.compare_consumption(user.total_energy_kwh)
+        device_name, device_time = self.comparator.compare_consumption(user.get_last_week_energy())
         body = (
             f"Hi {user.username},\n\n"
             f"Your total energy consumption over the past week is "
-            f"{user.get_last_week_energy():.4f} kWh.\n\n"
+            f"{user.get_last_week_energy():.4f} kWh ({user.get_last_week_energy() * self.config.get('misc', {}).get('energy_price_per_kwh', 0):.2f} {self.config.get('misc', {}).get('currency', '€')}).\n"
             f"That is roughly equivalent to running a {device_name} for {device_time}.\n\n"
+            f"Your overall energy consumption is {user.total_energy_kwh:.4f} kWh ({user.total_energy_kwh * self.config.get('misc', {}).get('energy_price_per_kwh', 0):.2f} {self.config.get('misc', {}).get('currency', '€')}).\n\n"
             f"Cheers,\n"
             f"{self.config.get('server', {}).get('instance_name', 'EPSA Awareness Dashboard')}\n"
         )

@@ -102,9 +102,10 @@ class DatabaseHandler:
             dict: Allocation data with keys (jobid, jobname, userid, username, nnodes, ts)
         """
         query = """
-            SELECT jobid, jobname, userid, username, nnodes, ts
-            FROM allocations
-            WHERE jobid = %s
+            SELECT a.jobid, a.job_name AS jobname, a.userid, u.username, a.nnodes, a.ts
+            FROM allocations a
+            LEFT JOIN users u ON u.userid = a.userid
+            WHERE a.jobid = %s
         """
         try:
             with self.get_connection() as conn:
@@ -281,12 +282,12 @@ class DatabaseHandler:
     def get_total_energy_consumption_for_user_in_kwh(self, userid):
         """
         Get total energy consumption for all jobs of a specific user in kWh.
-        
+
         Args:
             userid: User ID
-            
+
         Returns:
-            float: Total energy in kWh, or None on error
+            float: Total energy in kWh (0.0 if the user has no energy data)
         """
         total_energy = 0.0
         job_ids = self.get_all_jobs_of_user(userid)
@@ -294,7 +295,7 @@ class DatabaseHandler:
             energy = self.get_total_energy_consumption(jobid)
             if energy is not None:
                 total_energy += energy / 3.6e12  # Convert from Joules to kWh
-        return total_energy if total_energy > 0 else None
+        return total_energy
 
     def get_energy_leaderboard(self):
         """
@@ -421,22 +422,23 @@ class DatabaseHandler:
             userid: User ID
 
         Returns:
-            float: Total energy in kWh, or None on error
+            float: Total energy in kWh (0.0 if no jobs ran in the last 7 days)
         """
         total_energy = 0.0
         job_ids = self.get_all_jobs_of_user(userid)
         for jobid in job_ids:
             allocation = self.get_allocation_data(jobid)
             if allocation and allocation['ts']:
-                from datetime import datetime, timedelta
+                from datetime import datetime, timedelta, timezone
                 ts = allocation['ts']
                 if isinstance(ts, str):
                     ts = datetime.fromisoformat(ts)
-                if ts >= datetime.now() - timedelta(days=7):
+                now = datetime.now(timezone.utc) if ts.tzinfo else datetime.now()
+                if ts >= now - timedelta(days=7):
                     energy = self.get_total_energy_consumption(jobid)
                     if energy is not None:
                         total_energy += energy / 3.6e12  # Convert from Joules to kWh
-        return total_energy if total_energy > 0 else None
+        return total_energy
 
     def get_all_users(self):
         """
