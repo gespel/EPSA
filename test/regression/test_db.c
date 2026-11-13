@@ -45,10 +45,16 @@ int main(void)
         "device_uid text,device_type text,e0 numeric,e1 numeric,t0 numeric,t1 numeric,utilization numeric)");
 
     ready(reader, 42, 0); /* no allocation */
-    sql(reader, "INSERT INTO allocations VALUES(42,2),(43,0),(44,-1)");
+    sql(reader, "INSERT INTO allocations VALUES(42,2),(43,0),(44,-1),(45,NULL),(46,1)");
     ready(reader, 42, 0);
     ready(reader, 43, 0);
     ready(reader, 44, 0);
+    ready(reader, 45, 0);
+    sql(reader, "INSERT INTO executions VALUES(4,46,NULL),(5,46,'node-c')");
+    sql(reader, "INSERT INTO measurements(exec_id) VALUES(4)");
+    ready(reader, 46, 0); /* a NULL node name must not satisfy readiness */
+    sql(reader, "INSERT INTO measurements(exec_id) VALUES(5)");
+    ready(reader, 46, 1); /* single-node job */
     sql(reader, "INSERT INTO executions VALUES(1,42,'node-a'),(2,42,'node-b'),(3,42,'node-a')");
     ready(reader, 42, 0); /* execution rows without measurements */
     sql(reader, "INSERT INTO measurements(exec_id) VALUES(1),(1),(3)");
@@ -61,6 +67,12 @@ int main(void)
     sql(writer, "COMMIT");
     ready(reader, 42, 1);
     assert(get_measurement_count(reader, 42, &count) == 0 && count == 4);
+    sql(reader, "INSERT INTO executions VALUES(6,42,'node-extra')");
+    sql(reader, "INSERT INTO measurements(exec_id) VALUES(6)");
+    ready(reader, 42, 0); /* inconsistent excess nodes must not count as ready */
+    sql(reader, "DELETE FROM measurements WHERE exec_id=6");
+    sql(reader, "DELETE FROM executions WHERE id=6");
+    ready(reader, 42, 1);
 
     eps_measurement_data_t data = {
         .execution_id=1, .userid=1, .device_name="example.package",

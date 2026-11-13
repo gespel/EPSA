@@ -2,6 +2,8 @@
 import logging
 import subprocess
 import sys
+import tempfile
+from pathlib import Path
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -17,7 +19,7 @@ class AwarenessTests(unittest.TestCase):
                                MagicMock(), MagicMock(), MagicMock())
 
     def test_disabled_mail_has_no_side_effects(self):
-        for enabled in (False, None, "false", 0):
+        for enabled in (False, None, "false", "true", 0, 1):
             with self.subTest(enabled=enabled):
                 worker = self.make_worker({"email": {"enabled": enabled}})
                 worker.send_email_notifications()
@@ -87,6 +89,23 @@ class AwarenessTests(unittest.TestCase):
         subprocess.run([sys.executable, "-c",
             "import sys; import awareness_daemon; "
             "assert 'awareness_daemon.main' not in sys.modules"], check=True)
+
+    def test_lazy_entrypoint_remains_callable_after_first_call(self):
+        # Exercise real Python submodule binding without starting Flask or
+        # discovering credentials: use the actual initializer with a stub main.
+        import awareness_daemon
+        initializer = Path(awareness_daemon.__file__).read_text()
+        with tempfile.TemporaryDirectory() as directory:
+            package = Path(directory) / "awareness_daemon"
+            package.mkdir()
+            (package / "__init__.py").write_text(initializer)
+            (package / "main.py").write_text("def main():\n    return 17\n")
+            subprocess.run([sys.executable, "-c",
+                "import sys; sys.path.insert(0, sys.argv[1]); "
+                "import awareness_daemon; "
+                "assert awareness_daemon.main() == 17; "
+                "assert callable(awareness_daemon.main); "
+                "assert awareness_daemon.main() == 17", directory], check=True)
 
 
 if __name__ == "__main__":

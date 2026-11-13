@@ -22,7 +22,8 @@ Database connections and SMTP interactions are mocked. Coverage includes:
   an uninitialized local variable;
 - opened connections close on normal and exceptional exits;
 - an unknown user returns `None` without logging a spurious database error;
-- package import does not initialize the Flask application or discover secrets.
+- package import does not initialize the Flask application or discover secrets;
+- the lazy command entrypoint remains callable after its first invocation.
 
 ## C database integration
 
@@ -49,7 +50,9 @@ Do not compile this assertion-based test with `-DNDEBUG`. The deliberate
 missing-table case prints one PostgreSQL error, then should end with `PASS`.
 The test checks:
 
-- absent, zero-node and negative-node allocations are not complete;
+- absent, NULL, zero-node and negative-node allocations are not complete;
+- NULL node names do not count, single-node jobs pass, and excess distinct
+  nodes fail closed;
 - execution rows without measurements are not complete;
 - multiple device rows/duplicate executions from one node cannot substitute
   for another allocated node;
@@ -65,11 +68,23 @@ this patch does not change that schema or claim otherwise.
 
 ## Deployment considerations
 
-The controller summary waits up to 60 seconds for measurements from every
-allocated node. If data is incomplete at that point it logs a warning and skips
+The controller retains upstream's 15-second accumulated polling-sleep budget
+and 100-ms poll interval. Database connection/query time is not included, so
+this is NOT a 15-second wall-clock deadline. If data is incomplete at timeout
+it logs a warning and skips
 the summary, without failing the completed job solely for missing telemetry.
 Committed rows remain available for inspection. Query failures retain the
 existing error path.
+
+Compared with accepting the first available row, normal multi-node jobs can
+keep the asynchronous controller epilog pending longer. Missing/unsupported
+telemetry on any node suppresses the central log summary; there is no later
+automatic backfill. The check counts distinct node names, not the allocated
+host list, and does not deduplicate energy sums or validate device coverage.
+The query is more expensive than a row count and runs at up to ten polls per
+second per finishing job. Large-history/high-concurrency deployments need
+query-plan/index review and explicit connection/statement timeouts; this PR
+does not add indexes, connection pooling or bounded database I/O.
 
 This depends on the EFP committing an execution and all its measurement rows
 in one transaction. It does not add an explicit completion marker or distinguish
@@ -80,6 +95,13 @@ The integration test exercises database readiness, not the real-time Slurm
 epilog callback/timeout lifecycle. A controlled cluster smoke test remains
 appropriate before deployment. The Slurm 25.11 build has been checked; older
 Slurm API branches and GPU hardware require separate validation.
+
+Email opt-in now requires a boolean `true`; strings such as `"true"` and numeric
+`1` no longer enable it. The seven-day interval is only a fallback: upstream's
+example config explicitly sets `sending_interval: 60` and remains unchanged.
+The first enabled report still runs immediately on daemon start, not seven
+days later. This PR does not persist a last-sent timestamp across restarts or
+validate malformed/null email config sections.
 
 The awareness HTTP application remains without built-in user authentication.
 Keep it behind an authenticated access boundary; do not expose all users' job

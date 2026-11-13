@@ -463,7 +463,7 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 // so we can wait as long as it takes without holding up slurmctld's
 // internal locks.
 #define EPILOG_SLURMCTLD_POLL_INTERVAL_US 100000 /* 100 ms */
-#define EPILOG_SLURMCTLD_POLL_TIMEOUT_US 60000000 /* 60 s */
+#define EPILOG_SLURMCTLD_POLL_TIMEOUT_US 15000000 /* 15 s */
 
 static void* epilog_energy_thread(void* arg)
 {
