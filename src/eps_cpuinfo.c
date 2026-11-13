@@ -205,11 +205,7 @@ int init_cpuinfo(job_env_t* job_env, char* cpu_ids)
     show_flags |= SHOW_DETAIL;
 
     job_info_msg_t* job_info_list = NULL;
-#ifdef HAVE_JOB_ENV_JOBID
     int err = slurm_load_job(&job_info_list, EPS_JOB_ID(job_env), show_flags);
-#else
-    int err = slurm_load_job(&job_info_list, job_env->step_id, show_flags);
-#endif
     if (err != SLURM_SUCCESS)
     {
         slurm_info("error: slurm_load_job: %d", err);

@@ -21,7 +21,7 @@ static int _process_gres_count(
     {
         *gres_idxs = parse_index_range(idx, gres_count);
         free(idx);
-        if (gres_count && !gres_idxs)
+        if (*gres_count && !*gres_idxs)
         {
             slurm_info("Failed to parse gres indexes substring!");
             return 1;

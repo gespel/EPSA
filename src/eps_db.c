@@ -195,16 +195,16 @@ int insert_measurement_data(PGconn* connection, eps_measurement_data_t* data)
     char userid[12];
     snprintf(userid, 12, "%d", data->userid);
 
-    char e0[20], e1[20];
-    char t0[20], t1[20];
-    char utilization[6];
+    /* Twenty decimal digits plus the terminator for unsigned counters. */
+    char e0[21], e1[21];
+    char t0[21], t1[21];
+    char utilization[16];
 
-    snprintf(e0, 20, "%llu", data->e0);
-    snprintf(e1, 20, "%llu", data->e1);
-    snprintf(t0, 20, "%llu", data->t0);
-    snprintf(t1, 20, "%llu", data->t1);
-    snprintf(t1, 20, "%llu", data->t1);
-    snprintf(utilization, 6, "%.2f", data->utilization);
+    snprintf(e0, sizeof(e0), "%llu", data->e0);
+    snprintf(e1, sizeof(e1), "%llu", data->e1);
+    snprintf(t0, sizeof(t0), "%llu", data->t0);
+    snprintf(t1, sizeof(t1), "%llu", data->t1);
+    snprintf(utilization, sizeof(utilization), "%.2f", data->utilization);
 
     const char* param_values[10] = {
         exec_id,
