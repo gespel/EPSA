@@ -17,6 +17,7 @@ For further details check:
 */
 
 #include <unistd.h>
+#include <string.h>
 
 #include <eps_db.h>
 
@@ -280,6 +281,34 @@ int get_total_energy_consumption(PGconn* connection, uint32_t jobid, uint64_t* t
 
     PQclear(res);
     return 0;
+}
+
+int has_complete_job_measurements(PGconn* connection, uint32_t jobid, int* ready)
+{
+    *ready = 0;
+    char jobid_str[12];
+    snprintf(jobid_str, sizeof(jobid_str), "%u", jobid);
+    const char* values[] = {jobid_str};
+
+    /* The EFP writes each execution and its measurements in one transaction.
+     * Count nodes, not rows: several devices or duplicate execution rows on
+     * one node must not stand in for another node that has not committed yet.
+     * A missing allocation, zero-node allocation or measurement-free execution
+     * is not ready. Requeue/resize accounting needs a separate attempt model.
+     */
+    PGresult* res = PQexecParams(
+        connection,
+        "SELECT a.nnodes > 0 AND COUNT(DISTINCT e.node_name) = a.nnodes "
+        "FROM allocations a LEFT JOIN executions e ON e.jobid = a.jobid "
+        "AND EXISTS (SELECT 1 FROM measurements m WHERE m.exec_id = e.id) "
+        "WHERE a.jobid = $1 GROUP BY a.nnodes;",
+        1, NULL, values, NULL, NULL, 0
+    );
+    int err = check_query_result(res, connection);
+    if (!err && PQntuples(res) == 1 && !PQgetisnull(res, 0, 0))
+        *ready = strcmp(PQgetvalue(res, 0, 0), "t") == 0;
+    PQclear(res);
+    return err;
 }
 
 int get_measurement_count(PGconn* connection, uint32_t jobid, uint64_t* count)

@@ -463,7 +463,7 @@ extern int prep_p_prolog_slurmctld(job_record_t* job_ptr, bool* async)
 // so we can wait as long as it takes without holding up slurmctld's
 // internal locks.
 #define EPILOG_SLURMCTLD_POLL_INTERVAL_US 100000 /* 100 ms */
-#define EPILOG_SLURMCTLD_POLL_TIMEOUT_US 15000000 /* 15 s */
+#define EPILOG_SLURMCTLD_POLL_TIMEOUT_US 60000000 /* 60 s */
 
 static void* epilog_energy_thread(void* arg)
 {
@@ -483,24 +483,27 @@ static void* epilog_energy_thread(void* arg)
         goto callback;
     }
 
-    uint64_t measurement_count = 0;
+    int measurements_ready = 0;
     unsigned int waited_us = 0;
     int err;
     while (1) {
-        err = get_measurement_count(db_connection, job_id, &measurement_count);
+        err = has_complete_job_measurements(db_connection, job_id, &measurements_ready);
         if (err) {
-            slurm_info("error: failed to get measurement count");
+            slurm_info("error: failed to check measurement completeness");
             rc = SLURM_ERROR;
             break;
         }
-        if (measurement_count > 0) break;
+        if (measurements_ready) break;
         if (waited_us >= EPILOG_SLURMCTLD_POLL_TIMEOUT_US) {
             slurm_info(
-                "warning: no measurements found for JobId=%u after %u ms, "
-                "logging with whatever is available",
+                "warning: incomplete node measurements for JobId=%u after %u ms; "
+                "skipping central summary (database rows remain available)",
                 job_id, waited_us / 1000
             );
-            break;
+            /* Missing telemetry should not fail an otherwise completed job,
+             * nor should a partial sum be presented as its total energy. */
+            PQfinish(db_connection);
+            goto callback;
         }
         usleep(EPILOG_SLURMCTLD_POLL_INTERVAL_US);
         waited_us += EPILOG_SLURMCTLD_POLL_INTERVAL_US;
