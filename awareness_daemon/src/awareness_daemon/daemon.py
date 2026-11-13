@@ -1,8 +1,7 @@
 import threading
 
 # The daemon performs its periodic work once every 7 days.
-#SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60
-SEVEN_DAYS_SECONDS = 60
+SEVEN_DAYS_SECONDS = 7 * 24 * 60 * 60
 
 class AwarenessDaemon:
     def __init__(self, logger, config, db_handler, mailer, comparator, interval_seconds=SEVEN_DAYS_SECONDS):
@@ -35,6 +34,11 @@ class AwarenessDaemon:
         self.send_email_notifications()
 
     def send_email_notifications(self):
+        # Fail closed and avoid recipient queries/message preparation entirely
+        # when email is disabled. A quoted YAML "false" is not an opt-in.
+        if self.config.get("email", {}).get("enabled", False) is not True:
+            self.logger.info("Awareness email disabled; no messages prepared or sent")
+            return
         sent = 0
         users = self.db_handler.get_all_users()
         messages = [
